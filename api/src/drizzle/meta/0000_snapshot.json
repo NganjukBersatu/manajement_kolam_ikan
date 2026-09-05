@@ -1,0 +1,770 @@
+{
+  "id": "00000000-0000-0000-0000-000000000000",
+  "prevId": "",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.kolam": {
+      "name": "kolam",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nama_kolam": {
+          "name": "nama_kolam",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "luas_m2": {
+          "name": "luas_m2",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'kosong'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.tebar": {
+      "name": "tebar",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kolam_id": {
+          "name": "kolam_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jenis_ikan_id": {
+          "name": "jenis_ikan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal_tebar": {
+          "name": "tanggal_tebar",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_bibit": {
+          "name": "jumlah_bibit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_saat_ini": {
+          "name": "jumlah_saat_ini",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'aktif'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tebar_kolam_id_fkey": {
+          "name": "tebar_kolam_id_fkey",
+          "tableFrom": "tebar",
+          "tableTo": "kolam",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "kolam_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tebar_jenis_ikan_id_fkey": {
+          "name": "tebar_jenis_ikan_id_fkey",
+          "tableFrom": "tebar",
+          "tableTo": "jenis_ikan",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "jenis_ikan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.jenis_ikan": {
+      "name": "jenis_ikan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hari_sortir": {
+          "name": "hari_sortir",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hari_panen": {
+          "name": "hari_panen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.jadwal": {
+      "name": "jadwal",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tebar_id": {
+          "name": "tebar_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kolam_id": {
+          "name": "kolam_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jenis": {
+          "name": "jenis",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal_jadwal": {
+          "name": "tanggal_jadwal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'belum'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "jadwal_tebar_id_fkey": {
+          "name": "jadwal_tebar_id_fkey",
+          "tableFrom": "jadwal",
+          "tableTo": "tebar",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "tebar_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "jadwal_kolam_id_fkey": {
+          "name": "jadwal_kolam_id_fkey",
+          "tableFrom": "jadwal",
+          "tableTo": "kolam",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "kolam_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.sortir": {
+      "name": "sortir",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jadwal_id": {
+          "name": "jadwal_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tebar_id": {
+          "name": "tebar_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kolam_id": {
+          "name": "kolam_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_mati": {
+          "name": "jumlah_mati",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sortir_jadwal_id_fkey": {
+          "name": "sortir_jadwal_id_fkey",
+          "tableFrom": "sortir",
+          "tableTo": "jadwal",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "jadwal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "sortir_tebar_id_fkey": {
+          "name": "sortir_tebar_id_fkey",
+          "tableFrom": "sortir",
+          "tableTo": "tebar",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "tebar_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "sortir_kolam_id_fkey": {
+          "name": "sortir_kolam_id_fkey",
+          "tableFrom": "sortir",
+          "tableTo": "kolam",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "kolam_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.panen": {
+      "name": "panen",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jadwal_id": {
+          "name": "jadwal_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tebar_id": {
+          "name": "tebar_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kolam_id": {
+          "name": "kolam_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_ekor": {
+          "name": "jumlah_ekor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "berat_kg": {
+          "name": "berat_kg",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "panen_jadwal_id_fkey": {
+          "name": "panen_jadwal_id_fkey",
+          "tableFrom": "panen",
+          "tableTo": "jadwal",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "jadwal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "panen_tebar_id_fkey": {
+          "name": "panen_tebar_id_fkey",
+          "tableFrom": "panen",
+          "tableTo": "tebar",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "tebar_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "panen_kolam_id_fkey": {
+          "name": "panen_kolam_id_fkey",
+          "tableFrom": "panen",
+          "tableTo": "kolam",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "kolam_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.pakan": {
+      "name": "pakan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kolam_id": {
+          "name": "kolam_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_kg": {
+          "name": "jumlah_kg",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "biaya": {
+          "name": "biaya",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pakan_kolam_id_fkey": {
+          "name": "pakan_kolam_id_fkey",
+          "tableFrom": "pakan",
+          "tableTo": "kolam",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "kolam_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.penjualan": {
+      "name": "penjualan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jenis_ikan_id": {
+          "name": "jenis_ikan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kolam_id": {
+          "name": "kolam_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "jumlah_kg": {
+          "name": "jumlah_kg",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "harga_per_kg": {
+          "name": "harga_per_kg",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total": {
+          "name": "total",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "penjualan_jenis_ikan_id_fkey": {
+          "name": "penjualan_jenis_ikan_id_fkey",
+          "tableFrom": "penjualan",
+          "tableTo": "jenis_ikan",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "jenis_ikan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "penjualan_kolam_id_fkey": {
+          "name": "penjualan_kolam_id_fkey",
+          "tableFrom": "penjualan",
+          "tableTo": "kolam",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "kolam_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.pengeluaran": {
+      "name": "pengeluaran",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kategori": {
+          "name": "kategori",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah": {
+          "name": "jumlah",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.pengaturan_akun": {
+      "name": "pengaturan_akun",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "tables": {}
+  }
+}

@@ -43,22 +43,27 @@ onMounted(muat)
     <table class="w-full text-left text-[13.5px]">
       <thead>
         <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
-          <th class="px-4 py-3">Kolam</th>
-          <th class="px-4 py-3">Jenis Ikan</th>
-          <th class="px-4 py-3">Jumlah Saat Ini</th>
-          <th class="px-4 py-3">Tgl Jadwal</th>
-          <th class="px-4 py-3">Status</th>
-          <th class="px-4 py-3 text-right">Aksi</th>
+          <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam</th>
+          <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jenis Ikan</th>
+          <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah Saat Ini</th>
+          <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tgl Jadwal</th>
+          <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Status</th>
+          <th class="px-4 py-3 text-right text-ink-500 dark:text-ink-300 font-semibold">Aksi</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="j in daftar" :key="j.id" class="border-b border-ink-100 dark:border-ink-500 last:border-0">
+        <tr v-for="j in daftar" :key="j.id" class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100">
           <td class="px-4 py-3 font-semibold">{{ j.nama_kolam }}</td>
           <td class="px-4 py-3">{{ j.nama_ikan }}</td>
           <td class="px-4 py-3">{{ j.jumlah_saat_ini }}</td>
           <td class="px-4 py-3">{{ tanggal(j.tanggal_jadwal) }}</td>
           <td class="px-4 py-3">
-            <span class="px-2 py-1 rounded-full text-[11.5px] font-semibold" :class="j.status === 'selesai' ? 'bg-ok-100 text-ok-600' : 'bg-warn-100 text-warn-600'">
+            <span
+              class="px-2 py-1 rounded-full text-[11.5px] font-semibold"
+              :class="j.status === 'selesai'
+                ? 'bg-ok-100 text-ok-600 dark:bg-ok-600/25 dark:text-ok-500'
+                : 'bg-warn-100 text-warn-600 dark:bg-warn-600/25 dark:text-warn-500'"
+            >
               {{ j.status === 'selesai' ? 'Selesai' : 'Belum' }}
             </span>
           </td>
@@ -68,6 +73,11 @@ onMounted(muat)
             </button>
           </td>
         </tr>
+        <tr v-if="daftar.length === 0">
+          <td colspan="6" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+            Belum ada jadwal panen.
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -75,26 +85,26 @@ onMounted(muat)
   <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center px-4">
     <div class="absolute inset-0 bg-black/40" @click="showForm = false" />
     <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5">
-      <h2 class="text-[16px] font-semibold mb-4">Catat Panen — {{ jadwalDipilih?.nama_kolam }}</h2>
+      <h2 class="text-[16px] font-semibold dark:text-white mb-4">Catat Panen — {{ jadwalDipilih?.nama_kolam }}</h2>
       <form class="space-y-3" @submit.prevent="simpan">
         <div>
-          <label class="block text-[13px] font-medium mb-1">Tanggal</label>
-          <input v-model="form.tanggal" type="date" required class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]" />
+          <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Tanggal</label>
+          <input v-model="form.tanggal" type="date" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
         </div>
         <div>
-          <label class="block text-[13px] font-medium mb-1">Jumlah Ekor</label>
-          <input v-model="form.jumlah_ekor" type="number" min="1" required class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]" />
+          <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jumlah Ekor</label>
+          <input v-model="form.jumlah_ekor" type="number" min="1" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
         </div>
         <div>
-          <label class="block text-[13px] font-medium mb-1">Berat (kg)</label>
-          <input v-model="form.berat_kg" type="number" step="0.1" min="0" class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]" />
+          <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Berat (kg)</label>
+          <input v-model="form.berat_kg" type="number" step="0.1" min="0" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
         </div>
         <div>
-          <label class="block text-[13px] font-medium mb-1">Catatan (opsional)</label>
-          <textarea v-model="form.catatan" class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]"></textarea>
+          <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Catatan (opsional)</label>
+          <textarea v-model="form.catatan" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"></textarea>
         </div>
         <div class="flex gap-3 pt-2">
-          <button type="button" class="flex-1 rounded-lg border border-ink-100 py-2.5 text-[13.5px] font-semibold" @click="showForm = false">Batal</button>
+          <button type="button" class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold" @click="showForm = false">Batal</button>
           <button type="submit" class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600">Simpan</button>
         </div>
       </form>

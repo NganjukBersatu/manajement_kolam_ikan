@@ -5,10 +5,13 @@ const daftarKolam = ref([])
 const daftarJenisIkan = ref([])
 const showTebarForm = ref(false)
 const showTambahKolam = ref(false)
+const showEditKolam = ref(false)
 const kolamDipilih = ref(null)
+const kolamDiedit = ref(null)
 
 const form = ref({ jenis_ikan_id: '', tanggal_tebar: '', jumlah_bibit: '' })
 const formKolam = ref({ nama_kolam: '', luas_m2: '' })
+const formEditKolam = ref({ nama_kolam: '', luas_m2: '' })
 
 async function muatKolam() {
   const res = await fetch('/api/kolam')
@@ -31,6 +34,15 @@ function bukaTebar(kolam) {
 function bukaTambahKolam() {
   formKolam.value = { nama_kolam: '', luas_m2: '' }
   showTambahKolam.value = true
+}
+
+function bukaEditKolam(kolam) {
+  kolamDiedit.value = kolam
+  formEditKolam.value = {
+    nama_kolam: kolam.nama_kolam,
+    luas_m2: kolam.luas_m2 || ''
+  }
+  showEditKolam.value = true
 }
 
 async function simpanTebar() {
@@ -75,6 +87,28 @@ async function simpanKolam() {
   await muatKolam()
 }
 
+async function simpanEditKolam() {
+  const payload = {
+    nama_kolam: formEditKolam.value.nama_kolam,
+    luas_m2: formEditKolam.value.luas_m2 ? Number(formEditKolam.value.luas_m2) : null
+  }
+
+  const res = await fetch(`/api/kolam/${kolamDiedit.value.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+
+  if (!res.ok) {
+    const err = await res.json()
+    alert(err.message || 'Gagal mengubah kolam')
+    return
+  }
+
+  showEditKolam.value = false
+  await muatKolam()
+}
+
 function rupiah(n) {
   return n ? Number(n).toLocaleString('id-ID') : '-'
 }
@@ -89,7 +123,7 @@ onMounted(() => {
   <div>
     <!-- Header + Tombol Tambah -->
     <div class="flex items-center justify-between mb-4">
-      <h1 class="text-[18px] font-semibold">Daftar Kolam</h1>
+      <h1 class="text-[18px] font-semibold dark:text-white">Daftar Kolam</h1>
       <button
         type="button"
         class="px-4 py-2 rounded-lg bg-brand-500 text-white text-[13.5px] font-semibold hover:bg-brand-600"
@@ -104,28 +138,30 @@ onMounted(() => {
       <table class="w-full text-left text-[13.5px]">
         <thead>
           <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
-            <th class="px-4 py-3">Kolam</th>
-            <th class="px-4 py-3">Luas (m²)</th>
-            <th class="px-4 py-3">Status</th>
-            <th class="px-4 py-3">Jenis Ikan</th>
-            <th class="px-4 py-3">Tgl Tebar</th>
-            <th class="px-4 py-3">Bibit</th>
-            <th class="px-4 py-3">Jumlah Saat Ini</th>
-            <th class="px-4 py-3 text-right">Aksi</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Luas (m²)</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Status</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jenis Ikan</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tgl Tebar</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Bibit</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah Saat Ini</th>
+            <th class="px-4 py-3 text-right text-ink-500 dark:text-ink-300 font-semibold">Aksi</th>
           </tr>
         </thead>
         <tbody>
           <tr
             v-for="k in daftarKolam"
             :key="k.id"
-            class="border-b border-ink-100 dark:border-ink-500 last:border-0"
+            class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100"
           >
             <td class="px-4 py-3 font-semibold">{{ k.nama_kolam }}</td>
             <td class="px-4 py-3">{{ k.luas_m2 ? Number(k.luas_m2).toLocaleString('id-ID') : '-' }}</td>
             <td class="px-4 py-3">
               <span
                 class="px-2 py-1 rounded-full text-[11.5px] font-semibold"
-                :class="k.status === 'aktif' ? 'bg-ok-100 text-ok-600' : 'bg-ink-100 text-ink-500'"
+                :class="k.status === 'aktif'
+                  ? 'bg-ok-100 text-ok-600 dark:bg-ok-600/25 dark:text-ok-500'
+                  : 'bg-ink-100 text-ink-500 dark:bg-ink-500/40 dark:text-ink-200'"
               >
                 {{ k.status === 'aktif' ? 'Aktif' : 'Kosong' }}
               </span>
@@ -136,7 +172,14 @@ onMounted(() => {
             </td>
             <td class="px-4 py-3">{{ rupiah(k.jumlah_bibit) }}</td>
             <td class="px-4 py-3">{{ rupiah(k.jumlah_saat_ini) }}</td>
-            <td class="px-4 py-3 text-right">
+            <td class="px-4 py-3 text-right space-x-2">
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-lg border border-ink-200 dark:border-ink-500 text-ink-600 dark:text-ink-200 text-[12.5px] font-semibold hover:bg-ink-50 dark:hover:bg-ink-600"
+                @click="bukaEditKolam(k)"
+              >
+                Edit
+              </button>
               <button
                 v-if="k.status !== 'aktif'"
                 type="button"
@@ -147,6 +190,11 @@ onMounted(() => {
               </button>
             </td>
           </tr>
+          <tr v-if="daftarKolam.length === 0">
+            <td colspan="8" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+              Belum ada kolam. Tambahkan kolam pertamamu untuk mulai mencatat.
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -155,16 +203,16 @@ onMounted(() => {
     <div v-if="showTebarForm" class="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div class="absolute inset-0 bg-black/40" @click="showTebarForm = false" />
       <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5">
-        <h2 class="text-[16px] font-semibold mb-4">
+        <h2 class="text-[16px] font-semibold dark:text-white mb-4">
           Tebar Bibit — {{ kolamDipilih?.nama_kolam }}
         </h2>
         <form class="space-y-3" @submit.prevent="simpanTebar">
           <div>
-            <label class="block text-[13px] font-medium mb-1">Jenis Ikan</label>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jenis Ikan</label>
             <select
               v-model="form.jenis_ikan_id"
               required
-              class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
             >
               <option value="" disabled>Pilih jenis ikan</option>
               <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.id">
@@ -173,28 +221,28 @@ onMounted(() => {
             </select>
           </div>
           <div>
-            <label class="block text-[13px] font-medium mb-1">Tanggal Tebar</label>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Tanggal Tebar</label>
             <input
               v-model="form.tanggal_tebar"
               type="date"
               required
-              class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
             />
           </div>
           <div>
-            <label class="block text-[13px] font-medium mb-1">Jumlah Bibit</label>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jumlah Bibit</label>
             <input
               v-model="form.jumlah_bibit"
               type="number"
               min="1"
               required
-              class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
             />
           </div>
           <div class="flex gap-3 pt-2">
             <button
               type="button"
-              class="flex-1 rounded-lg border border-ink-100 py-2.5 text-[13.5px] font-semibold"
+              class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold"
               @click="showTebarForm = false"
             >
               Batal
@@ -214,21 +262,21 @@ onMounted(() => {
     <div v-if="showTambahKolam" class="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div class="absolute inset-0 bg-black/40" @click="showTambahKolam = false" />
       <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5">
-        <h2 class="text-[16px] font-semibold mb-4">Tambah Kolam Baru</h2>
+        <h2 class="text-[16px] font-semibold dark:text-white mb-4">Tambah Kolam Baru</h2>
         <form class="space-y-3" @submit.prevent="simpanKolam">
           <div>
-            <label class="block text-[13px] font-medium mb-1">Nama Kolam</label>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nama Kolam</label>
             <input
               v-model="formKolam.nama_kolam"
               type="text"
               required
               placeholder="Contoh: Kolam A1"
-              class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
             />
           </div>
           <div>
-            <label class="block text-[13px] font-medium mb-1">
-              Luas (m²) <span class="text-ink-400 font-normal">(opsional)</span>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">
+              Luas (m²) <span class="text-ink-400 dark:text-ink-400 font-normal">(opsional)</span>
             </label>
             <input
               v-model="formKolam.luas_m2"
@@ -236,14 +284,60 @@ onMounted(() => {
               min="0"
               step="0.01"
               placeholder="Contoh: 50"
-              class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
             />
           </div>
           <div class="flex gap-3 pt-2">
             <button
               type="button"
-              class="flex-1 rounded-lg border border-ink-100 py-2.5 text-[13.5px] font-semibold"
+              class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold"
               @click="showTambahKolam = false"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600"
+            >
+              Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Edit Kolam -->
+    <div v-if="showEditKolam" class="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div class="absolute inset-0 bg-black/40" @click="showEditKolam = false" />
+      <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5">
+        <h2 class="text-[16px] font-semibold dark:text-white mb-4">Edit Kolam</h2>
+        <form class="space-y-3" @submit.prevent="simpanEditKolam">
+          <div>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nama Kolam</label>
+            <input
+              v-model="formEditKolam.nama_kolam"
+              type="text"
+              required
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
+            />
+          </div>
+          <div>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">
+              Luas (m²) <span class="text-ink-400 dark:text-ink-400 font-normal">(opsional)</span>
+            </label>
+            <input
+              v-model="formEditKolam.luas_m2"
+              type="number"
+              min="0"
+              step="0.01"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
+            />
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button
+              type="button"
+              class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold"
+              @click="showEditKolam = false"
             >
               Batal
             </button>

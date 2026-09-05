@@ -1,59 +1,86 @@
 import { Router } from 'express'
-import { pool } from '../config/db.js'
+import { eq, and, asc, sql } from 'drizzle-orm'
+import { db } from '../db/drizzle.js'
+import { kolam, tebar, jenisIkan } from '../drizzle/schema.js'
 
 const router = Router()
 
 // GET /api/kolam → daftar kolam + info tebar aktif (jenis ikan & jumlah saat ini)
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT k.id, k.nama_kolam, k.luas_m2, k.status,
-             t.id AS tebar_id, t.tanggal_tebar, t.jumlah_bibit, t.jumlah_saat_ini,
-             ji.id AS jenis_ikan_id, ji.nama AS nama_ikan
-      FROM kolam k
-      LEFT JOIN tebar t ON t.kolam_id = k.id AND t.status = 'aktif'
-      LEFT JOIN jenis_ikan ji ON ji.id = t.jenis_ikan_id
-      ORDER BY k.nama_kolam ASC
-    `)
-    res.json({ data: result.rows })
+    const result = await db
+      .select({
+        id: kolam.id,
+        nama_kolam: kolam.namaKolam,
+        luas_m2: kolam.luasM2,
+        status: kolam.status,
+        tebar_id: tebar.id,
+        tanggal_tebar: tebar.tanggalTebar,
+        jumlah_bibit: tebar.jumlahBibit,
+        jumlah_saat_ini: tebar.jumlahSaatIni,
+        jenis_ikan_id: jenisIkan.id,
+        nama_ikan: jenisIkan.nama,
+      })
+      .from(kolam)
+      .leftJoin(tebar, and(eq(tebar.kolamId, kolam.id), eq(tebar.status, 'aktif')))
+      .leftJoin(jenisIkan, eq(jenisIkan.id, tebar.jenisIkanId))
+      .orderBy(asc(kolam.namaKolam))
+
+    res.json({ data: result })
   } catch (err) {
     res.status(500).json({ message: 'Gagal mengambil data kolam', error: err.message })
   }
 })
 
+// POST /api/kolam → tambah kolam baru
 router.post('/', async (req, res) => {
   const { nama_kolam, luas_m2 } = req.body
   if (!nama_kolam) return res.status(400).json({ message: 'nama_kolam wajib diisi' })
   try {
-    const result = await pool.query(
-      `INSERT INTO kolam (nama_kolam, luas_m2) VALUES ($1, $2) RETURNING *`,
-      [nama_kolam, luas_m2 || null]
-    )
-    res.status(201).json({ data: result.rows[0] })
+    const result = await db
+      .insert(kolam)
+      .values({
+        namaKolam: nama_kolam,
+        luasM2: luas_m2 || null,
+      })
+      .returning()
+
+    res.status(201).json({ data: result[0] })
   } catch (err) {
     res.status(500).json({ message: 'Gagal menambah kolam', error: err.message })
   }
 })
 
+// PUT /api/kolam/:id → update kolam (partial, seperti COALESCE)
 router.put('/:id', async (req, res) => {
   const { nama_kolam, luas_m2 } = req.body
   try {
-    const result = await pool.query(
-      `UPDATE kolam SET nama_kolam = COALESCE($1, nama_kolam), luas_m2 = COALESCE($2, luas_m2),
-       updated_at = NOW() WHERE id = $3 RETURNING *`,
-      [nama_kolam, luas_m2, req.params.id]
-    )
-    if (result.rows.length === 0) return res.status(404).json({ message: 'Kolam tidak ditemukan' })
-    res.json({ data: result.rows[0] })
+    const result = await db
+      .update(kolam)
+      .set({
+        namaKolam: nama_kolam !== undefined ? nama_kolam : sql`${kolam.namaKolam}`,
+        luasM2: luas_m2 !== undefined ? luas_m2 : sql`${kolam.luasM2}`,
+        updatedAt: sql`NOW()`,
+      })
+      .where(eq(kolam.id, req.params.id))
+      .returning()
+
+    if (result.length === 0) return res.status(404).json({ message: 'Kolam tidak ditemukan' })
+    res.json({ data: result[0] })
   } catch (err) {
     res.status(500).json({ message: 'Gagal mengubah kolam', error: err.message })
   }
 })
 
+// DELETE /api/kolam/:id → hapus kolam
 router.delete('/:id', async (req, res) => {
   try {
-    const result = await pool.query('DELETE FROM kolam WHERE id = $1 RETURNING id', [req.params.id])
-    if (result.rows.length === 0) return res.status(404).json({ message: 'Kolam tidak ditemukan' })
+    const result = await db
+      .delete(kolam)
+      .where(eq(kolam.id, req.params.id))
+      .returning({ id: kolam.id })
+
+    if (result.length === 0) return res.status(404).json({ message: 'Kolam tidak ditemukan' })
     res.json({ message: 'Kolam dihapus' })
   } catch (err) {
     res.status(500).json({ message: 'Gagal menghapus kolam', error: err.message })

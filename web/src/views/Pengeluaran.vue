@@ -122,7 +122,7 @@ onMounted(muat)
         <button
           type="button"
           class="px-4 py-2 rounded-lg text-[13.5px] font-semibold"
-          :class="tab === 'pengeluaran' ? 'bg-brand-500 text-white' : 'bg-white dark:bg-ink-700 border border-ink-100'"
+          :class="tab === 'pengeluaran' ? 'bg-brand-500 text-white' : 'bg-white dark:bg-ink-700 border border-ink-100 dark:border-ink-500 dark:text-ink-300'"
           @click="tab = 'pengeluaran'"
         >
           Pengeluaran Lain
@@ -130,7 +130,7 @@ onMounted(muat)
         <button
           type="button"
           class="px-4 py-2 rounded-lg text-[13.5px] font-semibold"
-          :class="tab === 'pakan' ? 'bg-brand-500 text-white' : 'bg-white dark:bg-ink-700 border border-ink-100'"
+          :class="tab === 'pakan' ? 'bg-brand-500 text-white' : 'bg-white dark:bg-ink-700 border border-ink-100 dark:border-ink-500 dark:text-ink-300'"
           @click="tab = 'pakan'"
         >
           Pakan Harian
@@ -153,18 +153,18 @@ onMounted(muat)
       <table class="w-full text-left text-[13.5px]">
         <thead>
           <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
-            <th class="px-4 py-3">Tanggal</th>
-            <th class="px-4 py-3">Kategori</th>
-            <th class="px-4 py-3">Deskripsi</th>
-            <th class="px-4 py-3">Total</th>
-            <th class="px-4 py-3 text-right">Aksi</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tanggal</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kategori</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Deskripsi</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Total</th>
+            <th class="px-4 py-3 text-right text-ink-500 dark:text-ink-300 font-semibold">Aksi</th>
           </tr>
         </thead>
         <tbody>
           <tr
             v-for="p in daftarPengeluaran"
             :key="p.id"
-            class="border-b border-ink-100 dark:border-ink-500 last:border-0"
+            class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100"
           >
             <td class="px-4 py-3">{{ tanggal(p.tanggal) }}</td>
             <td class="px-4 py-3 capitalize">{{ p.kategori }}</td>
@@ -180,6 +180,11 @@ onMounted(muat)
               </button>
             </td>
           </tr>
+          <tr v-if="!daftarPengeluaran.length">
+            <td colspan="5" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+              Belum ada pengeluaran lain.
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -192,18 +197,18 @@ onMounted(muat)
       <table class="w-full text-left text-[13.5px]">
         <thead>
           <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
-            <th class="px-4 py-3">Tanggal</th>
-            <th class="px-4 py-3">Kolam</th>
-            <th class="px-4 py-3">Jumlah (kg)</th>
-            <th class="px-4 py-3">Biaya</th>
-            <th class="px-4 py-3 text-right">Aksi</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tanggal</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah (kg)</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Biaya</th>
+            <th class="px-4 py-3 text-right text-ink-500 dark:text-ink-300 font-semibold">Aksi</th>
           </tr>
         </thead>
         <tbody>
           <tr
             v-for="p in daftarPakan"
             :key="p.id"
-            class="border-b border-ink-100 dark:border-ink-500 last:border-0"
+            class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100"
           >
             <td class="px-4 py-3">{{ tanggal(p.tanggal) }}</td>
             <td class="px-4 py-3">{{ p.nama_kolam }}</td>
@@ -219,6 +224,11 @@ onMounted(muat)
               </button>
             </td>
           </tr>
+          <tr v-if="!daftarPakan.length">
+            <td colspan="5" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+              Belum ada catatan pakan.
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -229,13 +239,13 @@ onMounted(muat)
       <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5">
         <!-- Form Pengeluaran -->
         <template v-if="tab === 'pengeluaran'">
-          <h2 class="text-[16px] font-semibold mb-4">Tambah Pengeluaran</h2>
+          <h2 class="text-[16px] font-semibold dark:text-white mb-4">Tambah Pengeluaran</h2>
           <form class="space-y-3" @submit.prevent="simpanPengeluaran">
             <div>
-              <label class="block text-[13px] font-medium mb-1">Kategori</label>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Kategori</label>
               <select
                 v-model="formPengeluaran.kategori"
-                class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900"
+                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
               >
                 <option value="obat">Obat</option>
                 <option value="listrik">Listrik</option>
@@ -245,36 +255,36 @@ onMounted(muat)
               </select>
             </div>
             <div>
-              <label class="block text-[13px] font-medium mb-1">Total</label>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Total</label>
               <input
                 v-model="formPengeluaran.jumlah"
                 type="number"
                 min="0"
                 required
-                class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]"
+                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
               />
             </div>
             <div>
-              <label class="block text-[13px] font-medium mb-1">Deskripsi</label>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Deskripsi</label>
               <input
                 v-model="formPengeluaran.deskripsi"
                 type="text"
-                class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]"
+                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
               />
             </div>
             <div>
-              <label class="block text-[13px] font-medium mb-1">Tanggal</label>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Tanggal</label>
               <input
                 v-model="formPengeluaran.tanggal"
                 type="date"
                 required
-                class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]"
+                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
               />
             </div>
             <div class="flex gap-3 pt-2">
               <button
                 type="button"
-                class="flex-1 rounded-lg border border-ink-100 py-2.5 text-[13.5px] font-semibold"
+                class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold"
                 @click="showForm = false"
               >
                 Batal
@@ -291,14 +301,14 @@ onMounted(muat)
 
         <!-- Form Pakan -->
         <template v-else>
-          <h2 class="text-[16px] font-semibold mb-4">Tambah Pakan Harian</h2>
+          <h2 class="text-[16px] font-semibold dark:text-white mb-4">Tambah Pakan Harian</h2>
           <form class="space-y-3" @submit.prevent="simpanPakan">
             <div>
-              <label class="block text-[13px] font-medium mb-1">Kolam</label>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Kolam</label>
               <select
                 v-model="formPakan.kolam_id"
                 required
-                class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900"
+                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
               >
                 <option value="" disabled>Pilih kolam</option>
                 <option v-for="k in daftarKolam" :key="k.id" :value="k.id">
@@ -308,39 +318,39 @@ onMounted(muat)
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-[13px] font-medium mb-1">Jumlah (kg)</label>
+                <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jumlah (kg)</label>
                 <input
                   v-model="formPakan.jumlah_kg"
                   type="number"
                   step="0.1"
                   min="0"
                   required
-                  class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]"
+                  class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
                 />
               </div>
               <div>
-                <label class="block text-[13px] font-medium mb-1">Biaya</label>
+                <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Biaya</label>
                 <input
                   v-model="formPakan.biaya"
                   type="number"
                   min="0"
-                  class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]"
+                  class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
                 />
               </div>
             </div>
             <div>
-              <label class="block text-[13px] font-medium mb-1">Tanggal</label>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Tanggal</label>
               <input
                 v-model="formPakan.tanggal"
                 type="date"
                 required
-                class="w-full rounded-lg border border-ink-100 px-3 py-2.5 text-[13.5px]"
+                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
               />
             </div>
             <div class="flex gap-3 pt-2">
               <button
                 type="button"
-                class="flex-1 rounded-lg border border-ink-100 py-2.5 text-[13.5px] font-semibold"
+                class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold"
                 @click="showForm = false"
               >
                 Batal
