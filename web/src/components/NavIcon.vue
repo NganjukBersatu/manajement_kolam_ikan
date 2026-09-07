@@ -1,28 +1,25 @@
 <script setup>
-const props = defineProps({ name: String, size: { type: [Number, String], default: 18 } })
+defineProps({
+  name: { type: String, required: true },
+  size: { type: Number, default: 16 }
+})
 
 const paths = {
-  home: 'M3 11l9-7 9 7M5 10v10h14V10',
-  wallet: 'M3 7h15a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h11M16 13h3',
-  calendar: 'M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z',
-  scissors: 'M6 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM6 20a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM20 4L7.5 12M20 20L7.5 12',
-  fish: 'M3 12c3-4 8-6 13-4 2 1 4 2 5 4-1 2-3 3-5 4-5 2-10 0-13-4zM17 10l2-2M17 14l2 2',
-  file: 'M6 3h9l5 5v13H6V3zM14 3v5h5',
-  gear: 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.56V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1-1.56 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.56-1H3a2 2 0 110-4h.09a1.7 1.7 0 001.56-1 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34H9a1.7 1.7 0 001-1.56V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87V9a1.7 1.7 0 001.56 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.56 1z',
-  sun: 'M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4M12 8a4 4 0 100 8 4 4 0 000-8z',
-  moon: 'M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z',
-  chart: 'M4 20V10M10 20V4M16 20v-7M4 20h16',
-  alert: 'M12 9v4M12 17h.01M10.3 3.9L2.5 17a1 1 0 00.9 1.5h17.2a1 1 0 00.9-1.5L13.7 3.9a1 1 0 00-1.4 0z',
-  plus: 'M12 5v14M5 12h14',
-  edit: 'M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z',
-  trash: 'M4 7h16M9 7V4h6v3m-8 0l1 13h8l1-13',
-  menu: 'M4 7h16M4 12h16M4 17h16',
-  users: 'M17 20v-1a4 4 0 00-4-4H7a4 4 0 00-4 4v1M9 11a4 4 0 100-8 4 4 0 000 8zM23 20v-1a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75'
+  home: 'M3 12l9-9 9 9M4 10v10h6v-6h4v6h6V10',
+  wallet: 'M3 7a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z M16 12h2',
+  fish: 'M2 12s4-6 12-6 8 6 8 6-4 6-8 6-12-6-12-6z M18 9l2-2m-2 5l2 2',
+  calendar: 'M3 4h18v18H3z M3 10h18 M8 2v4 M16 2v4',
+  chart: 'M4 20V10 M10 20V4 M16 20v-8 M22 20H2',
+  file: 'M6 2h9l5 5v15H6z M15 2v5h5',
+  gear: 'M12 15a3 3 0 100-6 3 3 0 000 6z M19 12a7 7 0 00-.2-1.6l2-1.6-2-3.4-2.4 1a7 7 0 00-2.8-1.6L13 2h-2l-.6 2.8a7 7 0 00-2.8 1.6l-2.4-1-2 3.4 2 1.6A7 7 0 005 12a7 7 0 00.2 1.6l-2 1.6 2 3.4 2.4-1a7 7 0 002.8 1.6L11 22h2l.6-2.8a7 7 0 002.8-1.6l2.4 1 2-3.4-2-1.6c.13-.52.2-1.06.2-1.6z',
+  scissors: 'M6 9a3 3 0 100-6 3 3 0 000 6z M6 21a3 3 0 100-6 3 3 0 000 6z M20 4L8.5 12 20 20 M9.5 12L4 8.5m5.5 3.5L4 15.5',
+  sun: 'M12 4V2m0 20v-2m8-8h2M2 12h2m14.14-6.14l1.42-1.42M4.44 19.56l1.42-1.42M19.56 19.56l-1.42-1.42M4.44 4.44l1.42 1.42M12 7a5 5 0 100 10 5 5 0 000-10z',
+  moon: 'M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z'
 }
 </script>
 
 <template>
-  <svg :width="size" :height="size" viewBox="0 0 24 24" fill="none">
-    <path :d="paths[name] || paths.file" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+  <svg :width="size" :height="size" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path :d="paths[name] || paths.file" />
   </svg>
 </template>

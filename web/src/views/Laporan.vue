@@ -1,17 +1,28 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 const data = ref(null)
 const loading = ref(true)
 
-const namaBulanIni = computed(() =>
-  new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date())
-)
+const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
 
-const namaBulanLalu = computed(() => {
-  const d = new Date()
+const now = new Date()
+const bulanDipilih = ref(now.getMonth() + 1) // 1-12
+const tahunDipilih = ref(now.getFullYear())
+
+// Daftar tahun untuk dropdown: 3 tahun ke belakang s/d tahun berjalan
+const tahunTersedia = computed(() => {
+  const arr = []
+  for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) arr.push(y)
+  return arr
+})
+
+const namaBulanDipilih = computed(() => `${namaBulan[bulanDipilih.value - 1]} ${tahunDipilih.value}`)
+
+const namaBulanSebelumnya = computed(() => {
+  const d = new Date(tahunDipilih.value, bulanDipilih.value - 1, 1)
   d.setMonth(d.getMonth() - 1)
-  return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(d)
+  return `${namaBulan[d.getMonth()]} ${d.getFullYear()}`
 })
 
 function rupiah(n) {
@@ -30,7 +41,7 @@ function tanggal(d) {
 async function muat() {
   loading.value = true
   try {
-    const res = await fetch('/api/laporan')
+    const res = await fetch(`/api/laporan?bulan=${bulanDipilih.value}&tahun=${tahunDipilih.value}`)
     const json = await res.json()
     data.value = json.data
   } catch (err) {
@@ -41,13 +52,28 @@ async function muat() {
 }
 
 onMounted(muat)
+watch([bulanDipilih, tahunDipilih], muat)
 </script>
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h1 class="text-[18px] font-semibold dark:text-white">Laporan Ringkasan</h1>
-      <p class="text-[13.5px] text-ink-500 dark:text-ink-300">Periode: {{ namaBulanIni }}</p>
+    <!-- Filter Bulan & Tahun -->
+    <div class="flex items-center justify-between">
+      <p class="text-[13px] text-ink-500 dark:text-ink-300">Pilih periode untuk melihat laporan bulan sebelumnya</p>
+      <div class="flex items-center gap-2">
+        <select
+          v-model.number="bulanDipilih"
+          class="text-[13.5px] border border-ink-100 dark:border-ink-500 rounded-lg px-3 py-1.5 bg-white dark:bg-ink-900 dark:text-white"
+        >
+          <option v-for="(b, i) in namaBulan" :key="b" :value="i + 1">{{ b }}</option>
+        </select>
+        <select
+          v-model.number="tahunDipilih"
+          class="text-[13.5px] border border-ink-100 dark:border-ink-500 rounded-lg px-3 py-1.5 bg-white dark:bg-ink-900 dark:text-white"
+        >
+          <option v-for="y in tahunTersedia" :key="y" :value="y">{{ y }}</option>
+        </select>
+      </div>
     </div>
 
     <div v-if="loading" class="text-[13.5px] text-ink-500 dark:text-ink-300 py-10 text-center">Memuat...</div>
@@ -80,8 +106,8 @@ onMounted(muat)
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-[14px] dark:text-white">Bulan Ini</h3>
-            <span class="text-[12px] px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-600/25 dark:text-brand-100 font-medium">{{ namaBulanIni }}</span>
+            <h3 class="font-semibold text-[14px] dark:text-white">Periode Dipilih</h3>
+            <span class="text-[12px] px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-600/25 dark:text-brand-100 font-medium">{{ namaBulanDipilih }}</span>
           </div>
           <div class="space-y-3 text-[13.5px]">
             <div class="flex justify-between"><span class="text-ink-500 dark:text-ink-300">Panen (ekor)</span><span class="font-semibold dark:text-ink-100">{{ data.total_panen_ekor || 0 }} ekor</span></div>
@@ -98,7 +124,7 @@ onMounted(muat)
         <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-semibold text-[14px] dark:text-white">Bulan Sebelumnya</h3>
-            <span class="text-[12px] px-2 py-0.5 rounded-full bg-ink-100 text-ink-600 dark:bg-ink-500/40 dark:text-ink-200 font-medium">{{ namaBulanLalu }}</span>
+            <span class="text-[12px] px-2 py-0.5 rounded-full bg-ink-100 text-ink-600 dark:bg-ink-500/40 dark:text-ink-200 font-medium">{{ namaBulanSebelumnya }}</span>
           </div>
           <div class="space-y-3 text-[13.5px]">
             <div class="flex justify-between"><span class="text-ink-500 dark:text-ink-300">Panen (ekor)</span><span class="font-semibold dark:text-ink-100">{{ data.bulan_lalu?.panen_ekor || 0 }} ekor</span></div>
