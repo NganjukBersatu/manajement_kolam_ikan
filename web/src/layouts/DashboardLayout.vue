@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import NavIcon from '../components/NavIcon.vue'
+import Header from '../components/Header.vue'
 
 const route = useRoute()
 const jadwalTerbuka = ref(route.path.startsWith('/jadwal'))
@@ -20,6 +21,7 @@ const jadwalSub = [
 
 const laporanSub = [
   { to: '/laporan', label: 'Ringkasan', icon: 'chart' },
+  { to: '/laporan/penjualan', label: 'Penjualan', icon: 'wallet' },
   { to: '/laporan/pengeluaran', label: 'Pengeluaran', icon: 'file' }
 ]
 
@@ -38,7 +40,6 @@ const menuBawah = [
       </div>
 
       <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-1 text-[13.5px]">
-        <!-- Menu Utama -->
         <router-link
           v-for="m in menu"
           :key="m.to"
@@ -49,7 +50,6 @@ const menuBawah = [
           <NavIcon :name="m.icon" :size="16" /> {{ m.label }}
         </router-link>
 
-        <!-- Submenu Jadwal -->
         <button
           type="button"
           class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10"
@@ -72,7 +72,6 @@ const menuBawah = [
           </router-link>
         </div>
 
-        <!-- Submenu Laporan -->
         <button
           type="button"
           class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10"
@@ -95,7 +94,6 @@ const menuBawah = [
           </router-link>
         </div>
 
-        <!-- Menu Bawah -->
         <router-link
           v-for="m in menuBawah"
           :key="m.to"
@@ -108,8 +106,11 @@ const menuBawah = [
       </nav>
     </aside>
 
-    <main class="flex-1 overflow-y-auto p-6 bg-ink-50 dark:bg-ink-900">
-      <router-view />
-    </main>
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <Header />
+      <main class="flex-1 overflow-y-auto p-6 bg-ink-50 dark:bg-ink-900">
+        <router-view />
+      </main>
+    </div>
   </div>
 </template>
