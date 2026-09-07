@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import NavIcon from '../components/NavIcon.vue'
 import Header from '../components/Header.vue'
+import { logout } from '../utils/auth.js'
 
 const route = useRoute()
 const jadwalTerbuka = ref(route.path.startsWith('/jadwal'))
@@ -29,6 +30,12 @@ const menuBawah = [
   { to: '/pengeluaran', label: 'Pengeluaran', icon: 'file' },
   { to: '/pengaturan', label: 'Pengaturan', icon: 'gear' }
 ]
+
+function konfirmasiLogout() {
+  if (confirm('Yakin ingin keluar dari dashboard?')) {
+    logout()
+  }
+}
 </script>
 
 <template>
@@ -104,6 +111,22 @@ const menuBawah = [
           <NavIcon :name="m.icon" :size="16" /> {{ m.label }}
         </router-link>
       </nav>
+
+      <!-- Tombol Keluar -->
+      <div class="px-2 py-3 border-t border-white/10">
+        <button
+          type="button"
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 text-[13.5px] text-left"
+          @click="konfirmasiLogout"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Keluar
+        </button>
+      </div>
     </aside>
 
     <div class="flex-1 flex flex-col overflow-hidden">

@@ -172,3 +172,11 @@ export const pengaturanAkun = pgTable("pengaturan_akun", {
 	email: varchar({ length: 100 }),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });
+
+// Tabel akun login (admin dashboard)
+export const users = pgTable("users", {
+	id: serial().primaryKey().notNull(),
+	username: varchar({ length: 50 }).notNull().unique(),
+	passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});

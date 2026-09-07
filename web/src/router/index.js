@@ -1,7 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardLayout from '../layouts/DashboardLayout.vue'
+import { isLoggedIn } from '../utils/auth.js'
 
 const routes = [
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/Login.vue'),
+    meta: { public: true, title: 'Login' }
+  },
   {
     path: '/',
     component: DashboardLayout,
@@ -23,4 +30,24 @@ const routes = [
   }
 ]
 
-export default createRouter({ history: createWebHistory(), routes })
+const router = createRouter({ history: createWebHistory(), routes })
+
+// Route guard: cek token sebelum masuk ke halaman mana pun
+router.beforeEach((to, from, next) => {
+  const loggedIn = isLoggedIn()
+
+  // Halaman publik (cuma /login): kalau sudah login, jangan biarkan buka /login lagi
+  if (to.meta.public) {
+    if (loggedIn && to.name === 'login') return next('/')
+    return next()
+  }
+
+  // Halaman lain semuanya butuh login
+  if (!loggedIn) {
+    return next({ name: 'login' })
+  }
+
+  next()
+})
+
+export default router
