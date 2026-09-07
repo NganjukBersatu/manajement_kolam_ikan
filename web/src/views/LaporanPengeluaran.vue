@@ -45,11 +45,36 @@ function tanggal(d) {
 async function muat() {
   loading.value = true
   try {
-    const res = await fetch(`/api/pengeluaran?bulan=${selectedMonth.value}&tahun=${selectedYear.value}`)
-    const json = await res.json()
-    daftar.value = json.data || []
+    // Ambil pengeluaran biasa
+    const resPengeluaran = await fetch(
+      `/api/pengeluaran?bulan=${selectedMonth.value}&tahun=${selectedYear.value}`
+    )
+    const jsonPengeluaran = await resPengeluaran.json()
+    const dataPengeluaran = (jsonPengeluaran.data || []).map(item => ({
+      ...item,
+      kategori: item.kategori || 'Pengeluaran Lain',
+      jumlah: Number(item.jumlah || 0)
+    }))
 
-    // Hitung total otomatis
+    // Ambil pengeluaran pakan
+    const resPakan = await fetch(
+      `/api/pakan?bulan=${selectedMonth.value}&tahun=${selectedYear.value}`
+    )
+    const jsonPakan = await resPakan.json()
+    const dataPakan = (jsonPakan.data || []).map(item => ({
+      id: `pakan-${item.id}`,
+      tanggal: item.tanggal,
+      kategori: 'Pakan Harian',
+      deskripsi: item.deskripsi || `Pakan ${item.jenis_pakan || ''}`.trim(),
+      jumlah: Number(item.total || item.jumlah || item.biaya || 0)
+    }))
+
+    // Gabungkan & urutkan berdasarkan tanggal (terbaru di atas)
+    daftar.value = [...dataPengeluaran, ...dataPakan].sort(
+      (a, b) => new Date(b.tanggal) - new Date(a.tanggal)
+    )
+
+    // Hitung total
     total.value = daftar.value.reduce((sum, item) => sum + Number(item.jumlah || 0), 0)
   } catch (err) {
     console.error(err)
@@ -60,7 +85,6 @@ async function muat() {
   }
 }
 
-// Otomatis reload saat ganti bulan/tahun
 watch([selectedMonth, selectedYear], () => {
   muat()
 })
@@ -74,7 +98,9 @@ onMounted(muat)
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
         <h1 class="text-[18px] font-semibold dark:text-white">Laporan Pengeluaran</h1>
-        <p class="text-[13.5px] text-ink-500 dark:text-ink-300">Detail & total pengeluaran per bulan</p>
+        <p class="text-[13.5px] text-ink-500 dark:text-ink-300">
+          Detail & total pengeluaran (termasuk pakan) per bulan
+        </p>
       </div>
 
       <!-- Filter Bulan & Tahun -->
@@ -101,9 +127,15 @@ onMounted(muat)
 
     <!-- Kartu Total -->
     <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
-      <p class="text-[13px] text-ink-500 dark:text-ink-300">Total Pengeluaran — {{ namaPeriode }}</p>
-      <p class="text-2xl font-bold text-danger-600 dark:text-danger-500 mt-1">{{ rupiah(total) }}</p>
-      <p class="text-[12.5px] text-ink-400 dark:text-ink-300 mt-1">{{ daftar.length }} transaksi</p>
+      <p class="text-[13px] text-ink-500 dark:text-ink-300">
+        Total Pengeluaran — {{ namaPeriode }}
+      </p>
+      <p class="text-2xl font-bold text-danger-600 dark:text-danger-500 mt-1">
+        {{ rupiah(total) }}
+      </p>
+      <p class="text-[12.5px] text-ink-400 dark:text-ink-300 mt-1">
+        {{ daftar.length }} transaksi
+      </p>
     </div>
 
     <!-- Loading -->
@@ -143,11 +175,14 @@ onMounted(muat)
           </tr>
         </tbody>
 
-        <!-- Footer Total -->
         <tfoot v-if="daftar.length">
           <tr class="border-t border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
-            <td colspan="3" class="px-4 py-3 font-semibold text-right dark:text-white">Total Bersih</td>
-            <td class="px-4 py-3 text-right font-bold text-danger-600 dark:text-danger-500">{{ rupiah(total) }}</td>
+            <td colspan="3" class="px-4 py-3 font-semibold text-right dark:text-white">
+              Total Bersih
+            </td>
+            <td class="px-4 py-3 text-right font-bold text-danger-600 dark:text-danger-500">
+              {{ rupiah(total) }}
+            </td>
           </tr>
         </tfoot>
       </table>
