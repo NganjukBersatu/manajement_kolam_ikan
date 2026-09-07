@@ -3,6 +3,8 @@ import express from 'express'
 import cors from 'cors'
 
 import { testConnection } from './config/db.js'
+import { requireAuth } from './middleware/auth.js'
+import authRoutes from './routes/auth.js'
 import dashboardRoutes from './routes/dashboard.js'
 import jenisIkanRoutes from './routes/jenisIkan.js'
 import kolamRoutes from './routes/kolam.js'
@@ -22,7 +24,12 @@ const PORT = process.env.PORT || 4001
 app.use(cors())
 app.use(express.json())
 
+// ---- Route PUBLIK (tidak perlu login) ----
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'kolam-ikan-api' }))
+app.use('/api/auth', authRoutes)
+
+// ---- Mulai dari sini, semua route /api/* WAJIB sudah login ----
+app.use('/api', requireAuth)
 
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/jenis-ikan', jenisIkanRoutes)

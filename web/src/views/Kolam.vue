@@ -109,6 +109,23 @@ async function simpanEditKolam() {
   await muatKolam()
 }
 
+async function hapusKolam(kolam) {
+  const konfirmasi = confirm(`Yakin ingin menghapus kolam "${kolam.nama_kolam}"? Data ini tidak bisa dikembalikan.`)
+  if (!konfirmasi) return
+
+  const res = await fetch(`/api/kolam/${kolam.id}`, {
+    method: 'DELETE'
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    alert(err.message || 'Gagal menghapus kolam')
+    return
+  }
+
+  await muatKolam()
+}
+
 function rupiah(n) {
   return n ? Number(n).toLocaleString('id-ID') : '-'
 }
@@ -179,6 +196,13 @@ onMounted(() => {
                 @click="bukaEditKolam(k)"
               >
                 Edit
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-500/40 text-red-600 dark:text-red-400 text-[12.5px] font-semibold hover:bg-red-50 dark:hover:bg-red-500/10"
+                @click="hapusKolam(k)"
+              >
+                Hapus
               </button>
               <button
                 v-if="k.status !== 'aktif'"

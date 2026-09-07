@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { eq, and, asc, sql } from 'drizzle-orm'
 import { db } from '../db/drizzle.js'
-import { kolam, tebar, jenisIkan } from '../drizzle/schema.js'
+import { kolam, tebar, jenisIkan, jadwal, sortir, panen, pakan, penjualan } from '../drizzle/schema.js'
 
 const router = Router()
 
@@ -72,17 +72,53 @@ router.put('/:id', async (req, res) => {
   }
 })
 
-// DELETE /api/kolam/:id → hapus kolam
+// DELETE /api/kolam/:id → hapus kolam beserta seluruh riwayat terkait (cascade manual)
+//
+// Urutan hapus WAJIB dari "cucu" ke "induk" karena ada foreign key:
+//   kolam <- tebar <- jadwal <- sortir
+//                             <- panen
+//          <- pakan
+//          <- penjualan
+//          <- sortir (langsung)
+//          <- panen (langsung)
+//          <- jadwal (langsung)
+//
+// Semua dibungkus dalam satu transaksi: kalau ada satu langkah gagal,
+// semua langkah dibatalkan (tidak ada data yang terhapus setengah-setengah).
 router.delete('/:id', async (req, res) => {
+  const kolamId = req.params.id
+
   try {
-    const result = await db
-      .delete(kolam)
-      .where(eq(kolam.id, req.params.id))
-      .returning({ id: kolam.id })
+    const result = await db.transaction(async (tx) => {
+      // 1. Hapus panen & sortir (referensi ke tebar/jadwal/kolam)
+      await tx.delete(panen).where(eq(panen.kolamId, kolamId))
+      await tx.delete(sortir).where(eq(sortir.kolamId, kolamId))
+
+      // 2. Hapus jadwal (referensi ke tebar & kolam)
+      await tx.delete(jadwal).where(eq(jadwal.kolamId, kolamId))
+
+      // 3. Hapus riwayat tebar (referensi ke kolam)
+      await tx.delete(tebar).where(eq(tebar.kolamId, kolamId))
+
+      // 4. Hapus catatan pakan (referensi ke kolam)
+      await tx.delete(pakan).where(eq(pakan.kolamId, kolamId))
+
+      // 5. Hapus catatan penjualan (referensi ke kolam, nullable tapi tetap dibersihkan)
+      await tx.delete(penjualan).where(eq(penjualan.kolamId, kolamId))
+
+      // 6. Terakhir, hapus kolamnya sendiri
+      const deleted = await tx
+        .delete(kolam)
+        .where(eq(kolam.id, kolamId))
+        .returning({ id: kolam.id })
+
+      return deleted
+    })
 
     if (result.length === 0) return res.status(404).json({ message: 'Kolam tidak ditemukan' })
-    res.json({ message: 'Kolam dihapus' })
+    res.json({ message: 'Kolam beserta seluruh riwayatnya berhasil dihapus' })
   } catch (err) {
+    console.error('❌ ERROR HAPUS KOLAM:', err)
     res.status(500).json({ message: 'Gagal menghapus kolam', error: err.message })
   }
 })
