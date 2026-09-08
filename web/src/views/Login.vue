@@ -38,33 +38,26 @@ async function submit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 px-4 relative overflow-hidden">
-    <!-- Background decoration -->
-    <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-emerald-300/30 blur-3xl"></div>
-      <div class="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-teal-300/30 blur-3xl"></div>
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-green-200/20 blur-3xl"></div>
-    </div>
-
-    <div class="w-full max-w-[400px] relative z-10">
+  <div class="min-h-screen flex items-center justify-center bg-cream px-4">
+    <div class="w-full max-w-[400px]">
       <!-- Card -->
-      <div class="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-emerald-100 p-8">
+      <div class="bg-white rounded-card shadow-card border border-ink-100 p-8">
         <!-- Logo -->
         <div class="flex flex-col items-center mb-8">
-          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center font-bold text-white text-2xl shadow-lg shadow-emerald-500/30 mb-3">
+          <div class="w-14 h-14 rounded-xl bg-brand-500 flex items-center justify-center font-bold text-white text-2xl mb-3">
             K
           </div>
-          <h1 class="text-emerald-900 text-xl font-semibold tracking-tight">Kolam Ikan</h1>
-          <p class="text-emerald-600/80 text-[13px] mt-1">Masuk ke Dashboard</p>
+          <h1 class="text-ink-900 text-xl font-semibold tracking-tight">Manajement Kolam</h1>
+          <p class="text-ink-500 text-[13px] mt-1">Masuk ke Dashboard</p>
         </div>
 
         <!-- Form -->
         <form class="space-y-5" @submit.prevent="submit">
           <!-- Username -->
           <div>
-            <label class="block text-[13px] font-medium text-emerald-800 mb-1.5">Username</label>
+            <label class="block text-[13px] font-medium text-ink-700 mb-1.5">Username</label>
             <div class="relative">
-              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-400">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-300">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
@@ -76,16 +69,16 @@ async function submit() {
                 required
                 autofocus
                 placeholder="Masukkan username"
-                class="w-full rounded-xl border border-emerald-200 bg-emerald-50/50 pl-10 pr-4 py-3 text-[14px] text-emerald-900 placeholder:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition"
+                class="w-full rounded-card border border-ink-100 bg-cream pl-10 pr-4 py-3 text-[14px] text-ink-900 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-400/40 focus:border-brand-400 transition"
               />
             </div>
           </div>
 
           <!-- Password -->
           <div>
-            <label class="block text-[13px] font-medium text-emerald-800 mb-1.5">Password</label>
+            <label class="block text-[13px] font-medium text-ink-700 mb-1.5">Password</label>
             <div class="relative">
-              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-400">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-300">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
@@ -96,12 +89,12 @@ async function submit() {
                 :type="showPassword ? 'text' : 'password'"
                 required
                 placeholder="Masukkan password"
-                class="w-full rounded-xl border border-emerald-200 bg-emerald-50/50 pl-10 pr-11 py-3 text-[14px] text-emerald-900 placeholder:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition"
+                class="w-full rounded-card border border-ink-100 bg-cream pl-10 pr-11 py-3 text-[14px] text-ink-900 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-400/40 focus:border-brand-400 transition"
               />
               <!-- Icon Mata -->
               <button
                 type="button"
-                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-400 hover:text-emerald-600 transition"
+                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-300 hover:text-ink-500 transition"
                 @click="showPassword = !showPassword"
                 tabindex="-1"
               >
@@ -122,7 +115,7 @@ async function submit() {
           <!-- Error Message -->
           <div
             v-if="errorMsg"
-            class="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-[13px] rounded-xl px-4 py-3"
+            class="flex items-center gap-2 bg-danger-100 border border-danger-500/30 text-danger-600 text-[13px] rounded-card px-4 py-3"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -136,7 +129,7 @@ async function submit() {
           <button
             type="submit"
             :disabled="loading"
-            class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-3 text-[14px] font-semibold hover:from-emerald-600 hover:to-teal-700 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
+            class="w-full rounded-card bg-brand-500 text-white py-3 text-[14px] font-semibold hover:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
           >
             <svg
               v-if="loading"
@@ -159,7 +152,7 @@ async function submit() {
       </div>
 
       <!-- Footer -->
-      <p class="text-center text-emerald-600/70 text-[12px] mt-6">
+      <p class="text-center text-ink-500 text-[12px] mt-6">
         Sistem Manajemen Kolam Ikan
       </p>
     </div>
