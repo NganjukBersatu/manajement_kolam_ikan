@@ -1,39 +1,18 @@
 /**
  * ============================================================================
- * KONTRAK API — backend perlu menyediakan endpoint berikut (silakan sesuaikan
- * prefix /api/pakan dengan konvensi routing kamu):
+ * KONTRAK API — Stok Pakan
  * ============================================================================
  *
- * GET  /api/pakan
- *   -> { data: [ { id, nama, merek, satuan, stokSaatIni, stokMinimum, createdAt } ] }
- *
- * POST /api/pakan                body: { nama, merek, satuan, satuanCustom, stokAwal, stokMinimum }
- *   -> { data: { id, nama, merek, satuan, stokSaatIni, stokMinimum, createdAt } }
- *
- * PUT  /api/pakan/:id             body: { nama, merek, satuan, satuanCustom, stokMinimum }
- *   -> { data: { ...jenisPakan diperbarui... } }
- *   (catatan: endpoint ini TIDAK mengubah stokSaatIni — perubahan stok hanya
- *    lewat transaksi masuk/keluar supaya ada jejak audit)
- *
- * DELETE /api/pakan/:id
- *   -> 204 No Content (atau { message })
- *
- * POST /api/pakan/:id/masuk       body: { jumlah, tanggal, hargaSatuan, supplier, catatan }
- *   -> { data: { stokSaatIni, transaksi: { id, pakanId, tipe:'masuk', jumlah, tanggal, hargaSatuan, supplier, catatan, createdAt } } }
- *
- * POST /api/pakan/:id/keluar      body: { jumlah, tanggal, catatan }
- *   -> { data: { stokSaatIni, transaksi: { id, pakanId, tipe:'keluar', jumlah, tanggal, catatan, createdAt } } }
- *
- * GET  /api/pakan/riwayat?pakanId=&tipe=&dari=&sampai=&limit=&offset=
- *   -> { data: [ { id, pakanId, namaPakan, tipe, jumlah, satuan, tanggal, hargaSatuan, supplier, catatan, createdAt } ], hasMore }
- *
+ * GET    /api/stok-pakan
+ * POST   /api/stok-pakan          body: { nama, satuan, stokAwal, stokMinimum }
+ * PUT    /api/stok-pakan/:id      body: { nama, satuan, stokMinimum }
+ * DELETE /api/stok-pakan/:id
  * ============================================================================
  */
 
 import { ref, computed } from 'vue'
 
-// State module-level -> singleton, dipakai bersama di seluruh aplikasi
-// (pola yang sama seperti useBusinessSettings.js)
+// State module-level -> singleton
 const jenisPakan = ref([])
 const riwayat = ref([])
 const riwayatHasMore = ref(false)
@@ -54,7 +33,7 @@ export function useStokPakan() {
     loadingJenis.value = true
     error.value = ''
     try {
-      const res = await fetch('/api/pakan')
+      const res = await fetch('/api/stok-pakan')
       if (!res.ok) throw new Error('Gagal memuat data stok pakan.')
       const json = await res.json()
       jenisPakan.value = json.data || []
@@ -66,19 +45,11 @@ export function useStokPakan() {
   }
 
   async function muatRiwayat(filter = {}) {
+    // Sementara dikosongkan dulu (endpoint riwayat belum ada)
     loadingRiwayat.value = true
     try {
-      const params = new URLSearchParams(
-        Object.fromEntries(Object.entries(filter).filter(([, v]) => v !== '' && v != null))
-      )
-      const qs = params.toString()
-      const res = await fetch(`/api/pakan/riwayat${qs ? '?' + qs : ''}`)
-      if (!res.ok) throw new Error('Gagal memuat riwayat transaksi.')
-      const json = await res.json()
-      riwayat.value = json.data || []
-      riwayatHasMore.value = !!json.hasMore
-    } catch (err) {
-      error.value = err.message || 'Gagal memuat riwayat transaksi.'
+      riwayat.value = []
+      riwayatHasMore.value = false
     } finally {
       loadingRiwayat.value = false
     }
@@ -86,32 +57,49 @@ export function useStokPakan() {
 
   // ===== CRUD jenis pakan =====
   async function tambahJenisPakan(payload) {
-    const res = await fetch('/api/pakan', {
+    const body = {
+      nama: payload.nama,
+      satuan: payload.satuan || 'kg',
+      stokAwal: payload.stokAwal ?? payload.stok ?? 0,
+      stokMinimum: payload.stokMinimum ?? 10
+    }
+
+    const res = await fetch('/api/stok-pakan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(body)
     })
+
     const json = await res.json()
     if (!res.ok) throw new Error(json.message || 'Gagal menambah jenis pakan.')
+    
     jenisPakan.value.push(json.data)
     return json.data
   }
 
   async function ubahJenisPakan(id, payload) {
-    const res = await fetch(`/api/pakan/${id}`, {
+    const body = {
+      nama: payload.nama,
+      satuan: payload.satuan,
+      stokMinimum: payload.stokMinimum
+    }
+
+    const res = await fetch(`/api/stok-pakan/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(body)
     })
+
     const json = await res.json()
     if (!res.ok) throw new Error(json.message || 'Gagal mengubah jenis pakan.')
+
     const idx = jenisPakan.value.findIndex((p) => p.id === id)
     if (idx !== -1) jenisPakan.value[idx] = json.data
     return json.data
   }
 
   async function hapusJenisPakan(id) {
-    const res = await fetch(`/api/pakan/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/stok-pakan/${id}`, { method: 'DELETE' })
     if (!res.ok) {
       const json = await res.json().catch(() => ({}))
       throw new Error(json.message || 'Gagal menghapus jenis pakan.')
@@ -119,38 +107,16 @@ export function useStokPakan() {
     jenisPakan.value = jenisPakan.value.filter((p) => p.id !== id)
   }
 
-  // ===== Transaksi stok =====
+  // ===== Transaksi stok (sementara belum diimplementasi di backend) =====
   async function catatStokMasuk(pakanId, payload) {
-    const res = await fetch(`/api/pakan/${pakanId}/masuk`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    const json = await res.json()
-    if (!res.ok) throw new Error(json.message || 'Gagal mencatat stok masuk.')
-
-    const idx = jenisPakan.value.findIndex((p) => p.id === pakanId)
-    if (idx !== -1) jenisPakan.value[idx].stokSaatIni = json.data.stokSaatIni
-    if (json.data.transaksi) riwayat.value.unshift(json.data.transaksi)
-    return json.data
+    throw new Error('Fitur stok masuk belum tersedia')
   }
 
   async function catatStokKeluar(pakanId, payload) {
-    const res = await fetch(`/api/pakan/${pakanId}/keluar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    const json = await res.json()
-    if (!res.ok) throw new Error(json.message || 'Gagal mencatat stok keluar.')
-
-    const idx = jenisPakan.value.findIndex((p) => p.id === pakanId)
-    if (idx !== -1) jenisPakan.value[idx].stokSaatIni = json.data.stokSaatIni
-    if (json.data.transaksi) riwayat.value.unshift(json.data.transaksi)
-    return json.data
+    throw new Error('Fitur stok keluar belum tersedia')
   }
 
-  // ===== Turunan (computed) =====
+  // ===== Computed =====
   const pakanMenipis = computed(() =>
     jenisPakan.value.filter((p) => Number(p.stokSaatIni) <= Number(p.stokMinimum))
   )

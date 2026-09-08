@@ -54,7 +54,12 @@ const paths = {
   'dollar-sign': 'M12 1v22 M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6',
   'trending-up': 'M23 6l-9.5 9.5-5-5L1 18 M17 6h6v6',
   'trending-down': 'M23 18l-9.5-9.5-5 5L1 6 M17 18h6v-6',
-  package: 'M16.5 9.4L7.5 4.21 M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z M3.27 6.96L12 12.01l8.73-5.05 M12 22.08V12'
+  package: 'M16.5 9.4L7.5 4.21 M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z M3.27 6.96L12 12.01l8.73-5.05 M12 22.08V12',
+
+  // Icon baru: untuk menu "Pemberian Makan"
+  utensils: 'M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2 M7 2v20 M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3z M21 15v7',
+  // Icon baru: untuk menu "Pemberian Obat"
+  pill: 'M10.5 20.5L3.5 13.5a4.95 4.95 0 117-7l7 7a4.95 4.95 0 11-7 7z M8.5 8.5l7 7'
 }
 </script>
 

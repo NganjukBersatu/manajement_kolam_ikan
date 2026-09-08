@@ -18,6 +18,7 @@ import penjualanRoutes from './routes/penjualan.js'
 import pengeluaranRoutes from './routes/pengeluaran.js'
 import laporanRoutes from './routes/laporan.js'
 import pengaturanRoutes from './routes/pengaturan.js'
+import stokPakanRoutes from './routes/stokPakan.js'          // ← TAMBAHKAN INI
 
 const app = express()
 const PORT = process.env.PORT || 4001
@@ -45,6 +46,7 @@ app.use('/api/penjualan', penjualanRoutes)
 app.use('/api/pengeluaran', pengeluaranRoutes)
 app.use('/api/laporan', laporanRoutes)
 app.use('/api/pengaturan', pengaturanRoutes)
+app.use('/api/stok-pakan', stokPakanRoutes)                  // ← TAMBAHKAN INI
 
 app.listen(PORT, async () => {
   console.log(`Kolam Ikan API berjalan di http://localhost:${PORT}`)
