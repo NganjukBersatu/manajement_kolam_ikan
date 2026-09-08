@@ -4,6 +4,9 @@ import { ref, computed, onMounted, watch } from 'vue'
 const data = ref(null)
 const loading = ref(true)
 
+const riwayatPakan = ref([])
+const riwayatObat = ref([])
+
 const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
 
 const now = new Date()
@@ -24,6 +27,21 @@ const namaBulanSebelumnya = computed(() => {
   d.setMonth(d.getMonth() - 1)
   return `${namaBulan[d.getMonth()]} ${d.getFullYear()}`
 })
+
+// Riwayat pakan/obat difilter sesuai bulan & tahun yang sedang dipilih
+const riwayatPakanPeriode = computed(() =>
+  riwayatPakan.value.filter(r => {
+    const t = new Date(r.tanggal)
+    return t.getMonth() + 1 === bulanDipilih.value && t.getFullYear() === tahunDipilih.value
+  })
+)
+
+const riwayatObatPeriode = computed(() =>
+  riwayatObat.value.filter(r => {
+    const t = new Date(r.tanggal)
+    return t.getMonth() + 1 === bulanDipilih.value && t.getFullYear() === tahunDipilih.value
+  })
+)
 
 function rupiah(n) {
   return 'Rp' + Number(n || 0).toLocaleString('id-ID')
@@ -51,7 +69,23 @@ async function muat() {
   }
 }
 
-onMounted(muat)
+async function muatRiwayatPakanObat() {
+  try {
+    const [resPakan, resObat] = await Promise.all([
+      fetch('/api/pakan'),
+      fetch('/api/obat')
+    ])
+    riwayatPakan.value = (await resPakan.json()).data
+    riwayatObat.value = (await resObat.json()).data
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+onMounted(() => {
+  muat()
+  muatRiwayatPakanObat()
+})
 watch([bulanDipilih, tahunDipilih], muat)
 </script>
 
@@ -162,6 +196,74 @@ watch([bulanDipilih, tahunDipilih], muat)
             </tr>
             <tr v-if="!data.per_kolam?.length">
               <td colspan="5" class="px-4 py-8 text-center text-ink-400 dark:text-ink-300">Belum ada data stok kolam</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Riwayat Pemberian Makan -->
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden">
+        <div class="px-4 py-3 border-b border-ink-100 dark:border-ink-500 flex items-center justify-between">
+          <span class="font-semibold text-[14px] dark:text-white">Riwayat Pemberian Makan</span>
+          <span class="text-[12px] px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-600/25 dark:text-brand-100 font-medium">{{ namaBulanDipilih }}</span>
+        </div>
+        <table class="w-full text-left text-[13.5px]">
+          <thead>
+            <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tanggal</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah (kg)</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Biaya</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Catatan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in riwayatPakanPeriode" :key="r.id" class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100">
+              <td class="px-4 py-3 font-semibold">{{ r.nama_kolam }}</td>
+              <td class="px-4 py-3">{{ tanggal(r.tanggal) }}</td>
+              <td class="px-4 py-3">{{ r.jumlah_kg }}</td>
+              <td class="px-4 py-3">{{ rupiah(r.biaya) }}</td>
+              <td class="px-4 py-3">{{ r.catatan || '-' }}</td>
+            </tr>
+            <tr v-if="riwayatPakanPeriode.length === 0">
+              <td colspan="5" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+                Belum ada riwayat pemberian makan di periode ini.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Riwayat Pemberian Obat -->
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden">
+        <div class="px-4 py-3 border-b border-ink-100 dark:border-ink-500 flex items-center justify-between">
+          <span class="font-semibold text-[14px] dark:text-white">Riwayat Pemberian Obat</span>
+          <span class="text-[12px] px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-600/25 dark:text-brand-100 font-medium">{{ namaBulanDipilih }}</span>
+        </div>
+        <table class="w-full text-left text-[13.5px]">
+          <thead>
+            <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tanggal</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Nama Obat</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Dosis</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Biaya</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Catatan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in riwayatObatPeriode" :key="r.id" class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100">
+              <td class="px-4 py-3 font-semibold">{{ r.nama_kolam }}</td>
+              <td class="px-4 py-3">{{ tanggal(r.tanggal) }}</td>
+              <td class="px-4 py-3">{{ r.nama_obat }}</td>
+              <td class="px-4 py-3">{{ r.dosis || '-' }}</td>
+              <td class="px-4 py-3">{{ rupiah(r.biaya) }}</td>
+              <td class="px-4 py-3">{{ r.catatan || '-' }}</td>
+            </tr>
+            <tr v-if="riwayatObatPeriode.length === 0">
+              <td colspan="6" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+                Belum ada riwayat pemberian obat di periode ini.
+              </td>
             </tr>
           </tbody>
         </table>

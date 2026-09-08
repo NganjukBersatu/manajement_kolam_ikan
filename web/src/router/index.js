@@ -17,6 +17,8 @@ const routes = [
       { path: 'transaksi', name: 'transaksi', component: () => import('../views/Transaksi.vue'), meta: { title: 'Transaksi Penjualan' } },
       { path: 'jadwal/sortir', name: 'jadwal-sortir', component: () => import('../views/JadwalSortir.vue'), meta: { title: 'Jadwal Sortir' } },
       { path: 'jadwal/panen', name: 'jadwal-panen', component: () => import('../views/JadwalPanen.vue'), meta: { title: 'Jadwal Panen' } },
+      { path: 'jadwal/pemberian-makan', name: 'jadwal-pemberian-makan', component: () => import('../views/JadwalPemberianMakan.vue'), meta: { title: 'Jadwal Pemberian Makan' } },
+      { path: 'jadwal/pemberian-obat', name: 'jadwal-pemberian-obat', component: () => import('../views/JadwalPemberianObat.vue'), meta: { title: 'Jadwal Pemberian Obat' } },
       { path: 'kolam', name: 'kolam', component: () => import('../views/Kolam.vue'), meta: { title: 'Daftar Kolam' } },
       { path: 'pengeluaran', name: 'pengeluaran', component: () => import('../views/Pengeluaran.vue'), meta: { title: 'Pengeluaran' } },
 
