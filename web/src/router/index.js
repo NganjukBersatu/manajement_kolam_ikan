@@ -22,6 +22,8 @@ const routes = [
       { path: 'kolam', name: 'kolam', component: () => import('../views/Kolam.vue'), meta: { title: 'Daftar Kolam' } },
       { path: 'pengeluaran', name: 'pengeluaran', component: () => import('../views/Pengeluaran.vue'), meta: { title: 'Pengeluaran' } },
 
+      // Stok Pakan
+      { path: 'stok-pakan', name: 'stok-pakan', component: () => import('../views/StokPakan.vue'), meta: { title: 'Stok Pakan' } },
       // Laporan
       { path: 'laporan', name: 'laporan', component: () => import('../views/Laporan.vue'), meta: { title: 'Laporan Ringkasan' } },
       { path: 'laporan/penjualan', name: 'laporan-penjualan', component: () => import('../views/LaporanPenjualan.vue'), meta: { title: 'Laporan Penjualan' } },

@@ -5,6 +5,7 @@ const tab = ref('pengeluaran') // pengeluaran | pakan
 const daftarPengeluaran = ref([])
 const daftarPakan = ref([])
 const daftarKolam = ref([])
+const daftarStokPakan = ref([])   // <-- baru
 const showForm = ref(false)
 
 const formPengeluaran = ref({
@@ -16,6 +17,7 @@ const formPengeluaran = ref({
 
 const formPakan = ref({
   kolam_id: '',
+  stok_pakan_id: '',   // <-- baru: jenis pakan yang diambil
   jumlah_kg: '',
   biaya: '',
   catatan: '',
@@ -23,14 +25,16 @@ const formPakan = ref({
 })
 
 async function muat() {
-  const [pe, pa, km] = await Promise.all([
+  const [pe, pa, km, st] = await Promise.all([
     fetch('/api/pengeluaran').then(r => r.json()),
     fetch('/api/pakan').then(r => r.json()),
-    fetch('/api/kolam').then(r => r.json())
+    fetch('/api/kolam').then(r => r.json()),
+    fetch('/api/stok-pakan').then(r => r.json()).catch(() => ({ data: [] }))
   ])
   daftarPengeluaran.value = pe.data
   daftarPakan.value = pa.data
   daftarKolam.value = km.data
+  daftarStokPakan.value = st.data || []
 }
 
 async function simpanPengeluaran() {
@@ -68,6 +72,7 @@ async function simpanPakan() {
   showForm.value = false
   formPakan.value = {
     kolam_id: '',
+    stok_pakan_id: '',
     jumlah_kg: '',
     biaya: '',
     catatan: '',
@@ -78,7 +83,6 @@ async function simpanPakan() {
 
 async function hapusPengeluaran(id) {
   if (!confirm('Yakin ingin menghapus pengeluaran ini?')) return
-
   const res = await fetch(`/api/pengeluaran/${id}`, { method: 'DELETE' })
   if (!res.ok) {
     const err = await res.json()
@@ -90,7 +94,6 @@ async function hapusPengeluaran(id) {
 
 async function hapusPakan(id) {
   if (!confirm('Yakin ingin menghapus data pakan ini?')) return
-
   const res = await fetch(`/api/pakan/${id}`, { method: 'DELETE' })
   if (!res.ok) {
     const err = await res.json()
@@ -199,6 +202,7 @@ onMounted(muat)
           <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tanggal</th>
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jenis pakan</th>
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah (kg)</th>
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Biaya</th>
             <th class="px-4 py-3 text-right text-ink-500 dark:text-ink-300 font-semibold">Aksi</th>
@@ -212,6 +216,7 @@ onMounted(muat)
           >
             <td class="px-4 py-3">{{ tanggal(p.tanggal) }}</td>
             <td class="px-4 py-3">{{ p.nama_kolam }}</td>
+            <td class="px-4 py-3">{{ p.nama_pakan || '-' }}</td>
             <td class="px-4 py-3">{{ p.jumlah_kg }}</td>
             <td class="px-4 py-3 font-semibold">{{ rupiah(p.biaya) }}</td>
             <td class="px-4 py-3 text-right">
@@ -225,7 +230,7 @@ onMounted(muat)
             </td>
           </tr>
           <tr v-if="!daftarPakan.length">
-            <td colspan="5" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+            <td colspan="6" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
               Belum ada catatan pakan.
             </td>
           </tr>
@@ -316,6 +321,22 @@ onMounted(muat)
                 </option>
               </select>
             </div>
+
+            <!-- Pilih jenis pakan (stok akan berkurang) -->
+            <div>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jenis pakan</label>
+              <select
+                v-model="formPakan.stok_pakan_id"
+                required
+                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
+              >
+                <option value="" disabled>Pilih jenis pakan</option>
+                <option v-for="s in daftarStokPakan" :key="s.id" :value="s.id">
+                  {{ s.nama }} (sisa: {{ Number(s.stok).toLocaleString('id-ID') }} {{ s.satuan || 'kg' }})
+                </option>
+              </select>
+            </div>
+
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jumlah (kg)</label>

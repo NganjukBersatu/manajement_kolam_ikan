@@ -17,10 +17,10 @@ const menu = [
 ]
 
 const jadwalSub = [
-  { to: '/jadwal/sortir', label: 'Sortir', icon: 'scissors' },
-  { to: '/jadwal/panen', label: 'Panen', icon: 'fish' },
   { to: '/jadwal/pemberian-makan', label: 'Pemberian Makan', icon: 'utensils' },
-  { to: '/jadwal/pemberian-obat', label: 'Pemberian Obat', icon: 'pill' }
+  { to: '/jadwal/pemberian-obat', label: 'Pemberian Obat', icon: 'pill' } ,
+  { to: '/jadwal/sortir', label: 'Sortir', icon: 'scissors' },
+  { to: '/jadwal/panen', label: 'Panen', icon: 'fish' }
 ]
 
 const laporanSub = [
@@ -162,6 +162,18 @@ function konfirmasiLogout() {
         >
           <NavIcon name="file" :size="16" class="shrink-0" />
           <span v-show="!collapsed" class="whitespace-nowrap">Pengeluaran</span>
+        </router-link>
+
+        <!-- Stok Pakan -->
+        <router-link
+          to="/stok-pakan"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
+          :class="collapsed ? 'justify-center' : ''"
+          exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
+          :title="collapsed ? 'Stok Pakan' : ''"
+        >
+          <NavIcon name="package" :size="16" class="shrink-0" />
+          <span v-show="!collapsed" class="whitespace-nowrap">Stok Pakan</span>
         </router-link>
 
         <!-- Laporan -->
