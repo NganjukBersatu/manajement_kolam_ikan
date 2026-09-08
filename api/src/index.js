@@ -13,6 +13,7 @@ import jadwalRoutes from './routes/jadwal.js'
 import sortirRoutes from './routes/sortir.js'
 import panenRoutes from './routes/panen.js'
 import pakanRoutes from './routes/pakan.js'
+import obatRoutes from './routes/obat.js'
 import penjualanRoutes from './routes/penjualan.js'
 import pengeluaranRoutes from './routes/pengeluaran.js'
 import laporanRoutes from './routes/laporan.js'
@@ -39,6 +40,7 @@ app.use('/api/jadwal', jadwalRoutes)
 app.use('/api/sortir', sortirRoutes)
 app.use('/api/panen', panenRoutes)
 app.use('/api/pakan', pakanRoutes)
+app.use('/api/obat', obatRoutes)
 app.use('/api/penjualan', penjualanRoutes)
 app.use('/api/pengeluaran', pengeluaranRoutes)
 app.use('/api/laporan', laporanRoutes)
