@@ -1,6 +1,6 @@
+// src/middleware/auth.js
 import jwt from 'jsonwebtoken'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_sementara_kolam_ikan_123'
+import { JWT_SECRET } from '../config/jwt.js'
 
 export function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization
