@@ -3,16 +3,25 @@ import { pool } from '../config/db.js'
 
 const router = Router()
 
-// GET /api/jadwal?jenis=sortir → daftar jadwal (sortir atau panen), terdekat dulu
+// GET /api/jadwal?jenis=sortir&status=belum → daftar jadwal, terdekat dulu
+// Parameter jenis dan status keduanya opsional dan bisa dipakai sendiri-sendiri atau bersamaan.
 router.get('/', async (req, res) => {
-  const { jenis } = req.query
+  const { jenis, status } = req.query
   try {
     const params = []
-    let where = ''
+    const kondisi = []
+
     if (jenis) {
       params.push(jenis)
-      where = 'WHERE j.jenis = $1'
+      kondisi.push(`j.jenis = $${params.length}`)
     }
+    if (status) {
+      params.push(status)
+      kondisi.push(`j.status = $${params.length}`)
+    }
+
+    const where = kondisi.length > 0 ? `WHERE ${kondisi.join(' AND ')}` : ''
+
     const result = await pool.query(
       `SELECT j.id, j.jenis, j.tanggal_jadwal, j.status, j.tebar_id, j.kolam_id,
               k.nama_kolam, ji.nama AS nama_ikan, t.jumlah_saat_ini
@@ -27,6 +36,27 @@ router.get('/', async (req, res) => {
     res.json({ data: result.rows })
   } catch (err) {
     res.status(500).json({ message: 'Gagal mengambil jadwal', error: err.message })
+  }
+})
+
+// POST /api/jadwal → buat jadwal baru secara manual
+// Dipakai untuk jenis yang tidak otomatis dibuat ulang oleh sistem (misal ganti_air
+// setelah jadwal sebelumnya selesai dicatat).
+router.post('/', async (req, res) => {
+  const { tebar_id, kolam_id, jenis, tanggal_jadwal } = req.body
+  if (!tebar_id || !kolam_id || !jenis || !tanggal_jadwal) {
+    return res.status(400).json({ message: 'tebar_id, kolam_id, jenis, tanggal_jadwal wajib diisi' })
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [tebar_id, kolam_id, jenis, tanggal_jadwal]
+    )
+    res.status(201).json({ data: result.rows[0] })
+  } catch (err) {
+    res.status(500).json({ message: 'Gagal menambah jadwal', error: err.message })
   }
 })
 

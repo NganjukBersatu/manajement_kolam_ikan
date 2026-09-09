@@ -4,8 +4,8 @@ import { pool } from '../config/db.js'
 const router = Router()
 
 // POST /api/tebar → catat tebar bibit baru
-// Otomatis: 1) status kolam jadi 'aktif', 2) buat jadwal sortir & panen
-// berdasarkan hari_sortir/hari_panen dari jenis ikan yang dipilih.
+// Otomatis: 1) status kolam jadi 'aktif', 2) buat jadwal sortir, panen, & ganti air
+// berdasarkan hari_sortir/hari_panen dari jenis ikan, dan interval_ganti_air_hari dari kolam.
 router.post('/', async (req, res) => {
   const { kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit } = req.body
   if (!kolam_id || !jenis_ikan_id || !tanggal_tebar || !jumlah_bibit) {
@@ -18,7 +18,7 @@ router.post('/', async (req, res) => {
 
     // Pastikan kolam sedang kosong (tidak ada tebar aktif lain)
     const kolamCek = await client.query(
-      `SELECT status FROM kolam WHERE id = $1`, [kolam_id]
+      `SELECT status, interval_ganti_air_hari FROM kolam WHERE id = $1`, [kolam_id]
     )
     if (kolamCek.rows.length === 0) {
       await client.query('ROLLBACK')
@@ -28,6 +28,7 @@ router.post('/', async (req, res) => {
       await client.query('ROLLBACK')
       return res.status(409).json({ message: 'Kolam ini masih ada tebar aktif' })
     }
+    const { interval_ganti_air_hari } = kolamCek.rows[0]
 
     const jenisResult = await client.query('SELECT hari_sortir, hari_panen FROM jenis_ikan WHERE id = $1', [jenis_ikan_id])
     if (jenisResult.rows.length === 0) {
@@ -45,13 +46,15 @@ router.post('/', async (req, res) => {
 
     await client.query(`UPDATE kolam SET status = 'aktif', updated_at = NOW() WHERE id = $1`, [kolam_id])
 
-    // Jadwal sortir & panen otomatis dihitung dari tanggal_tebar + hari yang ditentukan jenis ikan
+    // Jadwal sortir & panen dihitung dari tanggal_tebar + hari yang ditentukan jenis ikan.
+    // Jadwal ganti air pertama dihitung dari tanggal_tebar + interval_ganti_air_hari milik kolam.
     await client.query(
       `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal)
        VALUES
         ($1, $2, 'sortir', ($3::date + ($4 || ' days')::interval)::date),
-        ($1, $2, 'panen',  ($3::date + ($5 || ' days')::interval)::date)`,
-      [tebarBaru.id, kolam_id, tanggal_tebar, hari_sortir, hari_panen]
+        ($1, $2, 'panen',  ($3::date + ($5 || ' days')::interval)::date),
+        ($1, $2, 'ganti_air', ($3::date + ($6 || ' days')::interval)::date)`,
+      [tebarBaru.id, kolam_id, tanggal_tebar, hari_sortir, hari_panen, interval_ganti_air_hari]
     )
 
     await client.query('COMMIT')
@@ -65,7 +68,7 @@ router.post('/', async (req, res) => {
   }
 })
 
-// GET /api/tebar/:id → detail satu tebar (untuk halaman sortir/panen)
+// GET /api/tebar/:id → detail satu tebar (untuk halaman sortir/panen/ganti air)
 router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query(

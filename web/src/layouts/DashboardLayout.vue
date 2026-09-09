@@ -20,7 +20,8 @@ const jadwalSub = [
   { to: '/jadwal/pemberian-makan', label: 'Pemberian Makan', icon: 'utensils' },
   { to: '/jadwal/pemberian-obat', label: 'Pemberian Obat', icon: 'pill' } ,
   { to: '/jadwal/sortir', label: 'Sortir', icon: 'scissors' },
-  { to: '/jadwal/panen', label: 'Panen', icon: 'fish' }
+  { to: '/jadwal/panen', label: 'Panen', icon: 'fish' },
+  { to: '/jadwal/ganti-air', label: 'Ganti Air', icon: 'droplet' }
 ]
 
 const laporanSub = [

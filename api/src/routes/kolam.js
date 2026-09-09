@@ -77,11 +77,16 @@ router.put('/:id', async (req, res) => {
 // Urutan hapus WAJIB dari "cucu" ke "induk" karena ada foreign key:
 //   kolam <- tebar <- jadwal <- sortir
 //                             <- panen
+//                             <- ganti_air
 //          <- pakan
 //          <- penjualan
 //          <- sortir (langsung)
 //          <- panen (langsung)
+//          <- ganti_air (langsung)
 //          <- jadwal (langsung)
+//
+// Catatan: tabel ganti_air belum terdaftar di skema Drizzle (dibuat lewat SQL manual),
+// jadi dihapus pakai raw SQL lewat tx.execute, bukan tx.delete(...).
 //
 // Semua dibungkus dalam satu transaksi: kalau ada satu langkah gagal,
 // semua langkah dibatalkan (tidak ada data yang terhapus setengah-setengah).
@@ -90,9 +95,10 @@ router.delete('/:id', async (req, res) => {
 
   try {
     const result = await db.transaction(async (tx) => {
-      // 1. Hapus panen & sortir (referensi ke tebar/jadwal/kolam)
+      // 1. Hapus panen, sortir, & ganti_air (referensi ke tebar/jadwal/kolam)
       await tx.delete(panen).where(eq(panen.kolamId, kolamId))
       await tx.delete(sortir).where(eq(sortir.kolamId, kolamId))
+      await tx.execute(sql`DELETE FROM ganti_air WHERE kolam_id = ${kolamId}`)
 
       // 2. Hapus jadwal (referensi ke tebar & kolam)
       await tx.delete(jadwal).where(eq(jadwal.kolamId, kolamId))
