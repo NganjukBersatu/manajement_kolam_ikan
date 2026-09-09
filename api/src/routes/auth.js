@@ -8,7 +8,9 @@ import { requireAuth } from '../middleware/auth.js'
 
 const router = Router()
 
-// POST /api/auth/login → cek username & password, kembalikan JWT token
+const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_sementara_kolam_ikan_123'
+
+// POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { username, password } = req.body
 
@@ -31,18 +33,24 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, username: user.username },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     )
 
-    res.json({ token, user: { id: user.id, username: user.username } })
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username
+      }
+    })
   } catch (err) {
     console.error('❌ ERROR LOGIN:', err)
     res.status(500).json({ message: 'Gagal login', error: err.message })
   }
 })
 
-// GET /api/auth/me → dipakai frontend untuk cek token masih valid (misal saat reload halaman)
+// GET /api/auth/me
 router.get('/me', requireAuth, (req, res) => {
   res.json({ user: req.user })
 })
