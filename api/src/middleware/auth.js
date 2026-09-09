@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken'
 
-// Middleware ini mengecek header "Authorization: Bearer <token>".
-// Kalau valid, informasi user (id, username) ditaruh di req.user.
-// Kalau tidak ada / tidak valid, request ditolak dengan status 401.
+const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_sementara_kolam_ikan_123'
+
 export function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization
 
@@ -13,10 +12,11 @@ export function requireAuth(req, res, next) {
   const token = authHeader.split(' ')[1]
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET)
+    const payload = jwt.verify(token, JWT_SECRET)
     req.user = payload
     next()
   } catch (err) {
+    console.error('Token error:', err.message)
     return res.status(401).json({ message: 'Sesi login tidak valid atau sudah kedaluwarsa.' })
   }
 }

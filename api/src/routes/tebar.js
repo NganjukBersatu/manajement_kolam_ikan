@@ -3,9 +3,6 @@ import { pool } from '../config/db.js'
 
 const router = Router()
 
-// POST /api/tebar → catat tebar bibit baru
-// Otomatis: 1) status kolam jadi 'aktif', 2) buat jadwal sortir, panen, & ganti air
-// berdasarkan hari_sortir/hari_panen dari jenis ikan, dan interval_ganti_air_hari dari kolam.
 router.post('/', async (req, res) => {
   const { kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit } = req.body
   if (!kolam_id || !jenis_ikan_id || !tanggal_tebar || !jumlah_bibit) {
@@ -16,10 +13,7 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN')
 
-    // Pastikan kolam sedang kosong (tidak ada tebar aktif lain)
-    const kolamCek = await client.query(
-      `SELECT status, interval_ganti_air_hari FROM kolam WHERE id = $1`, [kolam_id]
-    )
+    const kolamCek = await client.query(`SELECT status FROM kolam WHERE id = $1`, [kolam_id])
     if (kolamCek.rows.length === 0) {
       await client.query('ROLLBACK')
       return res.status(404).json({ message: 'Kolam tidak ditemukan' })
@@ -28,14 +22,16 @@ router.post('/', async (req, res) => {
       await client.query('ROLLBACK')
       return res.status(409).json({ message: 'Kolam ini masih ada tebar aktif' })
     }
-    const { interval_ganti_air_hari } = kolamCek.rows[0]
 
-    const jenisResult = await client.query('SELECT hari_sortir, hari_panen FROM jenis_ikan WHERE id = $1', [jenis_ikan_id])
+    const jenisResult = await client.query(
+      'SELECT hari_sortir, hari_panen, hari_obat_pertama, interval_obat_hari FROM jenis_ikan WHERE id = $1',
+      [jenis_ikan_id]
+    )
     if (jenisResult.rows.length === 0) {
       await client.query('ROLLBACK')
       return res.status(404).json({ message: 'Jenis ikan tidak ditemukan' })
     }
-    const { hari_sortir, hari_panen } = jenisResult.rows[0]
+    const { hari_sortir, hari_panen, hari_obat_pertama, interval_obat_hari } = jenisResult.rows[0]
 
     const tebarResult = await client.query(
       `INSERT INTO tebar (kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit, jumlah_saat_ini)
@@ -46,16 +42,39 @@ router.post('/', async (req, res) => {
 
     await client.query(`UPDATE kolam SET status = 'aktif', updated_at = NOW() WHERE id = $1`, [kolam_id])
 
-    // Jadwal sortir & panen dihitung dari tanggal_tebar + hari yang ditentukan jenis ikan.
-    // Jadwal ganti air pertama dihitung dari tanggal_tebar + interval_ganti_air_hari milik kolam.
+    // Jadwal sortir & panen otomatis dari tanggal_tebar + hari yang ditentukan jenis ikan
     await client.query(
       `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal)
        VALUES
         ($1, $2, 'sortir', ($3::date + ($4 || ' days')::interval)::date),
-        ($1, $2, 'panen',  ($3::date + ($5 || ' days')::interval)::date),
-        ($1, $2, 'ganti_air', ($3::date + ($6 || ' days')::interval)::date)`,
-      [tebarBaru.id, kolam_id, tanggal_tebar, hari_sortir, hari_panen, interval_ganti_air_hari]
+        ($1, $2, 'panen',  ($3::date + ($5 || ' days')::interval)::date)`,
+      [tebarBaru.id, kolam_id, tanggal_tebar, hari_sortir, hari_panen]
     )
+
+    // Jadwal obat: mulai dari hari_obat_pertama, berulang tiap interval_obat_hari, sampai maksimal hari_panen.
+    // Kalau interval_obat_hari kosong (NULL), obat cuma dijadwalkan sekali.
+    const hariObatPertamaNum = Number(hari_obat_pertama)
+    const hariPanenNum = Number(hari_panen)
+    const intervalObatNum = interval_obat_hari != null ? Number(interval_obat_hari) : null
+
+    const hariObatList = []
+    if (hariObatPertamaNum <= hariPanenNum) {
+      if (intervalObatNum && intervalObatNum > 0) {
+        for (let h = hariObatPertamaNum; h <= hariPanenNum; h += intervalObatNum) {
+          hariObatList.push(h)
+        }
+      } else {
+        hariObatList.push(hariObatPertamaNum)
+      }
+    }
+
+    for (const hari of hariObatList) {
+      await client.query(
+        `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal)
+         VALUES ($1, $2, 'obat', ($3::date + ($4 || ' days')::interval)::date)`,
+        [tebarBaru.id, kolam_id, tanggal_tebar, hari]
+      )
+    }
 
     await client.query('COMMIT')
     res.status(201).json({ data: tebarBaru })
@@ -68,7 +87,6 @@ router.post('/', async (req, res) => {
   }
 })
 
-// GET /api/tebar/:id → detail satu tebar (untuk halaman sortir/panen/ganti air)
 router.get('/:id', async (req, res) => {
   try {
     const result = await pool.query(
