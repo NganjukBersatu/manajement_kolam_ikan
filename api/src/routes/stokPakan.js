@@ -3,6 +3,12 @@ import { pool } from '../config/db.js'
 
 const router = Router()
 
+// Helper: parse angka aman, fallback ke default jika tidak valid
+function toNumber(value, fallback = 0) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : fallback
+}
+
 // GET /api/stok-pakan
 router.get('/', async (req, res) => {
   try {
@@ -32,9 +38,9 @@ router.post('/', async (req, res) => {
        RETURNING id, nama, stok, satuan, stok_minimum, created_at`,
       [
         nama.trim(),
-        Number(stok) || 0,
+        toNumber(stok, 0),
         satuan || 'kg',
-        Number(stok_minimum) ?? 10
+        toNumber(stok_minimum, 10)
       ]
     )
     res.status(201).json({ data: result.rows[0] })
@@ -46,6 +52,10 @@ router.post('/', async (req, res) => {
 // PUT /api/stok-pakan/:id
 router.put('/:id', async (req, res) => {
   const { nama, stok, satuan, stok_minimum } = req.body
+
+  // null berarti "jangan ubah kolom ini" (dipakai oleh COALESCE di query)
+  const stokVal = stok !== undefined ? toNumber(stok, null) : null
+  const stokMinVal = stok_minimum !== undefined ? toNumber(stok_minimum, null) : null
 
   try {
     const result = await pool.query(
@@ -59,9 +69,9 @@ router.put('/:id', async (req, res) => {
        RETURNING id, nama, stok, satuan, stok_minimum, created_at`,
       [
         nama?.trim() || null,
-        stok !== undefined ? Number(stok) : null,
+        stokVal,
         satuan || null,
-        stok_minimum !== undefined ? Number(stok_minimum) : null,
+        stokMinVal,
         req.params.id
       ]
     )

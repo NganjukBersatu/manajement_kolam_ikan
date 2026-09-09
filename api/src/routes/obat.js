@@ -26,20 +26,46 @@ router.get('/', async (req, res) => {
   }
 })
 
+// POST /api/obat → catat pemberian obat, opsional kaitkan dengan jadwal_id agar jadwal ditandai selesai
 router.post('/', async (req, res) => {
-  const { kolam_id, tanggal, nama_obat, dosis, biaya, catatan } = req.body
+  const { kolam_id, tanggal, nama_obat, dosis, biaya, catatan, jadwal_id } = req.body
   if (!kolam_id || !tanggal || !nama_obat) {
     return res.status(400).json({ message: 'kolam_id, tanggal, nama_obat wajib diisi' })
   }
+
+  const client = await pool.connect()
   try {
-    const result = await pool.query(
-      `INSERT INTO obat (kolam_id, tanggal, nama_obat, dosis, biaya, catatan)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [kolam_id, tanggal, nama_obat, dosis || null, biaya || 0, catatan || null]
+    await client.query('BEGIN')
+
+    if (jadwal_id) {
+      const jadwalCek = await client.query(
+        `SELECT id, kolam_id, jenis FROM jadwal WHERE id = $1 FOR UPDATE`,
+        [jadwal_id]
+      )
+      if (jadwalCek.rows.length === 0) {
+        await client.query('ROLLBACK')
+        return res.status(404).json({ message: 'Jadwal obat tidak ditemukan' })
+      }
+      if (jadwalCek.rows[0].jenis !== 'obat' || String(jadwalCek.rows[0].kolam_id) !== String(kolam_id)) {
+        await client.query('ROLLBACK')
+        return res.status(400).json({ message: 'Jadwal tidak cocok dengan kolam yang dipilih' })
+      }
+      await client.query(`UPDATE jadwal SET status = 'sudah' WHERE id = $1`, [jadwal_id])
+    }
+
+    const result = await client.query(
+      `INSERT INTO obat (kolam_id, tanggal, nama_obat, dosis, biaya, catatan, jadwal_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [kolam_id, tanggal, nama_obat, dosis || null, biaya || 0, catatan || null, jadwal_id || null]
     )
+
+    await client.query('COMMIT')
     res.status(201).json({ data: result.rows[0] })
   } catch (err) {
+    await client.query('ROLLBACK')
     res.status(500).json({ message: 'Gagal mencatat pemberian obat', error: err.message })
+  } finally {
+    client.release()
   }
 })
 

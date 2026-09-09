@@ -13,6 +13,12 @@ const form = ref({
   stok_minimum: '10'
 })
 
+// Helper: parse angka aman untuk ditampilkan (defense in depth di UI)
+function angka(v) {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
+}
+
 async function muat() {
   loading.value = true
   error.value = ''
@@ -67,8 +73,19 @@ async function hapus(id) {
 
 const totalJenis = computed(() => daftarStok.value.length)
 const stokMenipis = computed(() =>
-  daftarStok.value.filter(s => Number(s.stok) <= Number(s.stok_minimum || 0)).length
+  daftarStok.value.filter(s => angka(s.stok) <= angka(s.stok_minimum)).length
 )
+
+// Total stok dikelompokkan per satuan, karena kg/sak/liter tidak boleh dijumlah jadi satu angka.
+// Hasilnya array of { satuan, total }, misalnya [{ satuan: 'kg', total: 138 }, { satuan: 'sak', total: 5 }]
+const totalStokPerSatuan = computed(() => {
+  const kelompok = {}
+  for (const s of daftarStok.value) {
+    const satuan = s.satuan || 'kg'
+    kelompok[satuan] = (kelompok[satuan] || 0) + angka(s.stok)
+  }
+  return Object.entries(kelompok).map(([satuan, total]) => ({ satuan, total }))
+})
 
 onMounted(muat)
 </script>
@@ -93,7 +110,7 @@ onMounted(muat)
     </div>
 
     <!-- Kartu ringkasan -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
         <p class="text-[13px] text-ink-500 dark:text-ink-300">Jenis pakan terdaftar</p>
         <p class="text-2xl font-bold dark:text-white mt-1">{{ totalJenis }}</p>
@@ -103,6 +120,20 @@ onMounted(muat)
         <p class="text-2xl font-bold mt-1" :class="stokMenipis > 0 ? 'text-danger-600' : 'dark:text-white'">
           {{ stokMenipis }}
         </p>
+      </div>
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
+        <p class="text-[13px] text-ink-500 dark:text-ink-300">Total stok</p>
+        <div v-if="totalStokPerSatuan.length" class="mt-1 space-y-0.5">
+          <p
+            v-for="t in totalStokPerSatuan"
+            :key="t.satuan"
+            class="text-2xl font-bold dark:text-white"
+          >
+            {{ t.total.toLocaleString('id-ID') }}
+            <span class="text-[13px] font-medium text-ink-500 dark:text-ink-300">{{ t.satuan }}</span>
+          </p>
+        </div>
+        <p v-else class="text-2xl font-bold dark:text-white mt-1">0</p>
       </div>
     </div>
 
@@ -141,14 +172,14 @@ onMounted(muat)
           >
             <td class="px-4 py-3 font-medium">{{ s.nama }}</td>
             <td class="px-4 py-3">
-              {{ Number(s.stok || 0).toLocaleString('id-ID') }} {{ s.satuan || 'kg' }}
+              {{ angka(s.stok).toLocaleString('id-ID') }} {{ s.satuan || 'kg' }}
             </td>
             <td class="px-4 py-3">
-              {{ Number(s.stok_minimum || 0).toLocaleString('id-ID') }} {{ s.satuan || 'kg' }}
+              {{ angka(s.stok_minimum).toLocaleString('id-ID') }} {{ s.satuan || 'kg' }}
             </td>
             <td class="px-4 py-3">
               <span
-                v-if="Number(s.stok || 0) <= Number(s.stok_minimum || 0)"
+                v-if="angka(s.stok) <= angka(s.stok_minimum)"
                 class="inline-flex px-2 py-0.5 rounded-full text-[12px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
               >
                 Menipis

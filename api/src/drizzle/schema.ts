@@ -1,29 +1,7 @@
-import { pgTable, foreignKey, serial, integer, date, numeric, text, timestamp, varchar, unique } from "drizzle-orm/pg-core"
+import { pgTable, serial, varchar, numeric, timestamp, foreignKey, integer, date, text, unique, check } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
-
-export const pakan = pgTable("pakan", {
-	id: serial().primaryKey().notNull(),
-	kolamId: integer("kolam_id").notNull(),
-	tanggal: date().notNull(),
-	jumlahKg: numeric("jumlah_kg").notNull(),
-	biaya: numeric().default('0').notNull(),
-	catatan: text(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	stokPakanId: integer("stok_pakan_id"),
-}, (table) => [
-	foreignKey({
-			columns: [table.kolamId],
-			foreignColumns: [kolam.id],
-			name: "pakan_kolam_id_fkey"
-		}),
-	foreignKey({
-			columns: [table.stokPakanId],
-			foreignColumns: [stokPakan.id],
-			name: "pakan_stok_pakan_id_fkey"
-		}).onDelete("set null"),
-]);
 
 export const kolam = pgTable("kolam", {
 	id: serial().primaryKey().notNull(),
@@ -110,6 +88,31 @@ export const sortir = pgTable("sortir", {
 			foreignColumns: [kolam.id],
 			name: "sortir_kolam_id_fkey"
 		}),
+]);
+
+export const pakan = pgTable("pakan", {
+	id: serial().primaryKey().notNull(),
+	kolamId: integer("kolam_id").notNull(),
+	tanggal: date().notNull(),
+	jumlahKg: numeric("jumlah_kg").notNull(),
+	biaya: numeric().default('0').notNull(),
+	catatan: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	stokPakanId: integer("stok_pakan_id"),
+	sesi: varchar({ length: 10 }).notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.kolamId],
+			foreignColumns: [kolam.id],
+			name: "pakan_kolam_id_fkey"
+		}),
+	foreignKey({
+			columns: [table.stokPakanId],
+			foreignColumns: [stokPakan.id],
+			name: "pakan_stok_pakan_id_fkey"
+		}).onDelete("set null"),
+	unique("uq_pakan_kolam_tanggal_sesi").on(table.tanggal, table.sesi, table.kolamId),
+	check("pakan_sesi_check", sql`(sesi)::text = ANY ((ARRAY['pagi'::character varying, 'siang'::character varying, 'sore'::character varying])::text[])`),
 ]);
 
 export const panen = pgTable("panen", {
