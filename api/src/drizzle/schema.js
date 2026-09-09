@@ -131,6 +131,7 @@ export const pakan = pgTable("pakan", {
 	id: serial().primaryKey().notNull(),
 	kolamId: integer("kolam_id").notNull(),
 	tanggal: date().notNull(),
+	sesi: varchar({ length: 20 }),
 	jumlahKg: numeric("jumlah_kg").notNull(),
 	biaya: numeric().default('0').notNull(),
 	catatan: text(),
@@ -197,6 +198,36 @@ export const users = pgTable("users", {
 	username: varchar({ length: 50 }).notNull().unique(),
 	passwordHash: varchar("password_hash", { length: 255 }).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+ tambahgantiair
+});
+
+export const obat = pgTable("obat", {
+	id: serial().primaryKey().notNull(),
+	kolamId: integer("kolam_id").notNull(),
+	tanggal: date().notNull(),
+	namaObat: varchar("nama_obat", { length: 100 }).notNull(),
+	dosis: varchar({ length: 50 }),
+	biaya: numeric().default('0'),
+	catatan: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+		columns: [table.kolamId],
+		foreignColumns: [kolam.id],
+		name: "obat_kolam_id_fkey"
+	}),
+]);
+
+export const stokPakan = pgTable("stok_pakan", {
+	id: serial().primaryKey().notNull(),
+	nama: varchar({ length: 100 }).notNull(),
+	stok: numeric({ precision: 12, scale: 2 }).default('0').notNull(),
+	satuan: varchar({ length: 20 }).default('kg').notNull(),
+	stokMinimum: numeric("stok_minimum", { precision: 12, scale: 2 }).default('10').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+=======
 }, (table) => [
 	unique("users_username_unique").on(table.username),
-]);
+])
+main
