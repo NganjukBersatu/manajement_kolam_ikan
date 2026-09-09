@@ -1,0 +1,5 @@
+-- Menambahkan kolom stok_pakan_id ke tabel pakan, sebagai foreign key opsional
+-- ke tabel stok_pakan (nullable, karena tidak semua catatan pakan harus
+-- terhubung ke stok tertentu).
+ALTER TABLE pakan
+  ADD COLUMN IF NOT EXISTS stok_pakan_id INT REFERENCES stok_pakan(id);

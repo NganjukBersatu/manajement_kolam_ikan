@@ -5,10 +5,9 @@ import { eq } from 'drizzle-orm'
 import { db } from '../db/drizzle.js'
 import { users } from '../drizzle/schema.js'
 import { requireAuth } from '../middleware/auth.js'
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/jwt.js'
 
 const router = Router()
-
-const JWT_SECRET = process.env.JWT_SECRET || 'rahasia_sementara_kolam_ikan_123'
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -34,7 +33,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign(
       { id: user.id, username: user.username },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: JWT_EXPIRES_IN }
     )
 
     res.json({
