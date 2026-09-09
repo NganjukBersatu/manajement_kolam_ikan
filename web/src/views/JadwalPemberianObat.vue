@@ -3,33 +3,47 @@ import { ref, onMounted, computed } from 'vue'
 
 const daftarKolam = ref([])
 const riwayatObat = ref([])
+const jadwalObat = ref([])
 
 const showForm = ref(false)
 const kolamDipilih = ref(null)
+const jadwalDipilih = ref(null)
 const form = ref({ tanggal: new Date().toISOString().slice(0, 10), nama_obat: '', dosis: '', biaya: '', catatan: '' })
 
 const showRiwayat = ref(false)
 const riwayatKolamDipilih = ref(null)
 
-// Hanya tampilkan kolam yang sedang aktif (ada ikannya)
+const hariIni = new Date().toISOString().slice(0, 10)
+
 const kolamAktif = computed(() => daftarKolam.value.filter(k => k.status === 'aktif'))
 
-// Gabungkan setiap kolam dengan catatan pemberian obat TERAKHIR miliknya.
-// Obat tidak diberikan rutin per hari, jadi tidak ada status "Sudah/Belum" —
-// cukup tampilkan tanggal & jenis obat terakhir sebagai referensi.
+// Gabungkan tiap kolam dengan: obat terakhir yang pernah diberikan, dan jadwal obat berikutnya (dari tabel jadwal)
 const daftarGabungan = computed(() => {
   return kolamAktif.value.map(k => {
     const riwayatKolam = riwayatObat.value
       .filter(r => r.kolam_id === k.id)
       .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
-
     const terakhir = riwayatKolam[0] || null
+
+    const jadwalKolam = jadwalObat.value
+      .filter(j => j.kolam_id === k.id && j.status === 'belum')
+      .sort((a, b) => new Date(a.tanggal_jadwal) - new Date(b.tanggal_jadwal))
+    const jadwalTerdekat = jadwalKolam[0] || null
+
+    let statusJadwal = null
+    if (jadwalTerdekat) {
+      if (jadwalTerdekat.tanggal_jadwal < hariIni) statusJadwal = 'terlambat'
+      else if (jadwalTerdekat.tanggal_jadwal === hariIni) statusJadwal = 'jatuh_tempo'
+      else statusJadwal = 'mendatang'
+    }
 
     return {
       ...k,
       tanggal_terakhir: terakhir?.tanggal || null,
       obat_terakhir: terakhir?.nama_obat || null,
-      riwayat: riwayatKolam
+      riwayat: riwayatKolam,
+      jadwal_terdekat: jadwalTerdekat,
+      status_jadwal: statusJadwal
     }
   })
 })
@@ -46,9 +60,22 @@ async function muatRiwayat() {
   riwayatObat.value = json.data
 }
 
+async function muatJadwal() {
+  const res = await fetch('/api/jadwal?jenis=obat')
+  const json = await res.json()
+  jadwalObat.value = json.data
+}
+
 function bukaForm(k) {
   kolamDipilih.value = k
-  form.value = { tanggal: new Date().toISOString().slice(0, 10), nama_obat: '', dosis: '', biaya: '', catatan: '' }
+  jadwalDipilih.value = k.jadwal_terdekat
+  form.value = {
+    tanggal: k.jadwal_terdekat ? k.jadwal_terdekat.tanggal_jadwal : new Date().toISOString().slice(0, 10),
+    nama_obat: '',
+    dosis: '',
+    biaya: '',
+    catatan: ''
+  }
   showForm.value = true
 }
 
@@ -62,7 +89,8 @@ async function simpan() {
       nama_obat: form.value.nama_obat,
       dosis: form.value.dosis,
       biaya: form.value.biaya || 0,
-      catatan: form.value.catatan
+      catatan: form.value.catatan,
+      jadwal_id: jadwalDipilih.value?.id || null
     })
   })
 
@@ -73,7 +101,7 @@ async function simpan() {
   }
 
   showForm.value = false
-  await Promise.all([muatKolam(), muatRiwayat()])
+  await Promise.all([muatKolam(), muatRiwayat(), muatJadwal()])
 }
 
 function bukaRiwayat(k) {
@@ -90,9 +118,17 @@ function tanggal(d) {
   return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function labelStatusJadwal(status) {
+  if (status === 'terlambat') return 'Terlambat'
+  if (status === 'jatuh_tempo') return 'Jatuh tempo hari ini'
+  if (status === 'mendatang') return 'Terjadwal'
+  return 'Belum ada jadwal'
+}
+
 onMounted(() => {
   muatKolam()
   muatRiwayat()
+  muatJadwal()
 })
 </script>
 
@@ -105,6 +141,7 @@ onMounted(() => {
           <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jenis Ikan</th>
           <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah Saat Ini</th>
           <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Terakhir Diberi Obat</th>
+          <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jadwal Berikutnya</th>
           <th class="px-4 py-3 text-right text-ink-500 dark:text-ink-300 font-semibold">Aksi</th>
         </tr>
       </thead>
@@ -120,6 +157,22 @@ onMounted(() => {
             </span>
             <span v-else class="text-ink-400 dark:text-ink-300">Belum pernah</span>
           </td>
+          <td class="px-4 py-3">
+            <div v-if="k.jadwal_terdekat" class="flex flex-col gap-1">
+              <span class="text-[12.5px]">{{ tanggal(k.jadwal_terdekat.tanggal_jadwal) }}</span>
+              <span
+                class="inline-flex w-fit px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                :class="{
+                  'bg-red-100 text-red-600 dark:bg-red-600/25 dark:text-red-400': k.status_jadwal === 'terlambat',
+                  'bg-warn-100 text-warn-600 dark:bg-warn-600/25 dark:text-warn-500': k.status_jadwal === 'jatuh_tempo',
+                  'bg-ink-100 text-ink-500 dark:bg-ink-600 dark:text-ink-300': k.status_jadwal === 'mendatang'
+                }"
+              >
+                {{ labelStatusJadwal(k.status_jadwal) }}
+              </span>
+            </div>
+            <span v-else class="text-ink-400 dark:text-ink-300 text-[12.5px]">Tidak ada jadwal</span>
+          </td>
           <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
             <button
               type="button"
@@ -130,7 +183,8 @@ onMounted(() => {
             </button>
             <button
               type="button"
-              class="px-3 py-1.5 rounded-lg bg-brand-500 text-white text-[12.5px] font-semibold hover:bg-brand-600"
+              class="px-3 py-1.5 rounded-lg text-white text-[12.5px] font-semibold"
+              :class="k.status_jadwal === 'terlambat' ? 'bg-danger-600 hover:bg-danger-700' : 'bg-brand-500 hover:bg-brand-600'"
               @click="bukaForm(k)"
             >
               Catat Pemberian Obat
@@ -138,7 +192,7 @@ onMounted(() => {
           </td>
         </tr>
         <tr v-if="daftarGabungan.length === 0">
-          <td colspan="5" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+          <td colspan="6" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
             Belum ada kolam aktif untuk diberi obat.
           </td>
         </tr>
@@ -150,7 +204,13 @@ onMounted(() => {
   <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center px-4">
     <div class="absolute inset-0 bg-black/40" @click="showForm = false" />
     <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5">
-      <h2 class="text-[16px] font-semibold dark:text-white mb-4">Catat Pemberian Obat — {{ kolamDipilih?.nama_kolam }}</h2>
+      <h2 class="text-[16px] font-semibold dark:text-white mb-1">Catat Pemberian Obat — {{ kolamDipilih?.nama_kolam }}</h2>
+      <p v-if="jadwalDipilih" class="text-[12.5px] text-ink-500 dark:text-ink-300 mb-4">
+        Sesuai jadwal {{ tanggal(jadwalDipilih.tanggal_jadwal) }}
+      </p>
+      <p v-else class="text-[12.5px] text-ink-500 dark:text-ink-300 mb-4">
+        Tidak terkait jadwal (pencatatan manual)
+      </p>
       <form class="space-y-3" @submit.prevent="simpan">
         <div>
           <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Tanggal</label>

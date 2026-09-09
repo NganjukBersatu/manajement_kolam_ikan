@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, numeric, timestamp, foreignKey, integer, date, text } from "drizzle-orm/pg-core"
+import { pgTable, serial, varchar, numeric, timestamp, foreignKey, integer, date, text, unique, check } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -118,6 +118,15 @@ export const panen = pgTable("panen", {
 		}),
 ]);
 
+export const stokPakan = pgTable("stok_pakan", {
+	id: serial().primaryKey().notNull(),
+	nama: varchar({ length: 100 }).notNull(),
+	stok: numeric({ precision: 12, scale: 2 }).default('0').notNull(),
+	satuan: varchar({ length: 20 }).default('kg').notNull(),
+	stokMinimum: numeric("stok_minimum", { precision: 12, scale: 2 }).default('10').notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+});
+
 export const pakan = pgTable("pakan", {
 	id: serial().primaryKey().notNull(),
 	kolamId: integer("kolam_id").notNull(),
@@ -127,12 +136,21 @@ export const pakan = pgTable("pakan", {
 	biaya: numeric().default('0').notNull(),
 	catatan: text(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	stokPakanId: integer("stok_pakan_id"),
+	sesi: varchar({ length: 10 }).notNull(),
 }, (table) => [
 	foreignKey({
 			columns: [table.kolamId],
 			foreignColumns: [kolam.id],
 			name: "pakan_kolam_id_fkey"
 		}),
+	foreignKey({
+			columns: [table.stokPakanId],
+			foreignColumns: [stokPakan.id],
+			name: "pakan_stok_pakan_id_fkey"
+		}).onDelete("set null"),
+	unique("uq_pakan_kolam_tanggal_sesi").on(table.tanggal, table.sesi, table.kolamId),
+	check("pakan_sesi_check", sql`(sesi)::text = ANY ((ARRAY['pagi'::character varying, 'siang'::character varying, 'sore'::character varying])::text[])`),
 ]);
 
 export const penjualan = pgTable("penjualan", {
@@ -180,6 +198,7 @@ export const users = pgTable("users", {
 	username: varchar({ length: 50 }).notNull().unique(),
 	passwordHash: varchar("password_hash", { length: 255 }).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+ tambahgantiair
 });
 
 export const obat = pgTable("obat", {
@@ -207,3 +226,8 @@ export const stokPakan = pgTable("stok_pakan", {
 	stokMinimum: numeric("stok_minimum", { precision: 12, scale: 2 }).default('10').notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
+=======
+}, (table) => [
+	unique("users_username_unique").on(table.username),
+])
+main

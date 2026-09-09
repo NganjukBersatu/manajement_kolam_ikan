@@ -2,32 +2,7 @@ import { ref, computed, watch } from 'vue'
 
 const STORAGE_KEY = 'notifications_data'
 
-const defaultNotifications = [
-  {
-    id: 1,
-    type: 'panen',
-    title: 'Kolam siap dipanen',
-    message: 'Kolam 2 sudah memasuki masa panen optimal.',
-    time: '2 jam lalu',
-    read: false
-  },
-  {
-    id: 2,
-    type: 'stok',
-    title: 'Stok pakan menipis',
-    message: 'Stok pakan tersisa kurang dari 10%.',
-    time: '5 jam lalu',
-    read: false
-  },
-  {
-    id: 3,
-    type: 'jadwal',
-    title: 'Jadwal sortir besok',
-    message: 'Sortir kolam 4 dijadwalkan besok pagi.',
-    time: '1 hari lalu',
-    read: true
-  }
-]
+const defaultNotifications = []
 
 function loadNotifications() {
   try {
@@ -53,11 +28,11 @@ watch(
   { deep: true }
 )
 
-// Ikon per jenis notifikasi, dipetakan ke nama di NavIcon.vue
 const iconByType = {
   panen: 'package',
   stok: 'alert-circle',
   jadwal: 'clock',
+  obat: 'clock',
   default: 'bell'
 }
 
@@ -79,7 +54,7 @@ export function useNotifications() {
 
   function addNotification({ type = 'default', title, message }) {
     notifications.value.unshift({
-      id: Date.now(),
+      id: Date.now() + Math.random(),
       type,
       title,
       message,
@@ -92,6 +67,39 @@ export function useNotifications() {
     return iconByType[type] || iconByType.default
   }
 
+  // Cek jadwal pemberian obat yang belum dicatat dan sudah waktunya (hari ini atau terlewat),
+  // lalu tambahkan notifikasi kalau belum pernah dinotifikasi sebelumnya (dicek dari jadwalId).
+  async function syncJadwalObat() {
+    try {
+      const res = await fetch('/api/jadwal?jenis=obat')
+      const json = await res.json()
+      const jadwalBelum = (json.data || []).filter((j) => j.status === 'belum')
+      const hariIni = new Date().toISOString().slice(0, 10)
+
+      const sudahDinotif = new Set(
+        notifications.value.filter((n) => n.type === 'obat' && n.jadwalId).map((n) => n.jadwalId)
+      )
+
+      for (const j of jadwalBelum) {
+        if (j.tanggal_jadwal > hariIni) continue // belum waktunya
+        if (sudahDinotif.has(j.id)) continue // sudah pernah dinotifikasi
+
+        const terlambat = j.tanggal_jadwal < hariIni
+        notifications.value.unshift({
+          id: Date.now() + Math.random(),
+          jadwalId: j.id,
+          type: 'obat',
+          title: terlambat ? 'Pemberian obat terlambat' : 'Waktunya beri obat',
+          message: `${j.nama_kolam} (${j.nama_ikan}) perlu diberi obat${terlambat ? ' — sudah lewat jadwal' : ' hari ini'}.`,
+          time: 'Baru saja',
+          read: false
+        })
+      }
+    } catch (e) {
+      console.error('Gagal sinkronisasi notifikasi obat:', e)
+    }
+  }
+
   return {
     notifications,
     unreadCount,
@@ -99,6 +107,7 @@ export function useNotifications() {
     markAllAsRead,
     clearAll,
     addNotification,
-    iconFor
+    iconFor,
+    syncJadwalObat
   }
 }

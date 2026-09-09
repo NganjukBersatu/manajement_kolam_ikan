@@ -1,29 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { kolam, pakan, stokPakan, tebar, jenisIkan, jadwal, sortir, panen, penjualan } from "./schema";
-
-export const pakanRelations = relations(pakan, ({one}) => ({
-	kolam: one(kolam, {
-		fields: [pakan.kolamId],
-		references: [kolam.id]
-	}),
-	stokPakan: one(stokPakan, {
-		fields: [pakan.stokPakanId],
-		references: [stokPakan.id]
-	}),
-}));
-
-export const kolamRelations = relations(kolam, ({many}) => ({
-	pakans: many(pakan),
-	tebars: many(tebar),
-	jadwals: many(jadwal),
-	sortirs: many(sortir),
-	panens: many(panen),
-	penjualans: many(penjualan),
-}));
-
-export const stokPakanRelations = relations(stokPakan, ({many}) => ({
-	pakans: many(pakan),
-}));
+import { kolam, tebar, jenisIkan, jadwal, sortir, pakan, stokPakan, panen, penjualan } from "./schema";
 
 export const tebarRelations = relations(tebar, ({one, many}) => ({
 	kolam: one(kolam, {
@@ -37,6 +13,15 @@ export const tebarRelations = relations(tebar, ({one, many}) => ({
 	jadwals: many(jadwal),
 	sortirs: many(sortir),
 	panens: many(panen),
+}));
+
+export const kolamRelations = relations(kolam, ({many}) => ({
+	tebars: many(tebar),
+	jadwals: many(jadwal),
+	sortirs: many(sortir),
+	pakans: many(pakan),
+	panens: many(panen),
+	penjualans: many(penjualan),
 }));
 
 export const jenisIkanRelations = relations(jenisIkan, ({many}) => ({
@@ -70,6 +55,21 @@ export const sortirRelations = relations(sortir, ({one}) => ({
 		fields: [sortir.kolamId],
 		references: [kolam.id]
 	}),
+}));
+
+export const pakanRelations = relations(pakan, ({one}) => ({
+	kolam: one(kolam, {
+		fields: [pakan.kolamId],
+		references: [kolam.id]
+	}),
+	stokPakan: one(stokPakan, {
+		fields: [pakan.stokPakanId],
+		references: [stokPakan.id]
+	}),
+}));
+
+export const stokPakanRelations = relations(stokPakan, ({many}) => ({
+	pakans: many(pakan),
 }));
 
 export const panenRelations = relations(panen, ({one}) => ({
