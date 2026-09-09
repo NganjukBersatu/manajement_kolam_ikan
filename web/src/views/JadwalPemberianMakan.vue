@@ -3,11 +3,12 @@ import { ref, onMounted, computed } from 'vue'
 
 const daftarKolam = ref([])
 const riwayatPakan = ref([])
+const daftarStokPakan = ref([])
 
 const showForm = ref(false)
 const kolamDipilih = ref(null)
 const sesiDipilih = ref(null)
-const form = ref({ jumlah_kg: '', biaya: '', catatan: '' })
+const form = ref({ stok_pakan_id: '', jumlah_kg: '', biaya: '', catatan: '' })
 
 const showRiwayat = ref(false)
 const riwayatKolamDipilih = ref(null)
@@ -15,11 +16,6 @@ const riwayatDetail = ref([])
 
 const hariIni = new Date().toISOString().slice(0, 10)
 
-// Normalisasi tanggal ke format YYYY-MM-DD, baik sumbernya berupa teks
-// maupun objek Date (Postgres via node-postgres mengembalikan kolom
-// bertipe DATE sebagai objek Date, bukan teks — kalau langsung dipakai
-// .slice() akan gagal diam-diam dan status selalu terbaca "Belum"
-// meskipun sudah dicatat hari itu).
 function keTanggalISO(d) {
   if (!d) return null
   const tgl = d instanceof Date ? d : new Date(d)
@@ -27,18 +23,14 @@ function keTanggalISO(d) {
   return tgl.toISOString().slice(0, 10)
 }
 
-// Definisi 3 sesi pemberian makan per hari. Ubah jam_mulai/jam_selesai
-// sesuai kebiasaan pemberian pakan di kolammu.
 const DAFTAR_SESI = [
   { key: 'pagi', label: 'Pagi', jam_mulai: 6, jam_selesai: 10 },
   { key: 'siang', label: 'Siang', jam_mulai: 11, jam_selesai: 15 },
   { key: 'sore', label: 'Sore', jam_mulai: 16, jam_selesai: 19 }
 ]
 
-// Hanya tampilkan kolam yang sedang aktif (ada ikannya)
 const kolamAktif = computed(() => daftarKolam.value.filter(k => k.status === 'aktif'))
 
-// Untuk setiap kolam, hitung status 3 sesi hari ini: 'sudah' | 'terlambat' | 'belum'
 const daftarGabungan = computed(() => {
   const jamSekarang = new Date().getHours()
 
@@ -62,6 +54,16 @@ const daftarGabungan = computed(() => {
   })
 })
 
+// Jenis pakan yang stoknya masih tersedia (> 0), ditampilkan di dropdown form
+const stokPakanTersedia = computed(() =>
+  daftarStokPakan.value.filter(s => Number(s.stok) > 0)
+)
+
+// Info stok dari jenis pakan yang sedang dipilih di form, untuk validasi & tampilan sisa stok
+const stokDipilihInfo = computed(() =>
+  daftarStokPakan.value.find(s => String(s.id) === String(form.value.stok_pakan_id)) || null
+)
+
 async function muatKolam() {
   const res = await fetch('/api/kolam')
   const json = await res.json()
@@ -74,15 +76,27 @@ async function muatRiwayat() {
   riwayatPakan.value = json.data
 }
 
+async function muatStokPakan() {
+  const res = await fetch('/api/stok-pakan')
+  const json = await res.json()
+  daftarStokPakan.value = json.data || []
+}
+
 function bukaForm(k, sesi) {
   if (sesi.status === 'sudah') return
   kolamDipilih.value = k
   sesiDipilih.value = sesi
-  form.value = { jumlah_kg: '', biaya: '', catatan: '' }
+  form.value = { stok_pakan_id: '', jumlah_kg: '', biaya: '', catatan: '' }
   showForm.value = true
 }
 
 async function simpan() {
+  // Validasi ringan di frontend sebelum kirim (backend tetap jadi validasi final)
+  if (stokDipilihInfo.value && Number(form.value.jumlah_kg) > Number(stokDipilihInfo.value.stok)) {
+    alert(`Stok tidak cukup. Sisa ${stokDipilihInfo.value.nama}: ${stokDipilihInfo.value.stok} kg`)
+    return
+  }
+
   const res = await fetch('/api/pakan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -92,7 +106,8 @@ async function simpan() {
       sesi: sesiDipilih.value.key,
       jumlah_kg: form.value.jumlah_kg,
       biaya: form.value.biaya || 0,
-      catatan: form.value.catatan
+      catatan: form.value.catatan,
+      stok_pakan_id: form.value.stok_pakan_id || null
     })
   })
 
@@ -103,7 +118,7 @@ async function simpan() {
   }
 
   showForm.value = false
-  await muatRiwayat()
+  await Promise.all([muatRiwayat(), muatStokPakan()])
 }
 
 async function bukaRiwayat(k) {
@@ -130,6 +145,7 @@ function labelSesi(key) {
 onMounted(() => {
   muatKolam()
   muatRiwayat()
+  muatStokPakan()
 })
 </script>
 
@@ -205,8 +221,26 @@ onMounted(() => {
       </p>
       <form class="space-y-3" @submit.prevent="simpan">
         <div>
+          <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jenis Pakan</label>
+          <select
+            v-model="form.stok_pakan_id"
+            class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
+          >
+            <option value="">— Tidak dipotong dari stok —</option>
+            <option v-for="s in stokPakanTersedia" :key="s.id" :value="s.id">
+              {{ s.nama }} (sisa {{ Number(s.stok).toLocaleString('id-ID') }} {{ s.satuan }})
+            </option>
+          </select>
+          <p v-if="stokPakanTersedia.length === 0" class="text-[12px] text-warn-600 mt-1">
+            Belum ada stok pakan tersedia. Tambahkan dulu di menu Stok Pakan.
+          </p>
+        </div>
+        <div>
           <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jumlah Pakan (kg)</label>
           <input v-model="form.jumlah_kg" type="number" step="0.1" min="0" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
+          <p v-if="stokDipilihInfo" class="text-[12px] text-ink-400 mt-1">
+            Sisa stok {{ stokDipilihInfo.nama }}: {{ Number(stokDipilihInfo.stok).toLocaleString('id-ID') }} {{ stokDipilihInfo.satuan }}
+          </p>
         </div>
         <div>
           <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">
@@ -238,6 +272,7 @@ onMounted(() => {
           <tr class="border-b border-ink-100 dark:border-ink-500 text-ink-500 dark:text-ink-300">
             <th class="py-2 pr-2">Tanggal</th>
             <th class="py-2 pr-2">Sesi</th>
+            <th class="py-2 pr-2">Pakan</th>
             <th class="py-2 pr-2">Jumlah (kg)</th>
             <th class="py-2">Biaya</th>
           </tr>
@@ -246,11 +281,12 @@ onMounted(() => {
           <tr v-for="r in riwayatDetail" :key="r.id" class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100">
             <td class="py-2 pr-2">{{ tanggal(r.tanggal) }}</td>
             <td class="py-2 pr-2">{{ labelSesi(r.sesi) }}</td>
+            <td class="py-2 pr-2">{{ r.nama_pakan || '-' }}</td>
             <td class="py-2 pr-2">{{ r.jumlah_kg }}</td>
             <td class="py-2">Rp {{ rupiah(r.biaya) }}</td>
           </tr>
           <tr v-if="riwayatDetail.length === 0">
-            <td colspan="4" class="py-4 text-center text-ink-500 dark:text-ink-300">Belum ada riwayat.</td>
+            <td colspan="5" class="py-4 text-center text-ink-500 dark:text-ink-300">Belum ada riwayat.</td>
           </tr>
         </tbody>
       </table>
