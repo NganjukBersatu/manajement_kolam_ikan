@@ -75,10 +75,10 @@ function konfirmasiLogout() {
     >
       <!-- Logo -->
       <div class="h-16 flex items-center gap-2 px-4 border-b border-white/10 overflow-hidden">
-        <div class="w-8 h-8 rounded-lg bg-gold-500 flex items-center justify-center font-bold text-brand-900 shrink-0">
-          K
+        <div class="w-8 h-8 rounded-lg bg-gold-500 flex items-center justify-center text-brand-900 shrink-0">
+          <NavIcon name="kolam" :size="18" />
         </div>
-        <span v-show="!collapsed" class="font-semibold whitespace-nowrap">Kolam Ikan</span>
+        <span v-show="!collapsed" class="font-semibold whitespace-nowrap">Manajement Kolam</span>
 
         <!-- Tombol tutup (hanya muncul saat sidebar terbuka) -->
         <button

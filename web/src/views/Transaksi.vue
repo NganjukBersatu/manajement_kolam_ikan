@@ -15,69 +15,16 @@ const kosongForm = () => ({
   kolam_id: '',
   jumlah_kg: '',
   harga_per_kg: '',
-  nama_pembeli: '',
-  no_hp: '',
   catatan: ''
 })
 const form = ref(kosongForm())
-
-// ====================== FILTER ======================
-const filterPeriode = ref('semua')
-const customDari = ref('')
-const customSampai = ref('')
-const filterJenisIkan = ref('')
-const filterKolam = ref('')
-const pencarian = ref('')
 
 // ====================== PAGINATION ======================
 const halamanSekarang = ref(1)
 const perHalaman = ref(10)
 
-function startOfDay(date) {
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-function endOfDay(date) {
-  const d = new Date(date)
-  d.setHours(23, 59, 59, 999)
-  return d
-}
-
-const rentangTanggal = computed(() => {
-  const sekarang = new Date()
-
-  if (filterPeriode.value === 'hari-ini') {
-    return { dari: startOfDay(sekarang), sampai: endOfDay(sekarang) }
-  }
-
-  if (filterPeriode.value === 'minggu-ini') {
-    const hari = sekarang.getDay()
-    const senin = new Date(sekarang)
-    senin.setDate(sekarang.getDate() - (hari === 0 ? 6 : hari - 1))
-    const minggu = new Date(senin)
-    minggu.setDate(senin.getDate() + 6)
-    return { dari: startOfDay(senin), sampai: endOfDay(minggu) }
-  }
-
-  if (filterPeriode.value === 'bulan-ini') {
-    const awalBulan = new Date(sekarang.getFullYear(), sekarang.getMonth(), 1)
-    const akhirBulan = new Date(sekarang.getFullYear(), sekarang.getMonth() + 1, 0)
-    return { dari: startOfDay(awalBulan), sampai: endOfDay(akhirBulan) }
-  }
-
-  if (filterPeriode.value === 'custom') {
-    return {
-      dari: customDari.value ? startOfDay(customDari.value) : null,
-      sampai: customSampai.value ? endOfDay(customSampai.value) : null
-    }
-  }
-
-  return { dari: null, sampai: null }
-})
-
-// Reset ke halaman 1 setiap filter berubah
-watch([filterPeriode, customDari, customSampai, filterJenisIkan, filterKolam, pencarian, perHalaman], () => {
+// Reset ke halaman 1 setiap perHalaman berubah
+watch([perHalaman], () => {
   halamanSekarang.value = 1
 })
 
@@ -122,8 +69,6 @@ function edit(p) {
     kolam_id: p.kolam_id ?? '',
     jumlah_kg: p.jumlah_kg ?? '',
     harga_per_kg: p.harga_per_kg ?? '',
-    nama_pembeli: p.nama_pembeli ?? '',
-    no_hp: p.no_hp ?? '',
     catatan: p.catatan ?? ''
   }
   showForm.value = true
@@ -171,30 +116,9 @@ async function hapus(id) {
 function rupiah(n) { return 'Rp' + Number(n).toLocaleString('id-ID') }
 function tanggal(d) { return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) }
 
-// ====================== DATA TERFILTER ======================
+// ====================== DATA TERURUT ======================
 const dataTerfilter = computed(() => {
-  const kataKunci = pencarian.value.trim().toLowerCase()
-  const { dari, sampai } = rentangTanggal.value
-
-  return [...daftar.value]
-    .filter((p) => {
-      if (kataKunci) {
-        const gabungan = `${p.nama_ikan || ''} ${p.nama_kolam || ''} ${p.nama_pembeli || ''} ${p.no_hp || ''} ${p.catatan || ''}`.toLowerCase()
-        if (!gabungan.includes(kataKunci)) return false
-      }
-
-      if (dari || sampai) {
-        const tgl = new Date(p.tanggal)
-        if (dari && tgl < dari) return false
-        if (sampai && tgl > sampai) return false
-      }
-
-      if (filterJenisIkan.value && String(p.jenis_ikan_id) !== String(filterJenisIkan.value)) return false
-      if (filterKolam.value && String(p.kolam_id) !== String(filterKolam.value)) return false
-
-      return true
-    })
-    .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+  return [...daftar.value].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
 })
 
 // ====================== PAGINATION ======================
@@ -246,16 +170,6 @@ const totalKg = computed(() =>
 )
 const jumlahTransaksi = computed(() => dataTerfilter.value.length)
 
-function resetFilter() {
-  filterPeriode.value = 'semua'
-  customDari.value = ''
-  customSampai.value = ''
-  filterJenisIkan.value = ''
-  filterKolam.value = ''
-  pencarian.value = ''
-  halamanSekarang.value = 1
-}
-
 onMounted(muat)
 </script>
 
@@ -277,82 +191,8 @@ onMounted(muat)
       </div>
     </div>
 
-    <!-- FILTER SECTION -->
-    <div class="mb-4 space-y-3">
-      <div class="flex flex-wrap items-center gap-2">
-        <button
-          v-for="opt in [
-            { value: 'semua', label: 'Semua' },
-            { value: 'hari-ini', label: 'Hari ini' },
-            { value: 'minggu-ini', label: 'Minggu ini' },
-            { value: 'bulan-ini', label: 'Bulan ini' },
-            { value: 'custom', label: 'Custom' }
-          ]"
-          :key="opt.value"
-          type="button"
-          class="px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors border"
-          :class="filterPeriode === opt.value
-            ? 'bg-brand-500 text-white border-brand-500'
-            : 'bg-white dark:bg-ink-700 text-ink-600 dark:text-ink-300 border-ink-100 dark:border-ink-500 hover:bg-ink-50 dark:hover:bg-ink-600'"
-          @click="filterPeriode = opt.value"
-        >
-          {{ opt.label }}
-        </button>
-      </div>
-
-      <div v-if="filterPeriode === 'custom'" class="flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-2">
-          <label class="text-[13px] text-ink-500 dark:text-ink-300">Dari</label>
-          <input v-model="customDari" type="date" class="rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]" />
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="text-[13px] text-ink-500 dark:text-ink-300">Sampai</label>
-          <input v-model="customSampai" type="date" class="rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]" />
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-2">
-          <label class="text-[13px] text-ink-500 dark:text-ink-300">Jenis Ikan</label>
-          <select v-model="filterJenisIkan" class="rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px] min-w-[160px]">
-            <option value="">Semua Jenis</option>
-            <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.id">{{ ji.nama }}</option>
-          </select>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <label class="text-[13px] text-ink-500 dark:text-ink-300">Kolam</label>
-          <select v-model="filterKolam" class="rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px] min-w-[140px]">
-            <option value="">Semua Kolam</option>
-            <option v-for="k in daftarKolam" :key="k.id" :value="k.id">{{ k.nama_kolam }}</option>
-          </select>
-        </div>
-
-        <button
-          v-if="filterPeriode !== 'semua' || filterJenisIkan || filterKolam || pencarian"
-          type="button"
-          class="text-[13px] text-danger-600 dark:text-danger-500 font-medium hover:underline"
-          @click="resetFilter"
-        >
-          Reset Filter
-        </button>
-      </div>
-    </div>
-
-    <!-- Search & Tambah -->
-    <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-      <div class="relative flex-1">
-        <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
-        <input
-          v-model="pencarian"
-          type="text"
-          placeholder="Cari jenis ikan, kolam, pembeli, atau catatan..."
-          class="w-full pl-9 pr-3 py-2 text-[13.5px] border border-ink-100 dark:border-ink-500 rounded-lg bg-white dark:bg-ink-900 dark:text-white placeholder:text-ink-400"
-        />
-      </div>
+    <!-- Tambah -->
+    <div class="flex justify-end mb-4">
       <button
         type="button"
         class="px-4 py-2.5 rounded-lg bg-brand-500 text-white text-[13.5px] font-semibold hover:bg-brand-600 whitespace-nowrap"
@@ -371,7 +211,6 @@ onMounted(muat)
               <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">Tanggal</th>
               <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">Jenis Ikan</th>
               <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">Kolam</th>
-              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">Pembeli</th>
               <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">Jumlah (kg)</th>
               <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">Harga/kg</th>
               <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">Total</th>
@@ -381,26 +220,17 @@ onMounted(muat)
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td colspan="9" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">Memuat data...</td>
+              <td colspan="8" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">Memuat data...</td>
             </tr>
             <tr v-else-if="dataHalaman.length === 0">
-              <td colspan="9" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
-                {{ (pencarian || filterPeriode !== 'semua' || filterJenisIkan || filterKolam)
-                  ? 'Tidak ada transaksi yang cocok dengan filter.'
-                  : 'Belum ada transaksi penjualan.' }}
+              <td colspan="8" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+                Belum ada transaksi penjualan.
               </td>
             </tr>
             <tr v-for="p in dataHalaman" :key="p.id" class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100">
               <td class="px-4 py-3 whitespace-nowrap">{{ tanggal(p.tanggal) }}</td>
               <td class="px-4 py-3">{{ p.nama_ikan }}</td>
               <td class="px-4 py-3">{{ p.nama_kolam || '-' }}</td>
-              <td class="px-4 py-3">
-                <div v-if="p.nama_pembeli">
-                  <p class="font-medium">{{ p.nama_pembeli }}</p>
-                  <p v-if="p.no_hp" class="text-[12px] text-ink-500 dark:text-ink-300">{{ p.no_hp }}</p>
-                </div>
-                <span v-else class="text-ink-400">-</span>
-              </td>
               <td class="px-4 py-3">{{ p.jumlah_kg }}</td>
               <td class="px-4 py-3">{{ rupiah(p.harga_per_kg) }}</td>
               <td class="px-4 py-3 font-semibold text-brand-500 dark:text-brand-400">{{ rupiah(p.total) }}</td>
@@ -503,29 +333,6 @@ onMounted(muat)
               <option value="">Tidak diketahui</option>
               <option v-for="k in daftarKolam" :key="k.id" :value="k.id">{{ k.nama_kolam }}</option>
             </select>
-          </div>
-
-          <!-- Informasi Pembeli -->
-          <div class="grid grid-cols-1 gap-3">
-            <div>
-              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nama Pembeli <span class="text-danger-500">*</span></label>
-              <input
-                v-model="form.nama_pembeli"
-                type="text"
-                required
-                placeholder="Contoh: Pak Slamet / Ibu Siti"
-                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
-              />
-            </div>
-            <div>
-              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">No. HP (opsional)</label>
-              <input
-                v-model="form.no_hp"
-                type="text"
-                placeholder="08xxxxxxxxxx"
-                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
-              />
-            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">

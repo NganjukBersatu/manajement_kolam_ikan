@@ -25,10 +25,6 @@ function angka(v) {
   return Number.isFinite(n) ? n : 0
 }
 
-function rupiah(n) {
-  return 'Rp' + Number(n || 0).toLocaleString('id-ID')
-}
-
 function tanggal(d) {
   if (!d) return '-'
   return new Date(d).toLocaleDateString('id-ID', {
@@ -329,16 +325,15 @@ onMounted(() => {
               <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam Tujuan</th>
               <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jenis Pakan</th>
               <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah Keluar</th>
-              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Biaya</th>
               <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Catatan</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="loadingRiwayat">
-              <td colspan="6" class="px-4 py-8 text-center text-ink-400">Memuat riwayat pemakaian pakan...</td>
+              <td colspan="5" class="px-4 py-8 text-center text-ink-400">Memuat riwayat pemakaian pakan...</td>
             </tr>
             <tr v-else-if="!riwayatTerfilter.length">
-              <td colspan="6" class="px-4 py-8 text-center text-ink-400">
+              <td colspan="5" class="px-4 py-8 text-center text-ink-400">
                 {{ pencarianAktivitas || filterKolam ? 'Tidak ada riwayat pakan yang sesuai pencarian.' : 'Belum ada catatan aktivitas pakan keluar.' }}
               </td>
             </tr>
@@ -364,9 +359,6 @@ onMounted(() => {
               </td>
               <td class="px-4 py-3 font-semibold text-danger-600 dark:text-danger-400 whitespace-nowrap">
                 - {{ r.jumlah_kg }} kg
-              </td>
-              <td class="px-4 py-3 text-ink-600 dark:text-ink-300 whitespace-nowrap">
-                {{ Number(r.biaya) > 0 ? rupiah(r.biaya) : '-' }}
               </td>
               <td class="px-4 py-3 text-ink-500 dark:text-ink-400 text-[12px]">
                 {{ r.catatan || '-' }}

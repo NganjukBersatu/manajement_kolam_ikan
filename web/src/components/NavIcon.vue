@@ -56,12 +56,14 @@ const paths = {
   'trending-down': 'M23 18l-9.5-9.5-5 5L1 6 M17 18h6v-6',
   package: 'M16.5 9.4L7.5 4.21 M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z M3.27 6.96L12 12.01l8.73-5.05 M12 22.08V12',
 
-  // Icon baru: untuk menu "Pemberian Makan"
+  // Icon: untuk menu "Pemberian Makan"
   utensils: 'M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2 M7 2v20 M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3z M21 15v7',
-  // Icon baru: untuk menu "Pemberian Obat"
+  // Icon: untuk menu "Pemberian Obat"
   pill: 'M10.5 20.5L3.5 13.5a4.95 4.95 0 117-7l7 7a4.95 4.95 0 11-7 7z M8.5 8.5l7 7',
-  // Icon baru: untuk menu "Ganti Air"
-  droplet: 'M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'
+  // Icon: untuk menu "Ganti Air"
+  droplet: 'M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z',
+  // Icon: kolam (gelombang air) — netral, tidak spesifik ikan, cocok untuk kolam ikan/udang/ternak air lainnya
+  kolam: 'M2 6c.7.6 1.4 1.2 2.8 1.2S7.3 6.6 8 6s1.4-1.2 2.8-1.2S13.3 5.4 14 6s1.4 1.2 2.8 1.2S19.3 6.6 20 6 M2 12c.7.6 1.4 1.2 2.8 1.2S7.3 12.6 8 12s1.4-1.2 2.8-1.2S13.3 11.4 14 12s1.4 1.2 2.8 1.2S19.3 12.6 20 12 M2 18c.7.6 1.4 1.2 2.8 1.2S7.3 18.6 8 18s1.4-1.2 2.8-1.2S13.3 17.4 14 18s1.4 1.2 2.8 1.2S19.3 18.6 20 18'
 }
 </script>
 
