@@ -8,7 +8,7 @@ const daftarStokPakan = ref([])
 const showForm = ref(false)
 const kolamDipilih = ref(null)
 const sesiDipilih = ref(null)
-const form = ref({ stok_pakan_id: '', jumlah_kg: '', biaya: '', catatan: '' })
+const form = ref({ stok_pakan_id: '', jumlah_kg: '', catatan: '' })
 
 const showRiwayat = ref(false)
 const riwayatKolamDipilih = ref(null)
@@ -86,7 +86,7 @@ function bukaForm(k, sesi) {
   if (sesi.status === 'sudah') return
   kolamDipilih.value = k
   sesiDipilih.value = sesi
-  form.value = { stok_pakan_id: '', jumlah_kg: '', biaya: '', catatan: '' }
+  form.value = { stok_pakan_id: '', jumlah_kg: '', catatan: '' }
   showForm.value = true
 }
 
@@ -105,7 +105,6 @@ async function simpan() {
       tanggal: hariIni,
       sesi: sesiDipilih.value.key,
       jumlah_kg: form.value.jumlah_kg,
-      biaya: form.value.biaya || 0,
       catatan: form.value.catatan,
       stok_pakan_id: form.value.stok_pakan_id || null
     })
@@ -243,12 +242,6 @@ onMounted(() => {
           </p>
         </div>
         <div>
-          <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">
-            Biaya (Rp) <span class="text-ink-400 font-normal">(opsional)</span>
-          </label>
-          <input v-model="form.biaya" type="number" min="0" placeholder="Contoh: 50000" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
-        </div>
-        <div>
           <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Catatan (opsional)</label>
           <textarea v-model="form.catatan" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"></textarea>
         </div>
@@ -273,8 +266,7 @@ onMounted(() => {
             <th class="py-2 pr-2">Tanggal</th>
             <th class="py-2 pr-2">Sesi</th>
             <th class="py-2 pr-2">Pakan</th>
-            <th class="py-2 pr-2">Jumlah (kg)</th>
-            <th class="py-2">Biaya</th>
+            <th class="py-2">Jumlah (kg)</th>
           </tr>
         </thead>
         <tbody>
@@ -282,11 +274,10 @@ onMounted(() => {
             <td class="py-2 pr-2">{{ tanggal(r.tanggal) }}</td>
             <td class="py-2 pr-2">{{ labelSesi(r.sesi) }}</td>
             <td class="py-2 pr-2">{{ r.nama_pakan || '-' }}</td>
-            <td class="py-2 pr-2">{{ r.jumlah_kg }}</td>
-            <td class="py-2">Rp {{ rupiah(r.biaya) }}</td>
+            <td class="py-2">{{ r.jumlah_kg }}</td>
           </tr>
           <tr v-if="riwayatDetail.length === 0">
-            <td colspan="5" class="py-4 text-center text-ink-500 dark:text-ink-300">Belum ada riwayat.</td>
+            <td colspan="4" class="py-4 text-center text-ink-500 dark:text-ink-300">Belum ada riwayat.</td>
           </tr>
         </tbody>
       </table>
