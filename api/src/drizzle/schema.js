@@ -15,6 +15,7 @@ export const jenisIkan = pgTable("jenis_ikan", {
 	nama: varchar({ length: 100 }).notNull(),
 	hariSortir: integer("hari_sortir").notNull(),
 	hariPanen: integer("hari_panen").notNull(),
+	hargaPerKg: numeric("harga_per_kg").default('0').notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
