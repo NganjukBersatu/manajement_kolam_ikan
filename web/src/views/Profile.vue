@@ -44,7 +44,9 @@ function saveProfile() {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto py-2">
+  <div class="max-w-2xl mx-auto p-6">
+    <h1 class="text-xl font-semibold text-ink-900 dark:text-white mb-6">Profil saya</h1>
+
     <div class="bg-white dark:bg-ink-800 border border-ink-100 dark:border-ink-700 rounded-card p-6">
       <!-- Foto -->
       <div class="flex items-center gap-5 mb-6 pb-6 border-b border-ink-100 dark:border-ink-700">

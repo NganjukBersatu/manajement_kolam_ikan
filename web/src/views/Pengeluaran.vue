@@ -66,14 +66,14 @@ onMounted(muat)
 
 <template>
   <div>
-    <!-- Aksi Tambah (judul & deskripsi sudah ada di header aplikasi) -->
-    <div class="flex justify-end mb-4">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-[18px] font-semibold dark:text-white">Pengeluaran</h1>
       <button
         type="button"
         class="px-4 py-2.5 rounded-lg bg-brand-500 text-white text-[13.5px] font-semibold hover:bg-brand-600"
         @click="showForm = true"
       >
-        + Tambah Pengeluaran
+        + Tambah
       </button>
     </div>
 

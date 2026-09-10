@@ -14,7 +14,6 @@ const menu = [
   { to: '/', label: 'Dashboard', icon: 'home' },
   { to: '/transaksi', label: 'Transaksi', icon: 'wallet' },
   { to: '/kolam', label: 'Daftar Kolam', icon: 'fish' },
-  { to: '/jenis-ikan', label: 'Jenis Ikan', icon: 'list' },
 ]
 
 const jadwalSub = [

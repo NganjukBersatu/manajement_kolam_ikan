@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 const daftar = ref([])
 const daftarJenisIkan = ref([])
@@ -17,15 +17,6 @@ const kosongForm = () => ({
   catatan: ''
 })
 const form = ref(kosongForm())
-
-// Otomatis isi harga/kg saat jenis ikan dipilih
-watch(() => form.value.jenis_ikan_id, (id) => {
-  if (!id) return
-  const ikan = daftarJenisIkan.value.find(j => String(j.id) === String(id))
-  if (ikan && ikan.harga_per_kg !== undefined && ikan.harga_per_kg !== null) {
-    form.value.harga_per_kg = Number(ikan.harga_per_kg)
-  }
-})
 
 const pencarian = ref('')
 
@@ -202,13 +193,10 @@ onMounted(muat)
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jenis Ikan</label>
             <select v-model="form.jenis_ikan_id" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white">
               <option value="" disabled>Pilih jenis ikan</option>
-              <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.id">
-                {{ ji.nama }} — {{ rupiah(ji.harga_per_kg) }}/kg
-              </option>
+              <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.id">{{ ji.nama }}</option>
             </select>
             <p v-if="daftarJenisIkan.length === 0" class="text-[12px] text-warn-600 mt-1">
               Belum ada jenis ikan terdaftar.
-              <router-link to="/jenis-ikan" class="text-brand-500 underline ml-1">Tambah di Master Jenis Ikan</router-link>
             </p>
           </div>
           <div>
@@ -224,12 +212,7 @@ onMounted(muat)
               <input v-model="form.jumlah_kg" type="number" step="0.1" min="0" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
             </div>
             <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="text-[13px] font-medium dark:text-ink-300">Harga/kg</label>
-                <span v-if="form.harga_per_kg" class="text-[11px] text-brand-600 dark:text-brand-400 font-medium bg-brand-50 dark:bg-brand-900/40 px-1.5 py-0.5 rounded">
-                  Otomatis
-                </span>
-              </div>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Harga/kg</label>
               <input v-model="form.harga_per_kg" type="number" min="0" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
             </div>
           </div>

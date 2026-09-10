@@ -159,8 +159,12 @@ function resetFilterTambahan() {
 
 <template>
   <div>
-    <!-- Filter periode laporan (judul & deskripsi sudah ada di header aplikasi) -->
-    <div class="flex justify-end items-center gap-2 mb-4">
+    <!-- Filter periode laporan -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <p class="text-[13px] text-ink-500 dark:text-ink-300">
+        Riwayat penjualan tercatat otomatis dari transaksi
+      </p>
+
       <div class="flex flex-wrap items-center gap-2">
         <button
           v-for="p in PRESET_PERIODE"

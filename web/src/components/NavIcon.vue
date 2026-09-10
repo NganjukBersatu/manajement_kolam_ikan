@@ -59,9 +59,7 @@ const paths = {
   // Icon baru: untuk menu "Pemberian Makan"
   utensils: 'M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2 M7 2v20 M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3z M21 15v7',
   // Icon baru: untuk menu "Pemberian Obat"
-  pill: 'M10.5 20.5L3.5 13.5a4.95 4.95 0 117-7l7 7a4.95 4.95 0 11-7 7z M8.5 8.5l7 7',
-  // Icon baru: untuk menu "Ganti Air"
-  droplet: 'M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'
+  pill: 'M10.5 20.5L3.5 13.5a4.95 4.95 0 117-7l7 7a4.95 4.95 0 11-7 7z M8.5 8.5l7 7'
 }
 </script>
 

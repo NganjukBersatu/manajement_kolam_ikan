@@ -183,25 +183,35 @@ onMounted(muat)
 
 <template>
   <div class="space-y-6">
-    <!-- Filter Bulan & Tahun (judul & deskripsi sudah di header aplikasi) -->
-    <div class="flex justify-end items-center gap-2">
-      <select
-        v-model="selectedMonth"
-        class="rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
-      >
-        <option v-for="b in daftarBulan" :key="b.value" :value="b.value">
-          {{ b.label }}
-        </option>
-      </select>
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h1 class="text-[18px] font-semibold dark:text-white">Laporan Pengeluaran</h1>
+        <p class="text-[13.5px] text-ink-500 dark:text-ink-300">
+          Detail & total pengeluaran (termasuk pakan) per bulan
+        </p>
+      </div>
 
-      <select
-        v-model="selectedYear"
-        class="rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
-      >
-        <option v-for="y in [2024, 2025, 2026, 2027, 2028]" :key="y" :value="y">
-          {{ y }}
-        </option>
-      </select>
+      <!-- Filter Bulan & Tahun -->
+      <div class="flex items-center gap-2">
+        <select
+          v-model="selectedMonth"
+          class="rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
+        >
+          <option v-for="b in daftarBulan" :key="b.value" :value="b.value">
+            {{ b.label }}
+          </option>
+        </select>
+
+        <select
+          v-model="selectedYear"
+          class="rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
+        >
+          <option v-for="y in [2024, 2025, 2026, 2027, 2028]" :key="y" :value="y">
+            {{ y }}
+          </option>
+        </select>
+      </div>
     </div>
 
     <!-- Search & Filter tambahan -->

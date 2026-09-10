@@ -13,26 +13,24 @@ const routes = [
     path: '/',
     component: DashboardLayout,
     children: [
-      { path: '', name: 'dashboard', component: () => import('../views/Dashboard.vue'), meta: { title: 'Dashboard', subtitle: 'Ringkasan aktivitas budidaya, status kolam, dan performa keuangan' } },
-      { path: 'transaksi', name: 'transaksi', component: () => import('../views/Transaksi.vue'), meta: { title: 'Transaksi Penjualan', subtitle: 'Catat dan pantau transaksi penjualan ikan langsung dari kolam' } },
-      { path: 'jadwal/sortir', name: 'jadwal-sortir', component: () => import('../views/JadwalSortir.vue'), meta: { title: 'Jadwal Sortir', subtitle: 'Pantau dan catat kegiatan sortir ukuran dan kematian ikan' } },
-      { path: 'jadwal/panen', name: 'jadwal-panen', component: () => import('../views/JadwalPanen.vue'), meta: { title: 'Jadwal Panen', subtitle: 'Jadwal panen ikan dan pencatatan hasil panen per kolam' } },
-      { path: 'jadwal/ganti-air', name: 'jadwal-ganti-air', component: () => import('../views/JadwalGantiAir.vue'), meta: { title: 'Jadwal Ganti Air', subtitle: 'Jadwal pengurasan dan sirkulasi air untuk menjaga kualitas kolam' } },
-      { path: 'jadwal/pemberian-makan', name: 'jadwal-pemberian-makan', component: () => import('../views/JadwalPemberianMakan.vue'), meta: { title: 'Jadwal Pemberian Makan', subtitle: 'Pencatatan pemberian pakan harian sesi pagi, siang, dan sore' } },
-      { path: 'jadwal/pemberian-obat', name: 'jadwal-pemberian-obat', component: () => import('../views/JadwalPemberianObat.vue'), meta: { title: 'Jadwal Pemberian Obat', subtitle: 'Jadwal dan riwayat pemberian vitamin serta obat pencegahan hama' } },
-      { path: 'kolam', name: 'kolam', component: () => import('../views/Kolam.vue'), meta: { title: 'Daftar Kolam', subtitle: 'Kelola daftar kolam budidaya dan aktivitas tebar bibit ikan' } },
-      { path: 'jenis-ikan', name: 'jenis-ikan', component: () => import('../views/JenisIkan.vue'), meta: { title: 'Jenis Ikan & Harga Jual', subtitle: 'Kelola jenis ikan ternak dan tentukan harga jual perkilo acuan transaksi' } },
-      { path: 'pengeluaran', name: 'pengeluaran', component: () => import('../views/Pengeluaran.vue'), meta: { title: 'Pengeluaran', subtitle: 'Catat biaya operasional budidaya seperti listrik, obat, dan perlengkapan' } },
+      { path: '', name: 'dashboard', component: () => import('../views/Dashboard.vue'), meta: { title: 'Dashboard' } },
+      { path: 'transaksi', name: 'transaksi', component: () => import('../views/Transaksi.vue'), meta: { title: 'Transaksi Penjualan' } },
+      { path: 'jadwal/sortir', name: 'jadwal-sortir', component: () => import('../views/JadwalSortir.vue'), meta: { title: 'Jadwal Sortir' } },
+      { path: 'jadwal/panen', name: 'jadwal-panen', component: () => import('../views/JadwalPanen.vue'), meta: { title: 'Jadwal Panen' } },
+      { path: 'jadwal/ganti-air', name: 'jadwal-ganti-air', component: () => import('../views/JadwalGantiAir.vue'), meta: { title: 'Jadwal Ganti Air' } },
+      { path: 'jadwal/pemberian-makan', name: 'jadwal-pemberian-makan', component: () => import('../views/JadwalPemberianMakan.vue'), meta: { title: 'Jadwal Pemberian Makan' } },
+      { path: 'jadwal/pemberian-obat', name: 'jadwal-pemberian-obat', component: () => import('../views/JadwalPemberianObat.vue'), meta: { title: 'Jadwal Pemberian Obat' } },
+      { path: 'kolam', name: 'kolam', component: () => import('../views/Kolam.vue'), meta: { title: 'Daftar Kolam' } },
+      { path: 'pengeluaran', name: 'pengeluaran', component: () => import('../views/Pengeluaran.vue'), meta: { title: 'Pengeluaran' } },
 
       // Stok Pakan
-      { path: 'stok-pakan', name: 'stok-pakan', component: () => import('../views/StokPakan.vue'), meta: { title: 'Stok Pakan', subtitle: 'Daftar jenis pakan, sisa stok, dan riwayat aktivitas pemakaian pakan' } },
+      { path: 'stok-pakan', name: 'stok-pakan', component: () => import('../views/StokPakan.vue'), meta: { title: 'Stok Pakan' } },
       // Laporan
-      { path: 'laporan', name: 'laporan', component: () => import('../views/Laporan.vue'), meta: { title: 'Laporan Ringkasan', subtitle: 'Analisis performa budidaya, keuntungan, dan ringkasan keuangan' } },
-      { path: 'laporan/penjualan', name: 'laporan-penjualan', component: () => import('../views/LaporanPenjualan.vue'), meta: { title: 'Laporan Penjualan', subtitle: 'Riwayat penjualan tercatat otomatis dari seluruh transaksi' } },
-      { path: 'laporan/pengeluaran', name: 'laporan-pengeluaran', component: () => import('../views/LaporanPengeluaran.vue'), meta: { title: 'Laporan Pengeluaran', subtitle: 'Detail dan total pengeluaran operasional per bulan' } },
+      { path: 'laporan', name: 'laporan', component: () => import('../views/Laporan.vue'), meta: { title: 'Laporan Ringkasan' } },
+      { path: 'laporan/penjualan', name: 'laporan-penjualan', component: () => import('../views/LaporanPenjualan.vue'), meta: { title: 'Laporan Penjualan' } },
+      { path: 'laporan/pengeluaran', name: 'laporan-pengeluaran', component: () => import('../views/LaporanPengeluaran.vue'), meta: { title: 'Laporan Pengeluaran' } },
 
-      { path: 'pengaturan', name: 'pengaturan', component: () => import('../views/Pengaturan.vue'), meta: { title: 'Pengaturan Usaha & Akun', subtitle: 'Sesuaikan identitas usaha budidaya, ganti kata sandi, dan preferensi' } },
-      { path: 'profile', name: 'profile', component: () => import('../views/Profile.vue'), meta: { title: 'Profil Saya', subtitle: 'Informasi dan foto profil akun pengelola kolam' } }
+      { path: 'pengaturan', name: 'pengaturan', component: () => import('../views/Pengaturan.vue'), meta: { title: 'Pengaturan' } }
     ]
   }
 ]
