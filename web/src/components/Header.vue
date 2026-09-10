@@ -10,7 +10,7 @@ const route = useRoute()
 const router = useRouter()
 const { isDark, toggle } = useTheme()
 const { profile, initials, handleFileSelect } = useProfile()
-const { notifications, unreadCount, markAsRead, markAllAsRead, iconFor } = useNotifications()
+const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, iconFor, syncAll } = useNotifications()
 
 const menuOpen = ref(false)
 const menuRef = ref(null)
@@ -19,6 +19,7 @@ const notifRef = ref(null)
 const fileInput = ref(null)
 const uploadError = ref('')
 const uploading = ref(false)
+let notifInterval = null
 
 function toggleMenu() {
   menuOpen.value = !menuOpen.value
@@ -29,6 +30,9 @@ function toggleMenu() {
 function toggleNotif() {
   notifOpen.value = !notifOpen.value
   menuOpen.value = false
+  if (notifOpen.value) {
+    syncAll()
+  }
 }
 
 function closeMenus(e) {
@@ -40,8 +44,16 @@ function closeMenus(e) {
   }
 }
 
-onMounted(() => document.addEventListener('click', closeMenus))
-onBeforeUnmount(() => document.removeEventListener('click', closeMenus))
+onMounted(() => {
+  document.addEventListener('click', closeMenus)
+  syncAll()
+  notifInterval = setInterval(syncAll, 30000)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeMenus)
+  if (notifInterval) clearInterval(notifInterval)
+})
 
 function triggerFileInput() {
   fileInput.value?.click()
@@ -70,6 +82,10 @@ function goToProfile() {
 
 function onNotifClick(item) {
   markAsRead(item.id)
+  if (item.route) {
+    notifOpen.value = false
+    router.push(item.route)
+  }
 }
 </script>
 
@@ -113,14 +129,24 @@ function onNotifClick(item) {
         >
           <div class="flex items-center justify-between px-4 py-2 border-b border-ink-100 dark:border-ink-700">
             <p class="text-[13.5px] font-medium text-ink-900 dark:text-white">Notifikasi</p>
-            <button
-              v-if="unreadCount > 0"
-              type="button"
-              class="text-[12px] text-brand-500 hover:text-brand-600 font-medium"
-              @click="markAllAsRead"
-            >
-              Tandai semua dibaca
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="unreadCount > 0"
+                type="button"
+                class="text-[12px] text-brand-500 hover:text-brand-600 font-medium"
+                @click="markAllAsRead"
+              >
+                Tandai dibaca
+              </button>
+              <button
+                v-if="notifications.length > 0"
+                type="button"
+                class="text-[12px] text-ink-400 hover:text-danger-500 font-medium"
+                @click="clearAll"
+              >
+                Bersihkan
+              </button>
+            </div>
           </div>
 
           <div class="max-h-80 overflow-y-auto">

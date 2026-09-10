@@ -3,6 +3,9 @@ CREATE TABLE jenis_ikan (
   nama VARCHAR(100) NOT NULL,
   hari_sortir INT NOT NULL,   -- jumlah hari setelah tebar untuk jadwal sortir
   hari_panen INT NOT NULL,    -- jumlah hari setelah tebar untuk jadwal panen
+  harga_per_kg NUMERIC NOT NULL DEFAULT 0, -- harga jual perkilo
+  hari_obat_pertama INT DEFAULT 7, -- hari pertama pemberian obat setelah tebar
+  interval_obat_hari INT DEFAULT 14, -- jarak interval hari pemberian obat
   created_at TIMESTAMP DEFAULT NOW()
 );
 

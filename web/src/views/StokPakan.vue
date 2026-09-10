@@ -1,10 +1,16 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import NavIcon from '../components/NavIcon.vue'
 
 const loading = ref(true)
+const loadingRiwayat = ref(true)
 const error = ref('')
 const daftarStok = ref([])
+const riwayatPakan = ref([])
 const showForm = ref(false)
+
+const pencarianAktivitas = ref('')
+const filterKolam = ref('')
 
 const form = ref({
   nama: '',
@@ -13,10 +19,28 @@ const form = ref({
   stok_minimum: '10'
 })
 
-// Helper: parse angka aman untuk ditampilkan (defense in depth di UI)
+// Helper: parse angka aman untuk ditampilkan
 function angka(v) {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0
+}
+
+function rupiah(n) {
+  return 'Rp' + Number(n || 0).toLocaleString('id-ID')
+}
+
+function tanggal(d) {
+  if (!d) return '-'
+  return new Date(d).toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  })
+}
+
+function labelSesi(sesi) {
+  const map = { pagi: 'Pagi', siang: 'Siang', sore: 'Sore' }
+  return map[sesi] || sesi
 }
 
 async function muat() {
@@ -32,6 +56,21 @@ async function muat() {
     daftarStok.value = []
   } finally {
     loading.value = false
+  }
+}
+
+async function muatRiwayat() {
+  loadingRiwayat.value = true
+  try {
+    const res = await fetch('/api/pakan')
+    if (res.ok) {
+      const json = await res.json()
+      riwayatPakan.value = json.data || []
+    }
+  } catch (e) {
+    console.error('Gagal memuat riwayat pakan:', e)
+  } finally {
+    loadingRiwayat.value = false
   }
 }
 
@@ -57,7 +96,7 @@ async function simpan() {
 
   showForm.value = false
   form.value = { nama: '', stok_awal: '', satuan: 'kg', stok_minimum: '10' }
-  await muat()
+  await Promise.all([muat(), muatRiwayat()])
 }
 
 async function hapus(id) {
@@ -68,7 +107,7 @@ async function hapus(id) {
     alert(err.message || 'Gagal menghapus')
     return
   }
-  await muat()
+  await Promise.all([muat(), muatRiwayat()])
 }
 
 const totalJenis = computed(() => daftarStok.value.length)
@@ -76,8 +115,7 @@ const stokMenipis = computed(() =>
   daftarStok.value.filter(s => angka(s.stok) <= angka(s.stok_minimum)).length
 )
 
-// Total stok dikelompokkan per satuan, karena kg/sak/liter tidak boleh dijumlah jadi satu angka.
-// Hasilnya array of { satuan, total }, misalnya [{ satuan: 'kg', total: 138 }, { satuan: 'sak', total: 5 }]
+// Total stok dikelompokkan per satuan
 const totalStokPerSatuan = computed(() => {
   const kelompok = {}
   for (const s of daftarStok.value) {
@@ -87,42 +125,67 @@ const totalStokPerSatuan = computed(() => {
   return Object.entries(kelompok).map(([satuan, total]) => ({ satuan, total }))
 })
 
-onMounted(muat)
+// Total akumulasi pakan keluar (kg)
+const totalPakanKeluarKg = computed(() =>
+  riwayatPakan.value.reduce((sum, item) => sum + Number(item.jumlah_kg || 0), 0)
+)
+
+// Daftar nama kolam unik untuk filter
+const daftarKolamTersedia = computed(() => {
+  const set = new Set()
+  riwayatPakan.value.forEach(r => {
+    if (r.nama_kolam) set.add(r.nama_kolam)
+  })
+  return Array.from(set).sort()
+})
+
+// Data riwayat pakan keluar terfilter
+const riwayatTerfilter = computed(() => {
+  const q = pencarianAktivitas.value.trim().toLowerCase()
+  const kolam = filterKolam.value
+
+  return riwayatPakan.value.filter(item => {
+    const cocokKolam = !kolam || item.nama_kolam === kolam
+    const gabungan = `${item.nama_kolam || ''} ${item.nama_pakan || ''} ${item.catatan || ''}`.toLowerCase()
+    const cocokKata = !q || gabungan.includes(q)
+    return cocokKolam && cocokKata
+  })
+})
+
+onMounted(() => {
+  muat()
+  muatRiwayat()
+})
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <div>
-        <h1 class="text-[18px] font-semibold dark:text-white">Stok Pakan</h1>
-        <p class="text-[13.5px] text-ink-500 dark:text-ink-300">
-          Daftar jenis pakan & sisa stok. Stok berkurang otomatis saat catat Pakan Harian di Pengeluaran.
-        </p>
-      </div>
+    <!-- Aksi Tambah (judul & deskripsi sudah ada di header aplikasi) -->
+    <div class="flex justify-end">
       <button
         type="button"
-        class="px-4 py-2.5 rounded-lg bg-brand-500 text-white text-[13.5px] font-semibold hover:bg-brand-600"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-500 text-white text-[13.5px] font-semibold hover:bg-brand-600 transition shadow-sm"
         @click="showForm = true"
       >
-        + Tambah jenis pakan
+        <NavIcon name="plus" :size="15" />
+        Tambah Jenis Pakan
       </button>
     </div>
 
     <!-- Kartu ringkasan -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
-        <p class="text-[13px] text-ink-500 dark:text-ink-300">Jenis pakan terdaftar</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4">
+        <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Jenis pakan terdaftar</p>
         <p class="text-2xl font-bold dark:text-white mt-1">{{ totalJenis }}</p>
       </div>
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
-        <p class="text-[13px] text-ink-500 dark:text-ink-300">Stok menipis</p>
-        <p class="text-2xl font-bold mt-1" :class="stokMenipis > 0 ? 'text-danger-600' : 'dark:text-white'">
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4">
+        <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Stok menipis</p>
+        <p class="text-2xl font-bold mt-1" :class="stokMenipis > 0 ? 'text-danger-600 dark:text-danger-400' : 'dark:text-white'">
           {{ stokMenipis }}
         </p>
       </div>
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
-        <p class="text-[13px] text-ink-500 dark:text-ink-300">Total stok</p>
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4">
+        <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Total sisa stok</p>
         <div v-if="totalStokPerSatuan.length" class="mt-1 space-y-0.5">
           <p
             v-for="t in totalStokPerSatuan"
@@ -134,6 +197,12 @@ onMounted(muat)
           </p>
         </div>
         <p v-else class="text-2xl font-bold dark:text-white mt-1">0</p>
+      </div>
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4">
+        <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Total pakan keluar</p>
+        <p class="text-2xl font-bold text-brand-600 dark:text-brand-400 mt-1">
+          {{ totalPakanKeluarKg.toLocaleString('id-ID') }} <span class="text-[13px] font-medium text-ink-500 dark:text-ink-300">kg</span>
+        </p>
       </div>
     </div>
 
@@ -150,8 +219,12 @@ onMounted(muat)
       v-else
       class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden"
     >
-      <div class="px-4 py-3 border-b border-ink-100 dark:border-ink-500">
-        <h2 class="text-[14.5px] font-semibold dark:text-white">Daftar jenis pakan</h2>
+      <div class="px-4 py-3 border-b border-ink-100 dark:border-ink-500 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <NavIcon name="package" :size="16" class="text-brand-500" />
+          <h2 class="text-[14.5px] font-semibold dark:text-white">Daftar Jenis Pakan & Sisa Stok</h2>
+        </div>
+        <span class="text-[12px] text-ink-400">Total {{ daftarStok.length }} jenis</span>
       </div>
 
       <table class="w-full text-left text-[13.5px]">
@@ -168,13 +241,13 @@ onMounted(muat)
           <tr
             v-for="s in daftarStok"
             :key="s.id"
-            class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100"
+            class="border-b border-ink-100 dark:border-ink-500 last:border-0 hover:bg-ink-50/30 dark:hover:bg-ink-900/20 dark:text-ink-100"
           >
             <td class="px-4 py-3 font-medium">{{ s.nama }}</td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3 font-semibold">
               {{ angka(s.stok).toLocaleString('id-ID') }} {{ s.satuan || 'kg' }}
             </td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3 text-ink-500 dark:text-ink-300">
               {{ angka(s.stok_minimum).toLocaleString('id-ID') }} {{ s.satuan || 'kg' }}
             </td>
             <td class="px-4 py-3">
@@ -194,7 +267,7 @@ onMounted(muat)
             <td class="px-4 py-3 text-right">
               <button
                 type="button"
-                class="px-3 py-1.5 rounded-lg bg-red-500 text-white text-[12.5px] font-semibold hover:bg-red-600"
+                class="text-danger-600 dark:text-danger-400 text-[13px] font-semibold hover:underline"
                 @click="hapus(s.id)"
               >
                 Hapus
@@ -203,46 +276,141 @@ onMounted(muat)
           </tr>
           <tr v-if="!daftarStok.length">
             <td colspan="5" class="px-4 py-10 text-center text-ink-400 dark:text-ink-300">
-              Belum ada jenis pakan. Klik "Tambah jenis pakan" untuk mulai.
+              Belum ada jenis pakan. Klik "Tambah Jenis Pakan" di atas untuk mulai.
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
+    <!-- Riwayat Aktivitas Pakan Keluar (per Kolam) -->
+    <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden">
+      <div class="p-4 border-b border-ink-100 dark:border-ink-500 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <NavIcon name="utensils" :size="16" class="text-brand-500" />
+            <h2 class="text-[15px] font-semibold dark:text-white">Riwayat Pakan Keluar (Aktivitas per Kolam)</h2>
+          </div>
+          <p class="text-[12.5px] text-ink-500 dark:text-ink-300 mt-0.5">
+            Catatan pemakaian pakan harian ke masing-masing kolam budidaya.
+          </p>
+        </div>
+
+        <!-- Filter & Search Riwayat -->
+        <div class="flex items-center gap-2">
+          <div class="relative">
+            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              v-model="pencarianAktivitas"
+              type="text"
+              placeholder="Cari kolam / pakan..."
+              class="w-40 sm:w-48 pl-8 pr-2.5 py-1.5 text-[12.5px] border border-ink-100 dark:border-ink-500 rounded-lg dark:bg-ink-900 dark:text-white"
+            />
+          </div>
+
+          <select
+            v-model="filterKolam"
+            class="text-[12.5px] border border-ink-100 dark:border-ink-500 rounded-lg px-2.5 py-1.5 bg-white dark:bg-ink-900 dark:text-white"
+          >
+            <option value="">Semua Kolam</option>
+            <option v-for="k in daftarKolamTersedia" :key="k" :value="k">{{ k }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-[13px]">
+          <thead>
+            <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tanggal & Sesi</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam Tujuan</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jenis Pakan</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah Keluar</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Biaya</th>
+              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Catatan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loadingRiwayat">
+              <td colspan="6" class="px-4 py-8 text-center text-ink-400">Memuat riwayat pemakaian pakan...</td>
+            </tr>
+            <tr v-else-if="!riwayatTerfilter.length">
+              <td colspan="6" class="px-4 py-8 text-center text-ink-400">
+                {{ pencarianAktivitas || filterKolam ? 'Tidak ada riwayat pakan yang sesuai pencarian.' : 'Belum ada catatan aktivitas pakan keluar.' }}
+              </td>
+            </tr>
+            <tr
+              v-for="r in riwayatTerfilter"
+              :key="r.id"
+              class="border-b border-ink-100 dark:border-ink-500 last:border-0 hover:bg-ink-50/30 dark:hover:bg-ink-900/20 dark:text-ink-100"
+            >
+              <td class="px-4 py-3 whitespace-nowrap">
+                <div class="font-medium">{{ tanggal(r.tanggal) }}</div>
+                <span class="inline-block mt-0.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 capitalize">
+                  Sesi {{ labelSesi(r.sesi) }}
+                </span>
+              </td>
+              <td class="px-4 py-3 font-semibold">
+                <span class="inline-flex items-center gap-1.5 text-brand-600 dark:text-brand-400">
+                  <NavIcon name="fish" :size="13" />
+                  {{ r.nama_kolam || '-' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-ink-700 dark:text-ink-200">
+                {{ r.nama_pakan || 'Pakan Umum' }}
+              </td>
+              <td class="px-4 py-3 font-semibold text-danger-600 dark:text-danger-400 whitespace-nowrap">
+                - {{ r.jumlah_kg }} kg
+              </td>
+              <td class="px-4 py-3 text-ink-600 dark:text-ink-300 whitespace-nowrap">
+                {{ Number(r.biaya) > 0 ? rupiah(r.biaya) : '-' }}
+              </td>
+              <td class="px-4 py-3 text-ink-500 dark:text-ink-400 text-[12px]">
+                {{ r.catatan || '-' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Modal tambah jenis pakan -->
     <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div class="absolute inset-0 bg-black/40" @click="showForm = false" />
-      <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5">
-        <h2 class="text-[16px] font-semibold dark:text-white mb-4">Tambah jenis pakan</h2>
-        <form class="space-y-3" @submit.prevent="simpan">
+      <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5 z-10">
+        <h2 class="text-[16px] font-semibold dark:text-white mb-4">Tambah Jenis Pakan</h2>
+        <form class="space-y-3.5" @submit.prevent="simpan">
           <div>
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nama pakan</label>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nama Pakan</label>
             <input
               v-model="form.nama"
               type="text"
               required
-              placeholder="Contoh: Pelet 2mm"
-              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
+              placeholder="Contoh: Pelet PF-1000, 781-2"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
             />
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Stok awal</label>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Stok Awal</label>
               <input
                 v-model="form.stok_awal"
                 type="number"
                 min="0"
                 step="0.1"
                 required
-                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
+                placeholder="Contoh: 50"
+                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
               />
             </div>
             <div>
               <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Satuan</label>
               <select
                 v-model="form.satuan"
-                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
+                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
               >
                 <option value="kg">kg</option>
                 <option value="sak">sak</option>
@@ -251,14 +419,16 @@ onMounted(muat)
             </div>
           </div>
           <div>
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Stok minimum (peringatan)</label>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Batas Minimum Peringatan</label>
             <input
               v-model="form.stok_minimum"
               type="number"
               min="0"
               step="0.1"
-              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
+              placeholder="Contoh: 10"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
             />
+            <p class="text-[11.5px] text-ink-400 mt-1">Sistem akan memberi notifikasi saat sisa stok di bawah batas ini.</p>
           </div>
           <div class="flex gap-3 pt-2">
             <button
@@ -270,7 +440,7 @@ onMounted(muat)
             </button>
             <button
               type="submit"
-              class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600"
+              class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600 transition"
             >
               Simpan
             </button>
