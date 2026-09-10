@@ -53,6 +53,58 @@ router.get('/', async (req, res) => {
   }
 })
 
+// Jam batas (24 jam) tiap sesi dianggap "terlambat" kalau belum dicatat.
+// SESUAIKAN dengan jam operasional kolam kamu yang sebenarnya.
+const JAM_BATAS = { pagi: 10, siang: 15, sore: 19 }
+
+// GET /api/pakan/ringkasan-hari-ini
+router.get('/ringkasan-hari-ini', async (req, res) => {
+  try {
+    const jamSekarang = new Date().getHours()
+
+    // Kolam yang sedang aktif (punya tebar berstatus 'aktif')
+    const kolamRes = await pool.query(
+      `SELECT k.id AS kolam_id, k.nama_kolam
+       FROM tebar t
+       JOIN kolam k ON k.id = t.kolam_id
+       WHERE t.status = 'aktif'`
+    )
+
+    // Catatan pakan yang sudah masuk hari ini
+    const pakanRes = await pool.query(
+      `SELECT kolam_id, sesi FROM pakan WHERE tanggal = CURRENT_DATE`
+    )
+    const sudahSet = new Set(pakanRes.rows.map(p => `${p.kolam_id}-${p.sesi}`))
+
+    const detail = []
+    for (const k of kolamRes.rows) {
+      for (const sesi of SESI_VALID) {
+        const sudah = sudahSet.has(`${k.kolam_id}-${sesi}`)
+        let status = 'sudah'
+        if (!sudah) {
+          status = jamSekarang >= JAM_BATAS[sesi] ? 'terlambat' : 'belum'
+        }
+        detail.push({ kolam_id: k.kolam_id, nama_kolam: k.nama_kolam, sesi, status })
+      }
+    }
+
+    const ringkasanSesi = SESI_VALID.map(sesi => {
+      const items = detail.filter(d => d.sesi === sesi)
+      return {
+        sesi,
+        sudah: items.filter(d => d.status === 'sudah').length,
+        belum: items.filter(d => d.status === 'belum').length,
+        terlambat: items.filter(d => d.status === 'terlambat').length
+      }
+    })
+
+    res.json({ data: detail, ringkasanSesi })
+  } catch (err) {
+    console.error('Error GET /api/pakan/ringkasan-hari-ini:', err.message)
+    res.status(500).json({ message: 'Gagal mengambil ringkasan pakan hari ini', error: err.message })
+  }
+})
+
 // GET /api/pakan/kolam/:kolam_id
 router.get('/kolam/:kolam_id', async (req, res) => {
   try {
