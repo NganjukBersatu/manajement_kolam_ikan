@@ -118,14 +118,12 @@ const totalTerlambat = computed(
   () => perluPerhatian.value.filter((k) => k.status === 'terlambat').length
 )
 
-// ===================== CHART (biarkan seperti sebelumnya) =====================
-const chartLabels = ['Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep']
-
+// ===================== CHART (data diambil dari /api/dashboard/grafik-bulanan) =====================
 const chartPenjualan = ref({
-  labels: chartLabels,
+  labels: [],
   datasets: [{
     label: 'Penjualan',
-    data: [420000, 580000, 710000, 650000, 890000, 854000],
+    data: [],
     borderColor: '#D4A017',
     backgroundColor: 'rgba(212, 160, 23, 0.12)',
     fill: true,
@@ -137,10 +135,10 @@ const chartPenjualan = ref({
 })
 
 const chartKeuntungan = ref({
-  labels: chartLabels,
+  labels: [],
   datasets: [{
     label: 'Keuntungan',
-    data: [180000, 240000, 310000, 275000, 480000, 454000],
+    data: [],
     borderColor: '#22C55E',
     backgroundColor: 'rgba(34, 197, 94, 0.12)',
     fill: true,
@@ -190,20 +188,32 @@ async function muat() {
   const resDashboard = await fetch('/api/dashboard')
   data.value = await resDashboard.json()
 
-  // Ambil data Sortir, Panen, dan ringkasan Pakan hari ini
-  const [resSortir, resPanen, resPakan] = await Promise.all([
+  // Ambil data Sortir, Panen, ringkasan Pakan hari ini, dan grafik bulanan
+  const [resSortir, resPanen, resPakan, resGrafik] = await Promise.all([
     fetch('/api/jadwal?jenis=sortir'),
     fetch('/api/jadwal?jenis=panen'),
-    fetch('/api/pakan/ringkasan-hari-ini')
+    fetch('/api/pakan/ringkasan-hari-ini'),
+    fetch('/api/dashboard/grafik-bulanan')
   ])
 
   const jsonSortir = await resSortir.json()
   const jsonPanen = await resPanen.json()
   const jsonPakan = await resPakan.json().catch(() => ({ data: [] }))
+  const jsonGrafik = await resGrafik.json().catch(() => ({ labels: [], penjualan: [], keuntungan: [] }))
 
   const sortir = jsonSortir.data || []
   const panen = jsonPanen.data || []
   const pakan = jsonPakan.data || []
+
+  // ---------- Grafik penjualan & keuntungan 6 bulan terakhir (data asli) ----------
+  chartPenjualan.value = {
+    labels: jsonGrafik.labels || [],
+    datasets: [{ ...chartPenjualan.value.datasets[0], data: jsonGrafik.penjualan || [] }]
+  }
+  chartKeuntungan.value = {
+    labels: jsonGrafik.labels || [],
+    datasets: [{ ...chartKeuntungan.value.datasets[0], data: jsonGrafik.keuntungan || [] }]
+  }
 
   // ---------- Jadwal mendatang (sortir + panen) ----------
   const map = {}

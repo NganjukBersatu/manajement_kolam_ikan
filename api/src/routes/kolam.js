@@ -20,6 +20,8 @@ router.get('/', async (req, res) => {
         jumlah_saat_ini: tebar.jumlahSaatIni,
         jenis_ikan_id: jenisIkan.id,
         nama_ikan: jenisIkan.nama,
+        hari_sortir: jenisIkan.hariSortir,
+        hari_panen: jenisIkan.hariPanen,
       })
       .from(kolam)
       .leftJoin(tebar, and(eq(tebar.kolamId, kolam.id), eq(tebar.status, 'aktif')))

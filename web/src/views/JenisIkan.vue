@@ -86,7 +86,7 @@ async function simpan() {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      alert(err.message || 'Gagal menyimpan jenis ikan')
+      alert((err.message || 'Gagal menyimpan jenis ikan') + (err.error ? `\n\nDetail: ${err.error}` : ''))
       return
     }
 

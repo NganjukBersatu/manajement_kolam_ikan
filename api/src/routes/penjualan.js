@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
     const result = await pool.query(`
       SELECT p.*, ji.nama AS nama_ikan, k.nama_kolam
       FROM penjualan p
-      JOIN jenis_ikan ji ON ji.id = p.jenis_ikan_id
+      LEFT JOIN jenis_ikan ji ON ji.id = p.jenis_ikan_id
       LEFT JOIN kolam k ON k.id = p.kolam_id
       ORDER BY p.tanggal DESC, p.created_at DESC
     `)

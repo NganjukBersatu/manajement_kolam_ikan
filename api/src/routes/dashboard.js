@@ -190,4 +190,72 @@ router.get('/', async (req, res) => {
   }
 })
 
+// GET /api/dashboard/grafik-bulanan
+// Mengambil total penjualan & keuntungan untuk 6 bulan terakhir (termasuk bulan berjalan)
+// supaya grafik "Penjualan per Bulan" dan "Keuntungan per Bulan" di Dashboard
+// menampilkan data asli, bukan data statis.
+router.get('/grafik-bulanan', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      WITH bulan AS (
+        SELECT date_trunc('month', CURRENT_DATE) - (n || ' month')::interval AS periode
+        FROM generate_series(5, 0, -1) AS n
+      ),
+      penjualan_bulanan AS (
+        SELECT date_trunc('month', tanggal) AS periode, SUM(total) AS total
+        FROM penjualan
+        GROUP BY 1
+      ),
+      pengeluaran_bulanan AS (
+        SELECT date_trunc('month', tanggal) AS periode, SUM(jumlah) AS total
+        FROM pengeluaran
+        WHERE kategori != 'obat'
+        GROUP BY 1
+      ),
+      pakan_bulanan AS (
+        SELECT date_trunc('month', tanggal) AS periode, SUM(biaya) AS total
+        FROM pakan
+        GROUP BY 1
+      ),
+      obat_bulanan AS (
+        SELECT date_trunc('month', tanggal) AS periode, SUM(biaya) AS total
+        FROM obat
+        GROUP BY 1
+      )
+      SELECT
+        b.periode,
+        COALESCE(pj.total, 0) AS penjualan,
+        COALESCE(pg.total, 0) + COALESCE(pk.total, 0) + COALESCE(ob.total, 0) AS pengeluaran
+      FROM bulan b
+      LEFT JOIN penjualan_bulanan pj ON pj.periode = b.periode
+      LEFT JOIN pengeluaran_bulanan pg ON pg.periode = b.periode
+      LEFT JOIN pakan_bulanan pk ON pk.periode = b.periode
+      LEFT JOIN obat_bulanan ob ON ob.periode = b.periode
+      ORDER BY b.periode ASC
+    `)
+
+    const NAMA_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+
+    const data = result.rows.map(r => {
+      const penjualan = Number(r.penjualan)
+      const pengeluaran = Number(r.pengeluaran)
+      const tgl = new Date(r.periode)
+      return {
+        bulan: NAMA_BULAN[tgl.getMonth()],
+        penjualan,
+        keuntungan: penjualan - pengeluaran
+      }
+    })
+
+    res.json({
+      labels: data.map(d => d.bulan),
+      penjualan: data.map(d => d.penjualan),
+      keuntungan: data.map(d => d.keuntungan)
+    })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Gagal mengambil grafik bulanan', error: err.message })
+  }
+})
+
 export default router

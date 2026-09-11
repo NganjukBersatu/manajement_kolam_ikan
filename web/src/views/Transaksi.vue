@@ -229,7 +229,7 @@ onMounted(muat)
             </tr>
             <tr v-for="p in dataHalaman" :key="p.id" class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100">
               <td class="px-4 py-3 whitespace-nowrap">{{ tanggal(p.tanggal) }}</td>
-              <td class="px-4 py-3">{{ p.nama_ikan }}</td>
+              <td class="px-4 py-3">{{ p.nama_ikan || '(jenis ikan tidak ditemukan)' }}</td>
               <td class="px-4 py-3">{{ p.nama_kolam || '-' }}</td>
               <td class="px-4 py-3">{{ p.jumlah_kg }}</td>
               <td class="px-4 py-3">{{ rupiah(p.harga_per_kg) }}</td>
