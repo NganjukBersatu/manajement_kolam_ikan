@@ -128,7 +128,7 @@ router.get('/kolam/:kolam_id', async (req, res) => {
   }
 })
 
-// POST /api/pakan → catat pakan + kurangi stok
+// POST /api/pakan → catat pakan + kurangi stok + hitung biaya otomatis
 router.post('/', async (req, res) => {
   const { kolam_id, tanggal, sesi, jumlah_kg, biaya, catatan, stok_pakan_id } = req.body
 
@@ -143,10 +143,13 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN')
 
-    // Validasi & kurangi stok jika stok_pakan_id dikirim
+    let finalBiaya = Number(biaya) || 0
+    let hargaPerKg = 0
+
+    // Validasi & kurangi stok + ambil harga_per_kg
     if (stok_pakan_id) {
       const stokRes = await client.query(
-        'SELECT id, nama, stok FROM stok_pakan WHERE id = $1 FOR UPDATE',
+        'SELECT id, nama, stok, harga_per_kg FROM stok_pakan WHERE id = $1 FOR UPDATE',
         [stok_pakan_id]
       )
 
@@ -157,12 +160,18 @@ router.post('/', async (req, res) => {
 
       const sisa = Number(stokRes.rows[0].stok)
       const dipakai = Number(jumlah_kg)
+      hargaPerKg = Number(stokRes.rows[0].harga_per_kg) || 0
 
       if (dipakai > sisa) {
         await client.query('ROLLBACK')
         return res.status(400).json({
           message: `Stok tidak cukup. Sisa ${stokRes.rows[0].nama}: ${sisa} kg`
         })
+      }
+
+      // Hitung biaya otomatis jika user tidak mengisi biaya
+      if (!biaya && hargaPerKg > 0) {
+        finalBiaya = dipakai * hargaPerKg
       }
 
       await client.query(
@@ -181,7 +190,7 @@ router.post('/', async (req, res) => {
         tanggal,
         sesi,
         jumlah_kg,
-        biaya || 0,
+        finalBiaya,
         catatan || null,
         stok_pakan_id || null
       ]
@@ -201,7 +210,7 @@ router.post('/', async (req, res) => {
     client.release()
   }
 })
-
+    
 // DELETE /api/pakan/:id → hapus + kembalikan stok
 router.delete('/:id', async (req, res) => {
   const client = await pool.connect()
