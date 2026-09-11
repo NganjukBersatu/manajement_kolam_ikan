@@ -207,10 +207,16 @@ export const obat = pgTable("obat", {
 	biaya: numeric().default('0'),
 	catatan: text(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	jadwalId: integer("jadwal_id"),
 }, (table) => [
 	foreignKey({
 		columns: [table.kolamId],
 		foreignColumns: [kolam.id],
 		name: "obat_kolam_id_fkey"
 	}),
+	foreignKey({
+		columns: [table.jadwalId],
+		foreignColumns: [jadwal.id],
+		name: "obat_jadwal_id_fkey"
+	}).onDelete("set null"),
 ]);

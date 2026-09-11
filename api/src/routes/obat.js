@@ -63,6 +63,7 @@ router.post('/', async (req, res) => {
     res.status(201).json({ data: result.rows[0] })
   } catch (err) {
     await client.query('ROLLBACK')
+    console.error('❌ ERROR CATAT OBAT:', err)
     res.status(500).json({ message: 'Gagal mencatat pemberian obat', error: err.message })
   } finally {
     client.release()

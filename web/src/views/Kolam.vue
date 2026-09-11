@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const daftarKolam = ref([])
 const pencarian = ref('')
@@ -11,6 +11,10 @@ const filterStatus = ref('')
 // ikan, udang, kepiting, dll. Kalau backend-nya juga mau diganti generik,
 // tinggal ganti endpoint '/api/jenis-ikan' -> '/api/jenis' di muatJenisIkan().
 const daftarJenisIkan = ref([])
+
+// ===== Pagination =====
+const halamanSekarang = ref(1)
+const perHalaman = ref(10)
 
 const showTebarForm = ref(false)
 const showTambahKolam = ref(false)
@@ -142,6 +146,54 @@ function rupiah(n) {
   return n ? Number(n).toLocaleString('id-ID') : '-'
 }
 
+// ===== Survival rate (bibit awal vs jumlah hidup sekarang) =====
+function survivalRate(k) {
+  const bibit = Number(k.jumlah_bibit)
+  const sekarang = Number(k.jumlah_saat_ini)
+  if (!bibit) return null
+  return Math.round((sekarang / bibit) * 100)
+}
+function jumlahMati(k) {
+  const bibit = Number(k.jumlah_bibit)
+  const sekarang = Number(k.jumlah_saat_ini)
+  if (!bibit) return 0
+  return Math.max(bibit - sekarang, 0)
+}
+// Ambang batas sama seperti di Dashboard, supaya konsisten
+function warnaSurvivalTeks(rate) {
+  if (rate < 70) return 'text-danger-600 dark:text-danger-500'
+  if (rate < 85) return 'text-warn-600 dark:text-warn-500'
+  return 'text-ok-600 dark:text-ok-500'
+}
+function warnaSurvivalBar(rate) {
+  if (rate < 70) return 'bg-danger-500'
+  if (rate < 85) return 'bg-warn-500'
+  return 'bg-ok-500'
+}
+
+// ===== Perkiraan tanggal sortir & panen (tanggal tebar + hari_sortir/hari_panen dari Jenis Ikan) =====
+function tambahHari(tanggal, hari) {
+  const d = new Date(tanggal)
+  d.setDate(d.getDate() + Number(hari))
+  return d
+}
+function estimasiSortir(k) {
+  if (!k.tanggal_tebar || !k.hari_sortir) return null
+  return tambahHari(k.tanggal_tebar, k.hari_sortir)
+}
+function estimasiPanen(k) {
+  if (!k.tanggal_tebar || !k.hari_panen) return null
+  return tambahHari(k.tanggal_tebar, k.hari_panen)
+}
+function formatTanggalEstimasi(d) {
+  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+function sudahLewat(d) {
+  const hariIni = new Date()
+  hariIni.setHours(0, 0, 0, 0)
+  return d < hariIni
+}
+
 // ===== Search & Filter =====
 const kolamTerfilter = computed(() => {
   const kata = pencarian.value.trim().toLowerCase()
@@ -170,6 +222,49 @@ function resetFilter() {
   filterJenis.value = ''
   filterStatus.value = ''
 }
+
+// Setiap kali pencarian/filter berubah, kembali ke halaman 1
+watch([pencarian, filterJenis, filterStatus, perHalaman], () => {
+  halamanSekarang.value = 1
+})
+
+const totalData = computed(() => kolamTerfilter.value.length)
+const totalHalaman = computed(() => Math.ceil(totalData.value / perHalaman.value) || 1)
+
+const kolamHalaman = computed(() => {
+  const start = (halamanSekarang.value - 1) * perHalaman.value
+  const end = start + perHalaman.value
+  return kolamTerfilter.value.slice(start, end)
+})
+
+const infoPagination = computed(() => {
+  if (totalData.value === 0) return 'Tidak ada data'
+  const start = (halamanSekarang.value - 1) * perHalaman.value + 1
+  const end = Math.min(halamanSekarang.value * perHalaman.value, totalData.value)
+  return `Menampilkan ${start}–${end} dari ${totalData.value} kolam`
+})
+
+function keHalaman(halaman) {
+  if (halaman < 1 || halaman > totalHalaman.value) return
+  halamanSekarang.value = halaman
+}
+
+const nomorHalaman = computed(() => {
+  const total = totalHalaman.value
+  const current = halamanSekarang.value
+  const pages = []
+
+  if (total <= 5) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else if (current <= 3) {
+    pages.push(1, 2, 3, 4, '...', total)
+  } else if (current >= total - 2) {
+    pages.push(1, '...', total - 3, total - 2, total - 1, total)
+  } else {
+    pages.push(1, '...', current - 1, current, current + 1, '...', total)
+  }
+  return pages
+})
 
 onMounted(() => {
   muatKolam()
@@ -244,14 +339,16 @@ onMounted(() => {
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Status</th>
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jenis</th>
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tgl Tebar</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Perkiraan Sortir/Panen</th>
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Bibit</th>
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah Saat Ini</th>
+            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Survival Rate</th>
             <th class="px-4 py-3 text-right text-ink-500 dark:text-ink-300 font-semibold">Aksi</th>
           </tr>
         </thead>
         <tbody>
           <tr
-            v-for="k in kolamTerfilter"
+            v-for="k in kolamHalaman"
             :key="k.id"
             class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100"
           >
@@ -276,8 +373,41 @@ onMounted(() => {
             <td class="px-4 py-3">
               {{ k.tanggal_tebar ? new Date(k.tanggal_tebar).toLocaleDateString('id-ID') : '-' }}
             </td>
+            <td class="px-4 py-3 text-[12.5px] min-w-[150px]">
+              <template v-if="estimasiSortir(k) || estimasiPanen(k)">
+                <p v-if="estimasiSortir(k)" :class="sudahLewat(estimasiSortir(k)) ? 'text-danger-600 dark:text-danger-500 font-semibold' : 'dark:text-ink-100'">
+                  Sortir: {{ formatTanggalEstimasi(estimasiSortir(k)) }}
+                  <span v-if="sudahLewat(estimasiSortir(k))">(lewat)</span>
+                </p>
+                <p v-if="estimasiPanen(k)" :class="sudahLewat(estimasiPanen(k)) ? 'text-danger-600 dark:text-danger-500 font-semibold' : 'dark:text-ink-100'">
+                  Panen: {{ formatTanggalEstimasi(estimasiPanen(k)) }}
+                  <span v-if="sudahLewat(estimasiPanen(k))">(lewat)</span>
+                </p>
+              </template>
+              <span v-else class="text-ink-400">-</span>
+            </td>
             <td class="px-4 py-3">{{ rupiah(k.jumlah_bibit) }}</td>
             <td class="px-4 py-3">{{ rupiah(k.jumlah_saat_ini) }}</td>
+            <td class="px-4 py-3 min-w-[130px]">
+              <template v-if="survivalRate(k) !== null">
+                <div class="flex items-center gap-2">
+                  <div class="h-1.5 w-16 rounded-full bg-ink-100 dark:bg-ink-900 overflow-hidden">
+                    <div
+                      class="h-full rounded-full"
+                      :class="warnaSurvivalBar(survivalRate(k))"
+                      :style="{ width: Math.min(survivalRate(k), 100) + '%' }"
+                    ></div>
+                  </div>
+                  <span class="font-semibold text-[12.5px]" :class="warnaSurvivalTeks(survivalRate(k))">
+                    {{ survivalRate(k) }}%
+                  </span>
+                </div>
+                <p v-if="jumlahMati(k) > 0" class="text-[11.5px] text-ink-400 mt-0.5">
+                  {{ jumlahMati(k).toLocaleString('id-ID') }} ekor mati
+                </p>
+              </template>
+              <span v-else class="text-ink-400">-</span>
+            </td>
             <td class="px-4 py-3 text-right space-x-2">
               <button
                 type="button"
@@ -304,17 +434,68 @@ onMounted(() => {
             </td>
           </tr>
           <tr v-if="daftarKolam.length === 0">
-            <td colspan="8" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+            <td colspan="10" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
               Belum ada kolam. Tambahkan kolam pertamamu untuk mulai mencatat.
             </td>
           </tr>
           <tr v-else-if="kolamTerfilter.length === 0">
-            <td colspan="8" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+            <td colspan="10" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
               Tidak ada kolam yang cocok dengan pencarian/filter kamu.
             </td>
           </tr>
         </tbody>
       </table>
+
+      <!-- PAGINATION -->
+      <div v-if="totalData > 0" class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-ink-100 dark:border-ink-500">
+        <div class="flex items-center gap-3 text-[13px] text-ink-500 dark:text-ink-300">
+          <span>{{ infoPagination }}</span>
+          <div class="flex items-center gap-1.5">
+            <span>Tampilkan</span>
+            <select v-model="perHalaman" class="rounded border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-2 py-1 text-[13px]">
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+            </select>
+            <span>data</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1">
+          <button
+            type="button"
+            class="px-2.5 py-1.5 rounded-lg text-[13px] border border-ink-100 dark:border-ink-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-ink-50 dark:hover:bg-ink-600"
+            :disabled="halamanSekarang === 1"
+            @click="keHalaman(halamanSekarang - 1)"
+          >
+            ←
+          </button>
+
+          <template v-for="(page, idx) in nomorHalaman" :key="idx">
+            <span v-if="page === '...'" class="px-2 text-ink-400">...</span>
+            <button
+              v-else
+              type="button"
+              class="min-w-[32px] px-2 py-1.5 rounded-lg text-[13px] border transition-colors"
+              :class="page === halamanSekarang
+                ? 'bg-brand-500 text-white border-brand-500'
+                : 'border-ink-100 dark:border-ink-500 hover:bg-ink-50 dark:hover:bg-ink-600'"
+              @click="keHalaman(page)"
+            >
+              {{ page }}
+            </button>
+          </template>
+
+          <button
+            type="button"
+            class="px-2.5 py-1.5 rounded-lg text-[13px] border border-ink-100 dark:border-ink-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-ink-50 dark:hover:bg-ink-600"
+            :disabled="halamanSekarang === totalHalaman"
+            @click="keHalaman(halamanSekarang + 1)"
+          >
+            →
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Modal Tebar Bibit -->

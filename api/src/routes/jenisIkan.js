@@ -50,6 +50,7 @@ router.put('/:id', async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ message: 'Jenis ikan tidak ditemukan' })
     res.json({ data: result.rows[0] })
   } catch (err) {
+    console.error('❌ ERROR UPDATE JENIS IKAN:', err)
     res.status(500).json({ message: 'Gagal mengubah jenis ikan', error: err.message })
   }
 })
