@@ -12,6 +12,41 @@ const showRiwayatModal = ref(false)
 const isEdit = ref(false)
 const editId = ref(null)
 
+// Modal sukses (muncul setelah tambah/edit jenis pakan berhasil disimpan)
+const showSuksesModal = ref(false)
+const pesanSukses = ref('')
+
+function tutupSukses() {
+  showSuksesModal.value = false
+  pesanSukses.value = ''
+}
+
+// Modal hapus
+const showHapusModal = ref(false)
+const itemYangAkanDihapus = ref(null)
+
+function bukaHapus(item) {
+  itemYangAkanDihapus.value = item
+  showHapusModal.value = true
+}
+
+function tutupHapus() {
+  showHapusModal.value = false
+  itemYangAkanDihapus.value = null
+}
+
+async function konfirmasiHapus() {
+  if (!itemYangAkanDihapus.value) return
+  const res = await fetch(`/api/stok-pakan/${itemYangAkanDihapus.value.id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    alert(err.message || 'Gagal menghapus')
+    return
+  }
+  tutupHapus()
+  await Promise.all([muat(), muatRiwayat()])
+}
+
 const pencarianAktivitas = ref('')
 const filterKolam = ref('')
 
@@ -104,8 +139,10 @@ async function simpan() {
     stok_minimum: Number(form.value.stok_minimum) || 0
   }
 
+  const sedangEdit = isEdit.value
+
   let res
-  if (isEdit.value) {
+  if (sedangEdit) {
     res = await fetch(`/api/stok-pakan/${editId.value}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -135,17 +172,10 @@ async function simpan() {
     stok_minimum: '10'
   }
   await Promise.all([muat(), muatRiwayat()])
-}
 
-async function hapus(id) {
-  if (!confirm('Yakin ingin menghapus jenis pakan ini?')) return
-  const res = await fetch(`/api/stok-pakan/${id}`, { method: 'DELETE' })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    alert(err.message || 'Gagal menghapus')
-    return
-  }
-  await Promise.all([muat(), muatRiwayat()])
+  // Tampilkan modal sukses setelah data selesai dimuat ulang
+  pesanSukses.value = sedangEdit ? 'Jenis pakan berhasil diperbarui.' : 'Jenis pakan berhasil ditambahkan.'
+  showSuksesModal.value = true
 }
 
 const totalJenis = computed(() => daftarStok.value.length)
@@ -319,7 +349,7 @@ onMounted(() => {
                 <button
                   type="button"
                   class="text-danger-600 dark:text-danger-400 text-[13px] font-semibold hover:underline"
-                  @click="hapus(s.id)"
+                  @click="bukaHapus(s)"
                 >
                   Hapus
                 </button>
@@ -506,5 +536,63 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Modal Konfirmasi Hapus -->
+    <Teleport to="body">
+      <div v-if="showHapusModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="tutupHapus"></div>
+        <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div class="pt-6 pb-2 flex justify-center">
+            <div class="w-14 h-14 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-red-500">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="px-6 pb-2 text-center">
+            <h3 class="text-[16px] font-semibold text-ink-900 dark:text-white">Hapus Jenis Pakan?</h3>
+            <p class="text-[13.5px] text-ink-500 dark:text-ink-300 mt-1.5">
+              Jenis pakan <strong>"{{ itemYangAkanDihapus?.nama }}"</strong> akan dihapus permanen. Data ini tidak bisa dikembalikan.
+            </p>
+          </div>
+          <div class="px-6 pb-6 pt-4 flex gap-3">
+            <button type="button" @click="tutupHapus" class="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-600 text-[13.5px] font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-700 transition">
+              Batal
+            </button>
+            <button type="button" @click="konfirmasiHapus" class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-medium transition">
+              Ya, Hapus
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal Sukses (tambah/edit jenis pakan berhasil disimpan) -->
+    <Teleport to="body">
+      <div v-if="showSuksesModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="tutupSukses"></div>
+        <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div class="pt-6 pb-2 flex justify-center">
+            <div class="w-14 h-14 rounded-full bg-ok-50 dark:bg-ok-900/20 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-ok-500">
+                <path d="M20 6 9 17l-5-5"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="px-6 pb-2 text-center">
+            <h3 class="text-[16px] font-semibold text-ink-900 dark:text-white">Berhasil!</h3>
+            <p class="text-[13.5px] text-ink-500 dark:text-ink-300 mt-1.5">
+              {{ pesanSukses }}
+            </p>
+          </div>
+          <div class="px-6 pb-6 pt-4">
+            <button type="button" @click="tutupSukses" class="w-full px-4 py-2.5 rounded-xl bg-ok-500 hover:bg-ok-600 text-white text-[13.5px] font-medium transition">
+              Oke
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

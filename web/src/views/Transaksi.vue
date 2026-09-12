@@ -13,6 +13,14 @@ const editingId = ref(null)
 const showHapusModal = ref(false)
 const idYangAkanDihapus = ref(null)
 
+// Modal sukses (muncul setelah tambah/edit transaksi berhasil)
+const showSuksesModal = ref(false)
+const pesanSukses = ref('')
+function tutupSukses() {
+  showSuksesModal.value = false
+  pesanSukses.value = ''
+}
+
 const kosongForm = () => ({
   tanggal: new Date().toISOString().slice(0, 10),
   jenis_ikan_id: '',
@@ -99,6 +107,12 @@ async function simpan() {
     editingId.value = null
     form.value = kosongForm()
     await muat()
+
+    // Tampilkan modal sukses
+    pesanSukses.value = isEdit
+      ? 'Transaksi berhasil diperbarui.'
+      : 'Transaksi berhasil ditambahkan.'
+    showSuksesModal.value = true
   } finally {
     menyimpan.value = false
   }
@@ -368,6 +382,33 @@ onMounted(muat)
           <div class="px-6 pb-6 pt-4 flex gap-3">
             <button type="button" @click="tutupHapus" class="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-600 text-[13.5px] font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-700 transition">Batal</button>
             <button type="button" @click="konfirmasiHapus" class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-medium transition">Ya, Hapus</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal Sukses (tambah/edit transaksi berhasil) -->
+    <Teleport to="body">
+      <div v-if="showSuksesModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="tutupSukses"></div>
+        <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div class="pt-6 pb-2 flex justify-center">
+            <div class="w-14 h-14 rounded-full bg-ok-50 dark:bg-ok-900/20 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-ok-500">
+                <path d="M20 6 9 17l-5-5"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="px-6 pb-2 text-center">
+            <h3 class="text-[16px] font-semibold text-ink-900 dark:text-white">Berhasil!</h3>
+            <p class="text-[13.5px] text-ink-500 dark:text-ink-300 mt-1.5">
+              {{ pesanSukses }}
+            </p>
+          </div>
+          <div class="px-6 pb-6 pt-4">
+            <button type="button" @click="tutupSukses" class="w-full px-4 py-2.5 rounded-xl bg-ok-500 hover:bg-ok-600 text-white text-[13.5px] font-medium transition">
+              Oke
+            </button>
           </div>
         </div>
       </div>
