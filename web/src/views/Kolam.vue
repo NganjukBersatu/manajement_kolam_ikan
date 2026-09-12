@@ -1,77 +1,69 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-
 const daftarKolam = ref([])
 const pencarian = ref('')
 const filterJenis = ref('')
 const filterStatus = ref('')
 const daftarJenisIkan = ref([])
-
 const halamanSekarang = ref(1)
 const perHalaman = ref(10)
-
 const showTebarForm = ref(false)
 const showTambahKolam = ref(false)
 const showEditKolam = ref(false)
 const kolamDipilih = ref(null)
 const kolamDiedit = ref(null)
-
 // Menu aksi
 const menuTerbuka = ref(null)
-
 // Modal hapus
 const showHapusKolamModal = ref(false)
 const kolamYangAkanDihapus = ref(null)
-
+// Modal sukses (muncul setelah tambah/edit kolam berhasil disimpan)
+const showSuksesModal = ref(false)
+const pesanSukses = ref('')
+function tutupSukses() {
+  showSuksesModal.value = false
+  pesanSukses.value = ''
+}
 function toggleMenu(id) {
   menuTerbuka.value = menuTerbuka.value === id ? null : id
 }
-
 function tutupMenu() {
   menuTerbuka.value = null
 }
-
 function handleClickLuar(e) {
   if (!e.target.closest('.menu-aksi-kolam')) {
     tutupMenu()
   }
 }
-
 onMounted(() => {
   document.addEventListener('click', handleClickLuar)
 })
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickLuar)
 })
-
 const form = ref({ jenis_ikan_id: '', tanggal_tebar: '', jumlah_bibit: '' })
 const formKolam = ref({ nama_kolam: '', luas_m2: '', jenis_id: '' })
 const formEditKolam = ref({ nama_kolam: '', luas_m2: '', jenis_id: '' })
-
 async function muatKolam() {
   const res = await fetch('/api/kolam')
   const json = await res.json()
   daftarKolam.value = json.data
 }
-
 async function muatJenisIkan() {
   const res = await fetch('/api/jenis-ikan')
   const json = await res.json()
   daftarJenisIkan.value = json.data
 }
-
 function bukaTebar(kolam) {
   tutupMenu()
   kolamDipilih.value = kolam
   form.value = { jenis_ikan_id: '', tanggal_tebar: '', jumlah_bibit: '' }
   showTebarForm.value = true
 }
-
 function bukaTambahKolam() {
   formKolam.value = { nama_kolam: '', luas_m2: '', jenis_id: '' }
   showTambahKolam.value = true
 }
-
 function bukaEditKolam(kolam) {
   tutupMenu()
   kolamDiedit.value = kolam
@@ -82,18 +74,15 @@ function bukaEditKolam(kolam) {
   }
   showEditKolam.value = true
 }
-
 function bukaHapusKolam(kolam) {
   tutupMenu()
   kolamYangAkanDihapus.value = kolam
   showHapusKolamModal.value = true
 }
-
 function tutupHapusKolam() {
   showHapusKolamModal.value = false
   kolamYangAkanDihapus.value = null
 }
-
 async function konfirmasiHapusKolam() {
   if (!kolamYangAkanDihapus.value) return
   const res = await fetch(`/api/kolam/${kolamYangAkanDihapus.value.id}`, { method: 'DELETE' })
@@ -105,7 +94,6 @@ async function konfirmasiHapusKolam() {
   tutupHapusKolam()
   await muatKolam()
 }
-
 async function simpanTebar() {
   const res = await fetch('/api/tebar', {
     method: 'POST',
@@ -115,67 +103,61 @@ async function simpanTebar() {
       ...form.value
     })
   })
-
   if (!res.ok) {
     const err = await res.json()
     alert(err.message || 'Gagal menyimpan tebar')
     return
   }
-
   showTebarForm.value = false
   await muatKolam()
 }
-
 async function simpanKolam() {
   const payload = {
     nama_kolam: formKolam.value.nama_kolam,
     luas_m2: formKolam.value.luas_m2 ? Number(formKolam.value.luas_m2) : null,
     jenis_id: formKolam.value.jenis_id || null
   }
-
   const res = await fetch('/api/kolam', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
-
   if (!res.ok) {
     const err = await res.json()
     alert(err.message || 'Gagal menambah kolam')
     return
   }
-
   showTambahKolam.value = false
   await muatKolam()
+  // Tampilkan modal sukses
+  pesanSukses.value = 'Kolam berhasil ditambahkan.'
+  showSuksesModal.value = true
 }
-
 async function simpanEditKolam() {
   const payload = {
     nama_kolam: formEditKolam.value.nama_kolam,
     luas_m2: formEditKolam.value.luas_m2 ? Number(formEditKolam.value.luas_m2) : null,
     jenis_id: formEditKolam.value.jenis_id || null
   }
-
   const res = await fetch(`/api/kolam/${kolamDiedit.value.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
-
   if (!res.ok) {
     const err = await res.json()
     alert(err.message || 'Gagal mengubah kolam')
     return
   }
-
   showEditKolam.value = false
   await muatKolam()
+  // Tampilkan modal sukses
+  pesanSukses.value = 'Kolam berhasil diperbarui.'
+  showSuksesModal.value = true
 }
-
 function rupiah(n) {
   return n ? Number(n).toLocaleString('id-ID') : '-'
 }
-
 function tambahHari(tanggal, hari) {
   const d = new Date(tanggal)
   d.setDate(d.getDate() + Number(hari))
@@ -197,65 +179,51 @@ function sudahLewat(d) {
   hariIni.setHours(0, 0, 0, 0)
   return d < hariIni
 }
-
 const kolamTerfilter = computed(() => {
   const kata = pencarian.value.trim().toLowerCase()
-
   return daftarKolam.value.filter((k) => {
     const namaJenis = (k.nama_jenis || k.nama_ikan || '').toLowerCase()
-
     const cocokKata =
       !kata ||
       k.nama_kolam.toLowerCase().includes(kata) ||
       namaJenis.includes(kata)
-
     const cocokJenis =
       !filterJenis.value ||
       String(k.jenis_id) === String(filterJenis.value) ||
       namaJenis === filterJenis.value.toLowerCase()
-
     const cocokStatus = !filterStatus.value || k.status === filterStatus.value
-
     return cocokKata && cocokJenis && cocokStatus
   })
 })
-
 function resetFilter() {
   pencarian.value = ''
   filterJenis.value = ''
   filterStatus.value = ''
 }
-
 watch([pencarian, filterJenis, filterStatus, perHalaman], () => {
   halamanSekarang.value = 1
 })
-
 const totalData = computed(() => kolamTerfilter.value.length)
 const totalHalaman = computed(() => Math.ceil(totalData.value / perHalaman.value) || 1)
-
 const kolamHalaman = computed(() => {
   const start = (halamanSekarang.value - 1) * perHalaman.value
   const end = start + perHalaman.value
   return kolamTerfilter.value.slice(start, end)
 })
-
 const infoPagination = computed(() => {
   if (totalData.value === 0) return 'Tidak ada data'
   const start = (halamanSekarang.value - 1) * perHalaman.value + 1
   const end = Math.min(halamanSekarang.value * perHalaman.value, totalData.value)
   return `Menampilkan ${start}–${end} dari ${totalData.value} kolam`
 })
-
 function keHalaman(halaman) {
   if (halaman < 1 || halaman > totalHalaman.value) return
   halamanSekarang.value = halaman
 }
-
 const nomorHalaman = computed(() => {
   const total = totalHalaman.value
   const current = halamanSekarang.value
   const pages = []
-
   if (total <= 5) {
     for (let i = 1; i <= total; i++) pages.push(i)
   } else if (current <= 3) {
@@ -267,7 +235,6 @@ const nomorHalaman = computed(() => {
   }
   return pages
 })
-
 onMounted(() => {
   muatKolam()
   muatJenisIkan()
@@ -285,7 +252,6 @@ onMounted(() => {
         + Tambah Kolam
       </button>
     </div>
-
     <!-- Search & Filter -->
     <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <div class="relative flex-1 min-w-0">
@@ -299,18 +265,15 @@ onMounted(() => {
           class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white pl-9 pr-3 py-2.5 text-[13.5px]"
         />
       </div>
-
       <select v-model="filterJenis" class="w-full sm:w-56 rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]">
         <option value="">Semua jenis</option>
         <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.id">{{ ji.nama }}</option>
       </select>
-
       <select v-model="filterStatus" class="w-full sm:w-40 rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]">
         <option value="">Semua status</option>
         <option value="aktif">Aktif</option>
         <option value="kosong">Kosong</option>
       </select>
-
       <button
         v-if="pencarian || filterJenis || filterStatus"
         type="button"
@@ -320,7 +283,6 @@ onMounted(() => {
         Reset
       </button>
     </div>
-
     <!-- Tabel -->
     <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden">
       <table class="w-full text-left text-[13.5px]">
@@ -368,7 +330,6 @@ onMounted(() => {
                 <button v-if="k.status !== 'aktif'" type="button" class="px-3 py-1.5 rounded-lg bg-ink-700 dark:bg-ink-500 text-white text-[12.5px] font-semibold hover:bg-ink-800 dark:hover:bg-ink-400" @click="bukaTebar(k)">
                   Tebar Bibit
                 </button>
-
                 <div class="relative menu-aksi-kolam">
                   <button type="button" class="w-8 h-8 flex items-center justify-center rounded-lg border border-ink-100 dark:border-ink-500 text-ink-500 dark:text-ink-300 hover:bg-ink-50 dark:hover:bg-ink-600" @click.stop="toggleMenu(k.id)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
@@ -377,7 +338,6 @@ onMounted(() => {
                       <circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none" />
                     </svg>
                   </button>
-
                   <div v-if="menuTerbuka === k.id" class="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-ink-700 border border-ink-100 dark:border-ink-500 rounded-lg shadow-card z-20 overflow-hidden">
                     <button type="button" class="w-full text-left px-3 py-2 text-[13px] font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10" @click="bukaEditKolam(k)">
                       Edit
@@ -398,7 +358,6 @@ onMounted(() => {
           </tr>
         </tbody>
       </table>
-
       <!-- PAGINATION -->
       <div v-if="totalData > 0" class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-ink-100 dark:border-ink-500">
         <div class="flex items-center gap-3 text-[13px] text-ink-500 dark:text-ink-300">
@@ -413,7 +372,6 @@ onMounted(() => {
             <span>data</span>
           </div>
         </div>
-
         <div class="flex items-center gap-1">
           <button type="button" class="px-2.5 py-1.5 rounded-lg text-[13px] border border-ink-100 dark:border-ink-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-ink-50 dark:hover:bg-ink-600" :disabled="halamanSekarang === 1" @click="keHalaman(halamanSekarang - 1)">←</button>
           <template v-for="(page, idx) in nomorHalaman" :key="idx">
@@ -424,7 +382,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
-
     <!-- Modal Tebar Bibit -->
     <div v-if="showTebarForm" class="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div class="absolute inset-0 bg-black/40" @click="showTebarForm = false" />
@@ -453,7 +410,6 @@ onMounted(() => {
         </form>
       </div>
     </div>
-
     <!-- Modal Tambah Kolam -->
     <div v-if="showTambahKolam" class="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div class="absolute inset-0 bg-black/40" @click="showTambahKolam = false" />
@@ -482,7 +438,6 @@ onMounted(() => {
         </form>
       </div>
     </div>
-
     <!-- Modal Edit Kolam -->
     <div v-if="showEditKolam" class="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div class="absolute inset-0 bg-black/40" @click="showEditKolam = false" />
@@ -511,7 +466,6 @@ onMounted(() => {
         </form>
       </div>
     </div>
-
     <!-- Modal Konfirmasi Hapus Kolam -->
     <Teleport to="body">
       <div v-if="showHapusKolamModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -534,6 +488,33 @@ onMounted(() => {
           <div class="px-6 pb-6 pt-4 flex gap-3">
             <button type="button" @click="tutupHapusKolam" class="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-600 text-[13.5px] font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-700 transition">Batal</button>
             <button type="button" @click="konfirmasiHapusKolam" class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-medium transition">Ya, Hapus</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal Sukses (tambah/edit kolam berhasil disimpan) -->
+    <Teleport to="body">
+      <div v-if="showSuksesModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="tutupSukses"></div>
+        <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div class="pt-6 pb-2 flex justify-center">
+            <div class="w-14 h-14 rounded-full bg-ok-50 dark:bg-ok-900/20 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-ok-500">
+                <path d="M20 6 9 17l-5-5"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="px-6 pb-2 text-center">
+            <h3 class="text-[16px] font-semibold text-ink-900 dark:text-white">Berhasil!</h3>
+            <p class="text-[13.5px] text-ink-500 dark:text-ink-300 mt-1.5">
+              {{ pesanSukses }}
+            </p>
+          </div>
+          <div class="px-6 pb-6 pt-4">
+            <button type="button" @click="tutupSukses" class="w-full px-4 py-2.5 rounded-xl bg-ok-500 hover:bg-ok-600 text-white text-[13.5px] font-medium transition">
+              Oke
+            </button>
           </div>
         </div>
       </div>
