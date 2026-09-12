@@ -10,6 +10,9 @@ const collapsed = ref(false)
 const jadwalTerbuka = ref(route.path.startsWith('/jadwal'))
 const laporanTerbuka = ref(route.path.startsWith('/laporan'))
 
+// Modal logout
+const showLogoutModal = ref(false)
+
 const menu = [
   { to: '/', label: 'Dashboard', icon: 'home' },
   { to: '/transaksi', label: 'Transaksi', icon: 'wallet' },
@@ -19,7 +22,7 @@ const menu = [
 
 const jadwalSub = [
   { to: '/jadwal/pemberian-makan', label: 'Pemberian Makan', icon: 'utensils' },
-  { to: '/jadwal/pemberian-obat', label: 'Pemberian Obat', icon: 'pill' } ,
+  { to: '/jadwal/pemberian-obat', label: 'Pemberian Obat', icon: 'pill' },
   { to: '/jadwal/sortir', label: 'Sortir', icon: 'scissors' },
   { to: '/jadwal/panen', label: 'Panen', icon: 'fish' },
   { to: '/jadwal/ganti-air', label: 'Ganti Air', icon: 'droplet' }
@@ -28,7 +31,7 @@ const jadwalSub = [
 const laporanSub = [
   { to: '/laporan', label: 'Ringkasan', icon: 'chart' },
   { to: '/laporan/penjualan', label: 'Penjualan', icon: 'wallet' },
-  { to: '/laporan/pengeluaran', label: 'Pengeluaran', icon: 'file' } , 
+  { to: '/laporan/pengeluaran', label: 'Pengeluaran', icon: 'file' },
   { to: '/laporan/panen', label: 'Panen', icon: 'fish' }
 ]
 
@@ -58,10 +61,17 @@ function bukaLaporan() {
   }
 }
 
+function bukaModalLogout() {
+  showLogoutModal.value = true
+}
+
+function tutupModalLogout() {
+  showLogoutModal.value = false
+}
+
 function konfirmasiLogout() {
-  if (confirm('Yakin ingin keluar dari dashboard?')) {
-    logout()
-  }
+  showLogoutModal.value = false
+  logout()
 }
 </script>
 
@@ -81,7 +91,6 @@ function konfirmasiLogout() {
         </div>
         <span v-show="!collapsed" class="font-semibold whitespace-nowrap">Manajement Kolam</span>
 
-        <!-- Tombol tutup (hanya muncul saat sidebar terbuka) -->
         <button
           v-if="!collapsed"
           type="button"
@@ -97,8 +106,6 @@ function konfirmasiLogout() {
 
       <!-- Navigasi -->
       <nav class="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-1 text-[13.5px]">
-
-        <!-- Tombol buka sidebar (hanya muncul saat tertutup, di atas Dashboard) -->
         <button
           v-if="collapsed"
           type="button"
@@ -228,7 +235,7 @@ function konfirmasiLogout() {
           type="button"
           class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 text-[13.5px] text-left transition"
           :class="collapsed ? 'justify-center' : ''"
-          @click="konfirmasiLogout"
+          @click="bukaModalLogout"
           :title="collapsed ? 'Keluar' : ''"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
@@ -248,5 +255,61 @@ function konfirmasiLogout() {
         <router-view />
       </main>
     </div>
+
+    <!-- ==================== MODAL KONFIRMASI LOGOUT ==================== -->
+    <Teleport to="body">
+      <div
+        v-if="showLogoutModal"
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      >
+        <!-- Backdrop -->
+        <div
+          class="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+          @click="tutupModalLogout"
+        ></div>
+
+        <!-- Modal -->
+        <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <!-- Icon -->
+          <div class="pt-6 pb-2 flex justify-center">
+            <div class="w-14 h-14 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Text -->
+          <div class="px-6 pb-2 text-center">
+            <h3 class="text-[16px] font-semibold text-ink-900 dark:text-white">
+              Keluar dari Dashboard?
+            </h3>
+            <p class="text-[13.5px] text-ink-500 dark:text-ink-300 mt-1.5 leading-relaxed">
+              Kamu akan keluar dari akun ini. Data yang belum disimpan mungkin hilang.
+            </p>
+          </div>
+
+          <!-- Buttons -->
+          <div class="px-6 pb-6 pt-4 flex gap-3">
+            <button
+              type="button"
+              @click="tutupModalLogout"
+              class="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-600 text-[13.5px] font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-700 transition"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              @click="konfirmasiLogout"
+              class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-medium transition"
+            >
+              Ya, Keluar
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

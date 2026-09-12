@@ -11,6 +11,10 @@ const showModal = ref(false)
 const modeEdit = ref(false)
 const idDiedit = ref(null)
 
+// Modal hapus
+const showHapusModal = ref(false)
+const itemYangAkanDihapus = ref(null)
+
 const form = ref({
   nama: '',
   hari_sortir: '',
@@ -44,6 +48,32 @@ function bukaEdit(item) {
   modeEdit.value = true
   idDiedit.value = item.id
   showModal.value = true
+}
+
+function bukaHapus(item) {
+  itemYangAkanDihapus.value = item
+  showHapusModal.value = true
+}
+
+function tutupHapus() {
+  showHapusModal.value = false
+  itemYangAkanDihapus.value = null
+}
+
+async function konfirmasiHapus() {
+  if (!itemYangAkanDihapus.value) return
+  try {
+    const res = await fetch(`/api/jenis-ikan/${itemYangAkanDihapus.value.id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      alert(err.message || 'Gagal menghapus jenis ikan')
+      return
+    }
+    tutupHapus()
+    await muat()
+  } catch (err) {
+    alert(err.message || 'Terjadi kesalahan')
+  }
 }
 
 async function muat() {
@@ -100,33 +130,16 @@ async function simpan() {
   }
 }
 
-async function hapus(item) {
-  if (!confirm(`Hapus jenis ikan "${item.nama}"?`)) return
-  try {
-    const res = await fetch(`/api/jenis-ikan/${item.id}`, { method: 'DELETE' })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      alert(err.message || 'Gagal menghapus jenis ikan')
-      return
-    }
-    await muat()
-  } catch (err) {
-    alert(err.message || 'Terjadi kesalahan')
-  }
-}
-
 function rupiah(n) {
   return 'Rp' + Number(n || 0).toLocaleString('id-ID')
 }
 
-// Data terfilter berdasarkan pencarian
 const dataTerfilter = computed(() => {
   const q = pencarian.value.trim().toLowerCase()
   if (!q) return daftar.value
   return daftar.value.filter(item => (item.nama || '').toLowerCase().includes(q))
 })
 
-// Statistik Ringkasan
 const totalJenis = computed(() => daftar.value.length)
 
 const rataRataHarga = computed(() => {
@@ -145,7 +158,6 @@ onMounted(muat)
 
 <template>
   <div class="space-y-6">
-    <!-- Aksi Tambah (judul & deskripsi sudah ada di header aplikasi) -->
     <div class="flex justify-end">
       <button
         type="button"
@@ -198,7 +210,7 @@ onMounted(muat)
       </div>
     </div>
 
-    <!-- Tabel Data -->
+    <!-- Tabel -->
     <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden">
       <table class="w-full text-left text-[13.5px]">
         <thead>
@@ -212,9 +224,7 @@ onMounted(muat)
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="5" class="px-4 py-8 text-center text-[13px] text-ink-500 dark:text-ink-300">
-              Memuat data jenis ikan...
-            </td>
+            <td colspan="5" class="px-4 py-8 text-center text-[13px] text-ink-500 dark:text-ink-300">Memuat data jenis ikan...</td>
           </tr>
           <tr v-else-if="dataTerfilter.length === 0">
             <td colspan="5" class="px-4 py-8 text-center text-[13px] text-ink-500 dark:text-ink-300">
@@ -232,30 +242,18 @@ onMounted(muat)
               </span>
               {{ item.nama }}
             </td>
-            <td class="px-4 py-3.5 text-ink-600 dark:text-ink-300">
-              {{ item.hari_sortir }} hari setelah tebar
-            </td>
-            <td class="px-4 py-3.5 text-ink-600 dark:text-ink-300">
-              {{ item.hari_panen }} hari setelah tebar
-            </td>
+            <td class="px-4 py-3.5 text-ink-600 dark:text-ink-300">{{ item.hari_sortir }} hari setelah tebar</td>
+            <td class="px-4 py-3.5 text-ink-600 dark:text-ink-300">{{ item.hari_panen }} hari setelah tebar</td>
             <td class="px-4 py-3.5">
               <span class="font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-2.5 py-1 rounded-md">
                 {{ rupiah(item.harga_per_kg) }}
               </span>
             </td>
             <td class="px-4 py-3.5 text-right space-x-3">
-              <button
-                type="button"
-                class="text-brand-600 dark:text-brand-400 text-[13px] font-semibold hover:underline"
-                @click="bukaEdit(item)"
-              >
+              <button type="button" class="text-brand-600 dark:text-brand-400 text-[13px] font-semibold hover:underline" @click="bukaEdit(item)">
                 Edit
               </button>
-              <button
-                type="button"
-                class="text-danger-600 dark:text-danger-500 text-[13px] font-semibold hover:underline"
-                @click="hapus(item)"
-              >
+              <button type="button" class="text-danger-600 dark:text-danger-500 text-[13px] font-semibold hover:underline" @click="bukaHapus(item)">
                 Hapus
               </button>
             </td>
@@ -278,38 +276,18 @@ onMounted(muat)
         <form class="space-y-3.5" @submit.prevent="simpan">
           <div>
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nama Ikan</label>
-            <input
-              v-model="form.nama"
-              type="text"
-              required
-              placeholder="Contoh: Lele Sangkuriang, Nila Hitam"
-              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
-            />
+            <input v-model="form.nama" type="text" required placeholder="Contoh: Lele Sangkuriang, Nila Hitam" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]" />
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jadwal Sortir (Hari)</label>
-              <input
-                v-model="form.hari_sortir"
-                type="number"
-                min="1"
-                required
-                placeholder="Contoh: 30"
-                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
-              />
+              <input v-model="form.hari_sortir" type="number" min="1" required placeholder="Contoh: 30" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]" />
               <p class="text-[11.5px] text-ink-400 mt-0.5">Hari pasca tebar</p>
             </div>
             <div>
               <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jadwal Panen (Hari)</label>
-              <input
-                v-model="form.hari_panen"
-                type="number"
-                min="1"
-                required
-                placeholder="Contoh: 75"
-                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
-              />
+              <input v-model="form.hari_panen" type="number" min="1" required placeholder="Contoh: 75" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]" />
               <p class="text-[11.5px] text-ink-400 mt-0.5">Hari pasca tebar</p>
             </div>
           </div>
@@ -318,15 +296,7 @@ onMounted(muat)
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Harga Jual per Kg (Rp)</label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13.5px] font-medium text-ink-400">Rp</span>
-              <input
-                v-model="form.harga_per_kg"
-                type="number"
-                min="0"
-                step="500"
-                required
-                placeholder="Contoh: 28000"
-                class="w-full pl-10 pr-3 py-2 text-[13.5px] border border-ink-100 dark:border-ink-500 rounded-lg dark:bg-ink-900 dark:text-white"
-              />
+              <input v-model="form.harga_per_kg" type="number" min="0" step="500" required placeholder="Contoh: 28000" class="w-full pl-10 pr-3 py-2 text-[13.5px] border border-ink-100 dark:border-ink-500 rounded-lg dark:bg-ink-900 dark:text-white" />
             </div>
             <div class="mt-1 flex items-center justify-between text-[12px] text-ink-500 dark:text-ink-300">
               <span>Preview: <b class="text-brand-500 dark:text-brand-400">{{ rupiah(form.harga_per_kg) }}</b> / kg</span>
@@ -335,23 +305,46 @@ onMounted(muat)
           </div>
 
           <div class="flex gap-3 pt-3">
-            <button
-              type="button"
-              class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold hover:bg-ink-50 dark:hover:bg-ink-800 transition"
-              @click="showModal = false"
-            >
+            <button type="button" class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold hover:bg-ink-50 dark:hover:bg-ink-800 transition" @click="showModal = false">
               Batal
             </button>
-            <button
-              type="submit"
-              :disabled="menyimpan"
-              class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600 disabled:opacity-60 transition shadow-sm"
-            >
+            <button type="submit" :disabled="menyimpan" class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600 disabled:opacity-60 transition shadow-sm">
               {{ menyimpan ? 'Menyimpan...' : (modeEdit ? 'Perbarui' : 'Simpan') }}
             </button>
           </div>
         </form>
       </div>
     </div>
+
+    <!-- Modal Konfirmasi Hapus -->
+    <Teleport to="body">
+      <div v-if="showHapusModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="tutupHapus"></div>
+        <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div class="pt-6 pb-2 flex justify-center">
+            <div class="w-14 h-14 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-red-500">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="px-6 pb-2 text-center">
+            <h3 class="text-[16px] font-semibold text-ink-900 dark:text-white">Hapus Jenis Ikan?</h3>
+            <p class="text-[13.5px] text-ink-500 dark:text-ink-300 mt-1.5">
+              Jenis ikan <strong>"{{ itemYangAkanDihapus?.nama }}"</strong> akan dihapus permanen.
+            </p>
+          </div>
+          <div class="px-6 pb-6 pt-4 flex gap-3">
+            <button type="button" @click="tutupHapus" class="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-600 text-[13.5px] font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-700 transition">
+              Batal
+            </button>
+            <button type="button" @click="konfirmasiHapus" class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-medium transition">
+              Ya, Hapus
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
