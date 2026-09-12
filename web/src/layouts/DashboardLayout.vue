@@ -28,7 +28,8 @@ const jadwalSub = [
 const laporanSub = [
   { to: '/laporan', label: 'Ringkasan', icon: 'chart' },
   { to: '/laporan/penjualan', label: 'Penjualan', icon: 'wallet' },
-  { to: '/laporan/pengeluaran', label: 'Pengeluaran', icon: 'file' }
+  { to: '/laporan/pengeluaran', label: 'Pengeluaran', icon: 'file' } , 
+  { to: '/laporan/panen', label: 'Panen', icon: 'fish' }
 ]
 
 function toggleSidebar() {

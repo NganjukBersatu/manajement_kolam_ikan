@@ -3,24 +3,58 @@ import { pool } from '../config/db.js'
 
 const router = Router()
 
+// GET /api/panen
+// Query opsional: ?bulan=9&tahun=2026
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT p.*, k.nama_kolam, ji.nama AS nama_ikan
+    const { bulan, tahun } = req.query
+
+    let query = `
+      SELECT 
+        p.id,
+        p.jadwal_id,
+        p.tebar_id,
+        p.kolam_id,
+        p.tanggal,
+        p.jumlah_ekor,
+        p.berat_kg,
+        p.catatan,
+        p.created_at,
+        k.nama_kolam,
+        ji.nama AS jenis_ikan
       FROM panen p
       JOIN kolam k ON k.id = p.kolam_id
       JOIN tebar t ON t.id = p.tebar_id
       JOIN jenis_ikan ji ON ji.id = t.jenis_ikan_id
-      ORDER BY p.tanggal DESC
-    `)
+    `
+
+    const params = []
+    const conditions = []
+
+    if (bulan && tahun) {
+      conditions.push(`EXTRACT(MONTH FROM p.tanggal) = $1`)
+      conditions.push(`EXTRACT(YEAR FROM p.tanggal) = $2`)
+      params.push(Number(bulan), Number(tahun))
+    } else if (tahun) {
+      conditions.push(`EXTRACT(YEAR FROM p.tanggal) = $1`)
+      params.push(Number(tahun))
+    }
+
+    if (conditions.length > 0) {
+      query += ` WHERE ` + conditions.join(' AND ')
+    }
+
+    query += ` ORDER BY p.tanggal DESC`
+
+    const result = await pool.query(query, params)
     res.json({ data: result.rows })
   } catch (err) {
+    console.error(err)
     res.status(500).json({ message: 'Gagal mengambil data panen', error: err.message })
   }
 })
 
 // POST /api/panen → catat hasil panen
-// Mengurangi jumlah_saat_ini; kalau habis (<=0), tebar selesai & kolam kosong lagi.
 router.post('/', async (req, res) => {
   const { jadwal_id, tebar_id, kolam_id, tanggal, jumlah_ekor, berat_kg, catatan } = req.body
   if (!tebar_id || !kolam_id || !tanggal || !jumlah_ekor) {
@@ -43,11 +77,12 @@ router.post('/', async (req, res) => {
       [jumlah_ekor, tebar_id]
     )
 
+    // Tandai jadwal sebagai selesai
     if (jadwal_id) {
       await client.query(`UPDATE jadwal SET status = 'selesai' WHERE id = $1`, [jadwal_id])
     }
 
-    // Kalau stok ikan di kolam itu sudah habis, tandai tebar selesai & kolam kosong lagi
+    // Kalau stok ikan di kolam sudah habis
     if (updateTebar.rows[0].jumlah_saat_ini <= 0) {
       await client.query(`UPDATE tebar SET status = 'selesai' WHERE id = $1`, [tebar_id])
       await client.query(`UPDATE kolam SET status = 'kosong', updated_at = NOW() WHERE id = $1`, [kolam_id])
