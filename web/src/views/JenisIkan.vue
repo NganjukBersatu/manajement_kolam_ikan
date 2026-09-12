@@ -15,7 +15,7 @@ const idDiedit = ref(null)
 const showHapusModal = ref(false)
 const itemYangAkanDihapus = ref(null)
 
-// Modal sukses (muncul setelah tambah/edit berhasil disimpan)
+// Modal sukses
 const showSuksesModal = ref(false)
 const pesanSukses = ref('')
 
@@ -26,16 +26,12 @@ function tutupSukses() {
 
 const form = ref({
   nama: '',
-  hari_sortir: '',
-  hari_panen: '',
   harga_per_kg: ''
 })
 
 function resetForm() {
   form.value = {
     nama: '',
-    hari_sortir: '',
-    hari_panen: '',
     harga_per_kg: ''
   }
   modeEdit.value = false
@@ -50,8 +46,6 @@ function bukaTambah() {
 function bukaEdit(item) {
   form.value = {
     nama: item.nama,
-    hari_sortir: item.hari_sortir,
-    hari_panen: item.hari_panen,
     harga_per_kg: item.harga_per_kg || 0
   }
   modeEdit.value = true
@@ -100,8 +94,8 @@ async function muat() {
 }
 
 async function simpan() {
-  if (!form.value.nama || !form.value.hari_sortir || !form.value.hari_panen) {
-    alert('Nama, siklus sortir, dan siklus panen wajib diisi!')
+  if (!form.value.nama) {
+    alert('Nama ikan wajib diisi!')
     return
   }
 
@@ -109,8 +103,6 @@ async function simpan() {
   try {
     const payload = {
       nama: form.value.nama,
-      hari_sortir: Number(form.value.hari_sortir),
-      hari_panen: Number(form.value.hari_panen),
       harga_per_kg: Number(form.value.harga_per_kg) || 0
     }
 
@@ -134,7 +126,6 @@ async function simpan() {
     resetForm()
     await muat()
 
-    // Tampilkan modal sukses setelah data selesai dimuat ulang
     pesanSukses.value = sedangEdit ? 'Jenis ikan berhasil diperbarui.' : 'Jenis ikan berhasil ditambahkan.'
     showSuksesModal.value = true
   } catch (err) {
@@ -230,18 +221,16 @@ onMounted(muat)
         <thead>
           <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Nama Ikan</th>
-            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Siklus Sortir</th>
-            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Siklus Panen</th>
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Harga Jual / kg</th>
             <th class="px-4 py-3 text-right text-ink-500 dark:text-ink-300 font-semibold">Aksi</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="5" class="px-4 py-8 text-center text-[13px] text-ink-500 dark:text-ink-300">Memuat data jenis ikan...</td>
+            <td colspan="3" class="px-4 py-8 text-center text-[13px] text-ink-500 dark:text-ink-300">Memuat data jenis ikan...</td>
           </tr>
           <tr v-else-if="dataTerfilter.length === 0">
-            <td colspan="5" class="px-4 py-8 text-center text-[13px] text-ink-500 dark:text-ink-300">
+            <td colspan="3" class="px-4 py-8 text-center text-[13px] text-ink-500 dark:text-ink-300">
               {{ pencarian ? 'Tidak ada jenis ikan yang cocok dengan kata kunci.' : 'Belum ada jenis ikan terdaftar.' }}
             </td>
           </tr>
@@ -256,8 +245,6 @@ onMounted(muat)
               </span>
               {{ item.nama }}
             </td>
-            <td class="px-4 py-3.5 text-ink-600 dark:text-ink-300">{{ item.hari_sortir }} hari setelah tebar</td>
-            <td class="px-4 py-3.5 text-ink-600 dark:text-ink-300">{{ item.hari_panen }} hari setelah tebar</td>
             <td class="px-4 py-3.5">
               <span class="font-semibold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-2.5 py-1 rounded-md">
                 {{ rupiah(item.harga_per_kg) }}
@@ -278,39 +265,42 @@ onMounted(muat)
 
     <!-- Modal Form Tambah / Edit -->
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div class="absolute inset-0 bg-black/40" @click="showModal = false" />
-      <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5 z-10">
+      <!-- Backdrop transparan hitam -->
+      <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="showModal = false"></div>
+
+      <div class="relative bg-white dark:bg-ink-700 rounded-2xl shadow-2xl w-full max-w-md p-5 z-10">
         <h2 class="text-[16px] font-semibold dark:text-white mb-1">
           {{ modeEdit ? 'Edit Jenis Ikan' : 'Tambah Jenis Ikan' }}
         </h2>
         <p class="text-[12.5px] text-ink-500 dark:text-ink-300 mb-4">
-          Tentukan nama ikan, estimasi jadwal, dan harga jual per kg sebagai acuan transaksi.
+          Tentukan nama ikan dan harga jual per kg sebagai acuan transaksi.
         </p>
 
         <form class="space-y-3.5" @submit.prevent="simpan">
           <div>
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nama Ikan</label>
-            <input v-model="form.nama" type="text" required placeholder="Contoh: Lele Sangkuriang, Nila Hitam" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]" />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jadwal Sortir (Hari)</label>
-              <input v-model="form.hari_sortir" type="number" min="1" required placeholder="Contoh: 30" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]" />
-              <p class="text-[11.5px] text-ink-400 mt-0.5">Hari pasca tebar</p>
-            </div>
-            <div>
-              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jadwal Panen (Hari)</label>
-              <input v-model="form.hari_panen" type="number" min="1" required placeholder="Contoh: 75" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]" />
-              <p class="text-[11.5px] text-ink-400 mt-0.5">Hari pasca tebar</p>
-            </div>
+            <input
+              v-model="form.nama"
+              type="text"
+              required
+              placeholder="Contoh: Lele Sangkuriang, Nila Hitam"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
+            />
           </div>
 
           <div>
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Harga Jual per Kg (Rp)</label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[13.5px] font-medium text-ink-400">Rp</span>
-              <input v-model="form.harga_per_kg" type="number" min="0" step="500" required placeholder="Contoh: 28000" class="w-full pl-10 pr-3 py-2 text-[13.5px] border border-ink-100 dark:border-ink-500 rounded-lg dark:bg-ink-900 dark:text-white" />
+              <input
+                v-model="form.harga_per_kg"
+                type="number"
+                min="0"
+                step="500"
+                required
+                placeholder="Contoh: 28000"
+                class="w-full pl-10 pr-3 py-2 text-[13.5px] border border-ink-100 dark:border-ink-500 rounded-lg dark:bg-ink-900 dark:text-white"
+              />
             </div>
             <div class="mt-1 flex items-center justify-between text-[12px] text-ink-500 dark:text-ink-300">
               <span>Preview: <b class="text-brand-500 dark:text-brand-400">{{ rupiah(form.harga_per_kg) }}</b> / kg</span>
@@ -319,10 +309,18 @@ onMounted(muat)
           </div>
 
           <div class="flex gap-3 pt-3">
-            <button type="button" class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold hover:bg-ink-50 dark:hover:bg-ink-800 transition" @click="showModal = false">
+            <button
+              type="button"
+              class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold hover:bg-ink-50 dark:hover:bg-ink-800 transition"
+              @click="showModal = false"
+            >
               Batal
             </button>
-            <button type="submit" :disabled="menyimpan" class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600 disabled:opacity-60 transition shadow-sm">
+            <button
+              type="submit"
+              :disabled="menyimpan"
+              class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600 disabled:opacity-60 transition shadow-sm"
+            >
               {{ menyimpan ? 'Menyimpan...' : (modeEdit ? 'Perbarui' : 'Simpan') }}
             </button>
           </div>
@@ -361,14 +359,14 @@ onMounted(muat)
       </div>
     </Teleport>
 
-    <!-- Modal Sukses (tambah/edit berhasil disimpan) -->
+    <!-- Modal Sukses -->
     <Teleport to="body">
       <div v-if="showSuksesModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="tutupSukses"></div>
         <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
           <div class="pt-6 pb-2 flex justify-center">
-            <div class="w-14 h-14 rounded-full bg-ok-50 dark:bg-ok-900/20 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-ok-500">
+            <div class="w-14 h-14 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-500">
                 <path d="M20 6 9 17l-5-5"></path>
               </svg>
             </div>
@@ -380,7 +378,7 @@ onMounted(muat)
             </p>
           </div>
           <div class="px-6 pb-6 pt-4">
-            <button type="button" @click="tutupSukses" class="w-full px-4 py-2.5 rounded-xl bg-ok-500 hover:bg-ok-600 text-white text-[13.5px] font-medium transition">
+            <button type="button" @click="tutupSukses" class="w-full px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-[13.5px] font-medium transition">
               Oke
             </button>
           </div>
