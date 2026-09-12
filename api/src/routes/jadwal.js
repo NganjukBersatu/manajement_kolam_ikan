@@ -24,7 +24,12 @@ router.get('/', async (req, res) => {
 
     const result = await pool.query(
       `SELECT j.id, j.jenis, j.tanggal_jadwal, j.status, j.tebar_id, j.kolam_id,
-              k.nama_kolam, ji.nama AS nama_ikan, t.jumlah_saat_ini
+              k.nama_kolam, ji.nama AS nama_ikan, t.jumlah_saat_ini,
+              COALESCE((
+                SELECT COUNT(*)::int
+                FROM sortir s
+                WHERE s.tebar_id = j.tebar_id AND s.kolam_id = j.kolam_id
+              ), 0) AS jumlah_sortir
        FROM jadwal j
        JOIN kolam k ON k.id = j.kolam_id
        JOIN tebar t ON t.id = j.tebar_id

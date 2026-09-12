@@ -26,10 +26,12 @@ const routes = [
 
       // Stok Pakan
       { path: 'stok-pakan', name: 'stok-pakan', component: () => import('../views/StokPakan.vue'), meta: { title: 'Stok Pakan', subtitle: 'Daftar jenis pakan, sisa stok, dan riwayat aktivitas pemakaian pakan' } },
+
       // Laporan
       { path: 'laporan', name: 'laporan', component: () => import('../views/Laporan.vue'), meta: { title: 'Laporan Ringkasan', subtitle: 'Analisis performa budidaya, keuntungan, dan ringkasan keuangan' } },
       { path: 'laporan/penjualan', name: 'laporan-penjualan', component: () => import('../views/LaporanPenjualan.vue'), meta: { title: 'Laporan Penjualan', subtitle: 'Riwayat penjualan tercatat otomatis dari seluruh transaksi' } },
       { path: 'laporan/pengeluaran', name: 'laporan-pengeluaran', component: () => import('../views/LaporanPengeluaran.vue'), meta: { title: 'Laporan Pengeluaran', subtitle: 'Detail dan total pengeluaran operasional per bulan' } },
+      { path: 'laporan/panen', name: 'laporan-panen', component: () => import('../views/LaporanPanen.vue'), meta: { title: 'Laporan Panen', subtitle: 'Hasil panen dari catatan jadwal panen per periode' } },
 
       { path: 'pengaturan', name: 'pengaturan', component: () => import('../views/Pengaturan.vue'), meta: { title: 'Pengaturan Usaha & Akun', subtitle: 'Sesuaikan identitas usaha budidaya, ganti kata sandi, dan preferensi' } },
       { path: 'profile', name: 'profile', component: () => import('../views/Profile.vue'), meta: { title: 'Profil Saya', subtitle: 'Informasi dan foto profil akun pengelola kolam' } }

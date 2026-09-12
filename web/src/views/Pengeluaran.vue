@@ -321,31 +321,11 @@ onMounted(muat)
 
 <template>
   <div class="space-y-6">
-    <!-- Header: Filter Bulan + Tombol Tambah -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-      <div class="flex items-center gap-2">
-        <select
-          v-model="selectedMonth"
-          class="rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
-        >
-          <option v-for="b in daftarBulan" :key="b.value" :value="b.value">
-            {{ b.label }}
-          </option>
-        </select>
-
-        <select
-          v-model="selectedYear"
-          class="rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white"
-        >
-          <option v-for="y in [2024, 2025, 2026, 2027, 2028]" :key="y" :value="y">
-            {{ y }}
-          </option>
-        </select>
-      </div>
-
+    <!-- Header: Tombol Tambah saja -->
+    <div class="flex justify-end">
       <button
         @click="bukaTambah"
-        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[13.5px] font-medium transition"
+        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-500 text-white text-[13.5px] font-semibold hover:bg-brand-600 transition shadow-sm"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -611,20 +591,20 @@ onMounted(muat)
             </div>
 
             <!-- Jumlah -->
-<div>
-  <label class="block text-[13px] font-medium text-ink-600 dark:text-ink-300 mb-1.5">
-    Jumlah (Rp) <span class="text-red-500">*</span>
-  </label>
-  <input
-    v-model="form.jumlah"
-    type="number"
-    min="1"
-    step="1"
-    placeholder="Contoh: 150000"
-    required
-    class="w-full rounded-lg border border-ink-200 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px] focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-  />
-</div>
+            <div>
+              <label class="block text-[13px] font-medium text-ink-600 dark:text-ink-300 mb-1.5">
+                Jumlah (Rp) <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="form.jumlah"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="Contoh: 150000"
+                required
+                class="w-full rounded-lg border border-ink-200 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px] focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              />
+            </div>
 
             <!-- Tombol -->
             <div class="flex gap-3 pt-2">
@@ -638,7 +618,7 @@ onMounted(muat)
               <button
                 type="submit"
                 :disabled="formLoading"
-                class="flex-1 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-[13.5px] font-medium transition"
+                class="flex-1 px-4 py-2.5 rounded-lg bg-brand-500 hover:bg-brand-600 disabled:opacity-60 text-white text-[13.5px] font-semibold transition"
               >
                 {{ formLoading ? 'Menyimpan...' : (isEdit ? 'Simpan Perubahan' : 'Simpan') }}
               </button>

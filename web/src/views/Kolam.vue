@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 
 const daftarKolam = ref([])
 const pencarian = ref('')
@@ -22,6 +22,30 @@ const showEditKolam = ref(false)
 const kolamDipilih = ref(null)
 const kolamDiedit = ref(null)
 
+// ===== Menu aksi (titik tiga) =====
+const menuTerbuka = ref(null) // menyimpan id kolam yang menu-nya sedang terbuka
+
+function toggleMenu(id) {
+  menuTerbuka.value = menuTerbuka.value === id ? null : id
+}
+
+function tutupMenu() {
+  menuTerbuka.value = null
+}
+
+function handleClickLuar(e) {
+  if (!e.target.closest('.menu-aksi-kolam')) {
+    tutupMenu()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickLuar)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickLuar)
+})
+
 const form = ref({ jenis_ikan_id: '', tanggal_tebar: '', jumlah_bibit: '' })
 const formKolam = ref({ nama_kolam: '', luas_m2: '', jenis_id: '' })
 const formEditKolam = ref({ nama_kolam: '', luas_m2: '', jenis_id: '' })
@@ -39,6 +63,7 @@ async function muatJenisIkan() {
 }
 
 function bukaTebar(kolam) {
+  tutupMenu()
   kolamDipilih.value = kolam
   form.value = { jenis_ikan_id: '', tanggal_tebar: '', jumlah_bibit: '' }
   showTebarForm.value = true
@@ -50,6 +75,7 @@ function bukaTambahKolam() {
 }
 
 function bukaEditKolam(kolam) {
+  tutupMenu()
   kolamDiedit.value = kolam
   formEditKolam.value = {
     nama_kolam: kolam.nama_kolam,
@@ -126,6 +152,7 @@ async function simpanEditKolam() {
 }
 
 async function hapusKolam(kolam) {
+  tutupMenu()
   const konfirmasi = confirm(`Yakin ingin menghapus kolam "${kolam.nama_kolam}"? Data ini tidak bisa dikembalikan.`)
   if (!konfirmasi) return
 
@@ -144,31 +171,6 @@ async function hapusKolam(kolam) {
 
 function rupiah(n) {
   return n ? Number(n).toLocaleString('id-ID') : '-'
-}
-
-// ===== Survival rate (bibit awal vs jumlah hidup sekarang) =====
-function survivalRate(k) {
-  const bibit = Number(k.jumlah_bibit)
-  const sekarang = Number(k.jumlah_saat_ini)
-  if (!bibit) return null
-  return Math.round((sekarang / bibit) * 100)
-}
-function jumlahMati(k) {
-  const bibit = Number(k.jumlah_bibit)
-  const sekarang = Number(k.jumlah_saat_ini)
-  if (!bibit) return 0
-  return Math.max(bibit - sekarang, 0)
-}
-// Ambang batas sama seperti di Dashboard, supaya konsisten
-function warnaSurvivalTeks(rate) {
-  if (rate < 70) return 'text-danger-600 dark:text-danger-500'
-  if (rate < 85) return 'text-warn-600 dark:text-warn-500'
-  return 'text-ok-600 dark:text-ok-500'
-}
-function warnaSurvivalBar(rate) {
-  if (rate < 70) return 'bg-danger-500'
-  if (rate < 85) return 'bg-warn-500'
-  return 'bg-ok-500'
 }
 
 // ===== Perkiraan tanggal sortir & panen (tanggal tebar + hari_sortir/hari_panen dari Jenis Ikan) =====
@@ -342,7 +344,6 @@ onMounted(() => {
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Perkiraan Sortir/Panen</th>
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Bibit</th>
             <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah Saat Ini</th>
-            <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Survival Rate</th>
             <th class="px-4 py-3 text-right text-ink-500 dark:text-ink-300 font-semibold">Aksi</th>
           </tr>
         </thead>
@@ -388,58 +389,60 @@ onMounted(() => {
             </td>
             <td class="px-4 py-3">{{ rupiah(k.jumlah_bibit) }}</td>
             <td class="px-4 py-3">{{ rupiah(k.jumlah_saat_ini) }}</td>
-            <td class="px-4 py-3 min-w-[130px]">
-              <template v-if="survivalRate(k) !== null">
-                <div class="flex items-center gap-2">
-                  <div class="h-1.5 w-16 rounded-full bg-ink-100 dark:bg-ink-900 overflow-hidden">
-                    <div
-                      class="h-full rounded-full"
-                      :class="warnaSurvivalBar(survivalRate(k))"
-                      :style="{ width: Math.min(survivalRate(k), 100) + '%' }"
-                    ></div>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <button
+                  v-if="k.status !== 'aktif'"
+                  type="button"
+                  class="px-3 py-1.5 rounded-lg bg-ink-700 dark:bg-ink-500 text-white text-[12.5px] font-semibold hover:bg-ink-800 dark:hover:bg-ink-400"
+                  @click="bukaTebar(k)"
+                >
+                  Tebar Bibit
+                </button>
+
+                <div class="relative menu-aksi-kolam">
+                  <button
+                    type="button"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg border border-ink-100 dark:border-ink-500 text-ink-500 dark:text-ink-300 hover:bg-ink-50 dark:hover:bg-ink-600"
+                    @click.stop="toggleMenu(k.id)"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                      <circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none" />
+                      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+                      <circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none" />
+                    </svg>
+                  </button>
+
+                  <div
+                    v-if="menuTerbuka === k.id"
+                    class="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-ink-700 border border-ink-100 dark:border-ink-500 rounded-lg shadow-card z-20 overflow-hidden"
+                  >
+                    <button
+                      type="button"
+                      class="w-full text-left px-3 py-2 text-[13px] font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                      @click="bukaEditKolam(k)"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      class="w-full text-left px-3 py-2 text-[13px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+                      @click="hapusKolam(k)"
+                    >
+                      Hapus
+                    </button>
                   </div>
-                  <span class="font-semibold text-[12.5px]" :class="warnaSurvivalTeks(survivalRate(k))">
-                    {{ survivalRate(k) }}%
-                  </span>
                 </div>
-                <p v-if="jumlahMati(k) > 0" class="text-[11.5px] text-ink-400 mt-0.5">
-                  {{ jumlahMati(k).toLocaleString('id-ID') }} ekor mati
-                </p>
-              </template>
-              <span v-else class="text-ink-400">-</span>
-            </td>
-            <td class="px-4 py-3 text-right space-x-2">
-              <button
-                type="button"
-                class="px-3 py-1.5 rounded-lg border border-ink-200 dark:border-ink-500 text-ink-600 dark:text-ink-200 text-[12.5px] font-semibold hover:bg-ink-50 dark:hover:bg-ink-600"
-                @click="bukaEditKolam(k)"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                class="px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-500/40 text-red-600 dark:text-red-400 text-[12.5px] font-semibold hover:bg-red-50 dark:hover:bg-red-500/10"
-                @click="hapusKolam(k)"
-              >
-                Hapus
-              </button>
-              <button
-                v-if="k.status !== 'aktif'"
-                type="button"
-                class="px-3 py-1.5 rounded-lg bg-ink-700 dark:bg-ink-500 text-white text-[12.5px] font-semibold hover:bg-ink-800 dark:hover:bg-ink-400"
-                @click="bukaTebar(k)"
-              >
-                Tebar Bibit
-              </button>
+              </div>
             </td>
           </tr>
           <tr v-if="daftarKolam.length === 0">
-            <td colspan="10" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+            <td colspan="9" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
               Belum ada kolam. Tambahkan kolam pertamamu untuk mulai mencatat.
             </td>
           </tr>
           <tr v-else-if="kolamTerfilter.length === 0">
-            <td colspan="10" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
+            <td colspan="9" class="px-4 py-6 text-center text-[13px] text-ink-500 dark:text-ink-300">
               Tidak ada kolam yang cocok dengan pencarian/filter kamu.
             </td>
           </tr>

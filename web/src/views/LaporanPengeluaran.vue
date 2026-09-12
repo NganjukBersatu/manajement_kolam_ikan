@@ -9,7 +9,7 @@ const sekarang = new Date()
 const selectedMonth = ref(sekarang.getMonth() + 1)
 const selectedYear = ref(sekarang.getFullYear())
 
-// ===================== Search & Filter tambahan =====================
+// ===================== Search & Filter =====================
 const pencarian = ref('')
 const filterKategori = ref('') // '' = semua
 const filterWaktu = ref('semua') // semua | hari_ini | kemarin | 7_hari | kustom
@@ -57,7 +57,6 @@ function tanggal(d) {
   })
 }
 
-// Ambil YYYY-MM-DD saja (hindari masalah timezone)
 function ymd(d) {
   if (!d) return ''
   return typeof d === 'string' ? d.slice(0, 10) : new Date(d).toISOString().slice(0, 10)
@@ -99,6 +98,10 @@ function cocokRentangTanggal(tgl) {
   return t >= rentang.dari && t <= rentang.sampai
 }
 
+function isGaji(item) {
+  return (item.kategori || '').toLowerCase() === 'gaji'
+}
+
 async function muat() {
   loading.value = true
   try {
@@ -131,7 +134,6 @@ async function muat() {
       (a, b) => new Date(b.tanggal) - new Date(a.tanggal)
     )
 
-    // Hitung total (sebelum filter client-side)
     total.value = daftar.value.reduce((sum, item) => sum + Number(item.jumlah || 0), 0)
   } catch (err) {
     console.error(err)
@@ -158,8 +160,27 @@ const daftarTerfilter = computed(() => {
   })
 })
 
-const totalTerfilter = computed(() =>
-  daftarTerfilter.value.reduce((sum, item) => sum + Number(item.jumlah || 0), 0)
+// ========== PEMISAHAN UNTUK PERHITUNGAN WARALABA ==========
+const totalGaji = computed(() =>
+  daftarTerfilter.value
+    .filter(item => isGaji(item))
+    .reduce((sum, item) => sum + Number(item.jumlah || 0), 0)
+)
+
+const totalOperasional = computed(() =>
+  daftarTerfilter.value
+    .filter(item => !isGaji(item))
+    .reduce((sum, item) => sum + Number(item.jumlah || 0), 0)
+)
+
+const totalTerfilter = computed(() => totalGaji.value + totalOperasional.value)
+
+const jumlahTransaksiGaji = computed(() =>
+  daftarTerfilter.value.filter(item => isGaji(item)).length
+)
+
+const jumlahTransaksiOperasional = computed(() =>
+  daftarTerfilter.value.filter(item => !isGaji(item)).length
 )
 
 const adaFilterAktif = computed(() =>
@@ -183,7 +204,7 @@ onMounted(muat)
 
 <template>
   <div class="space-y-6">
-    <!-- Filter Bulan & Tahun (judul & deskripsi sudah di header aplikasi) -->
+    <!-- Filter Bulan & Tahun -->
     <div class="flex justify-end items-center gap-2">
       <select
         v-model="selectedMonth"
@@ -204,16 +225,14 @@ onMounted(muat)
       </select>
     </div>
 
-    <!-- Search & Filter tambahan -->
+    <!-- Search & Filter -->
     <div class="flex flex-col lg:flex-row gap-3">
-      <!-- Input search dengan icon -->
       <div class="relative w-full lg:flex-1">
         <svg
           class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 dark:text-ink-300 pointer-events-none"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
         >
           <path
             stroke-linecap="round"
@@ -230,7 +249,6 @@ onMounted(muat)
         />
       </div>
 
-      <!-- Filter Kategori -->
       <select
         v-model="filterKategori"
         class="w-full lg:w-48 rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
@@ -245,7 +263,6 @@ onMounted(muat)
         <option value="Pengeluaran Lain">Pengeluaran Lain</option>
       </select>
 
-      <!-- Filter Waktu (hari ini / kemarin / 7 hari / kustom) -->
       <select
         v-model="filterWaktu"
         class="w-full lg:w-56 rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
@@ -255,7 +272,6 @@ onMounted(muat)
         </option>
       </select>
 
-      <!-- Rentang tanggal kustom -->
       <template v-if="filterWaktu === 'kustom'">
         <input
           v-model="tanggalMulai"
@@ -269,7 +285,6 @@ onMounted(muat)
         />
       </template>
 
-      <!-- Tombol Reset -->
       <button
         v-if="adaFilterAktif"
         type="button"
@@ -280,21 +295,58 @@ onMounted(muat)
       </button>
     </div>
 
-    <!-- Kartu Total -->
-    <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
-      <p class="text-[13px] text-ink-500 dark:text-ink-300">
-        Total Pengeluaran — {{ namaPeriode }}
-        <span v-if="adaFilterAktif" class="text-ink-400">(hasil filter)</span>
-      </p>
-      <p class="text-2xl font-bold text-danger-600 dark:text-danger-500 mt-1">
-        {{ rupiah(adaFilterAktif ? totalTerfilter : total) }}
-      </p>
-      <p class="text-[12.5px] text-ink-400 dark:text-ink-300 mt-1">
-        {{ adaFilterAktif ? daftarTerfilter.length : daftar.length }} transaksi
-        <span v-if="adaFilterAktif && daftar.length">
-          dari {{ daftar.length }} total
-        </span>
-      </p>
+    <!-- ===================== RINGKASAN UNTUK WARALABA ===================== -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <!-- Total Operasional -->
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
+        <p class="text-[13px] text-ink-500 dark:text-ink-300">
+          Pengeluaran Operasional
+          <span v-if="adaFilterAktif" class="text-ink-400 text-[11px]">(filter)</span>
+        </p>
+        <p class="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-1">
+          {{ rupiah(totalOperasional) }}
+        </p>
+        <p class="text-[12.5px] text-ink-400 dark:text-ink-300 mt-1">
+          {{ jumlahTransaksiOperasional }} transaksi
+        </p>
+        <p class="text-[11px] text-ink-400 mt-2 leading-tight">
+          Termasuk: Pakan, Obat, Listrik, Perlengkapan, dll
+        </p>
+      </div>
+
+      <!-- Total Gaji -->
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
+        <p class="text-[13px] text-ink-500 dark:text-ink-300">
+          Pengeluaran Gaji
+          <span v-if="adaFilterAktif" class="text-ink-400 text-[11px]">(filter)</span>
+        </p>
+        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+          {{ rupiah(totalGaji) }}
+        </p>
+        <p class="text-[12.5px] text-ink-400 dark:text-ink-300 mt-1">
+          {{ jumlahTransaksiGaji }} transaksi
+        </p>
+        <p class="text-[11px] text-ink-400 mt-2 leading-tight">
+          Khusus untuk perhitungan waralaba
+        </p>
+      </div>
+
+      <!-- Total Keseluruhan -->
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
+        <p class="text-[13px] text-ink-500 dark:text-ink-300">
+          Total Pengeluaran — {{ namaPeriode }}
+          <span v-if="adaFilterAktif" class="text-ink-400 text-[11px]">(filter)</span>
+        </p>
+        <p class="text-2xl font-bold text-danger-600 dark:text-danger-500 mt-1">
+          {{ rupiah(totalTerfilter) }}
+        </p>
+        <p class="text-[12.5px] text-ink-400 dark:text-ink-300 mt-1">
+          {{ daftarTerfilter.length }} transaksi
+          <span v-if="adaFilterAktif && daftar.length">
+            dari {{ daftar.length }} total
+          </span>
+        </p>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -323,19 +375,25 @@ onMounted(muat)
             class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100"
           >
             <td class="px-4 py-3">{{ tanggal(p.tanggal) }}</td>
-            <td class="px-4 py-3 capitalize">{{ p.kategori }}</td>
+            <td class="px-4 py-3">
+              <span
+                :class="isGaji(p)
+                  ? 'inline-flex px-2 py-0.5 rounded-full text-[12px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                  : 'capitalize'"
+              >
+                {{ p.kategori }}
+              </span>
+            </td>
             <td class="px-4 py-3">{{ p.deskripsi || '-' }}</td>
             <td class="px-4 py-3 text-right font-semibold">{{ rupiah(p.jumlah) }}</td>
           </tr>
 
-          <!-- Kosong: belum ada data di bulan tersebut -->
           <tr v-if="!daftar.length">
             <td colspan="4" class="px-4 py-10 text-center text-ink-400 dark:text-ink-300">
               Belum ada pengeluaran di {{ namaPeriode }}
             </td>
           </tr>
 
-          <!-- Kosong: ada data tapi tidak cocok filter -->
           <tr v-else-if="!daftarTerfilter.length">
             <td colspan="4" class="px-4 py-10 text-center text-ink-400 dark:text-ink-300">
               Tidak ada data yang cocok dengan pencarian/filter kamu.
