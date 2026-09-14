@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class',   // ← wajib ditambahkan
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
   theme: {
     extend: {
@@ -38,11 +38,21 @@ export default {
           500: '#B44B3D',
           600: '#943A2F'
         },
+        // Skala dilengkapi: sebelumnya hanya ada 900/700/500/300/100,
+        // padahal komponen (Header.vue, dll.) juga memakai 800/600/400/200.
+        // Shade yang hilang menyebabkan class dark:bg-ink-800, text-ink-400,
+        // dsb. tidak menghasilkan CSS sama sekali (Tailwind diam-diam abaikan
+        // class yang tidak ada di config), sehingga elemen jatuh balik ke
+        // warna default/putih di mode gelap.
         ink: {
           900: '#20302D',
+          800: '#2D3D3A',
           700: '#3B4B47',
+          600: '#4F6360',
           500: '#647A75',
+          400: '#869A95',
           300: '#A9BAB5',
+          200: '#C6D1CD',
           100: '#E4E9E6'
         }
       },
