@@ -15,9 +15,12 @@ const { profile, initials, handleFileSelect, removePhoto, updateProfile } = useP
 const {
   settings: usaha,
   updateSettings: updateUsaha,
-  setKomoditas,
+  toggleCommodity,
+  isCommoditySelected,
   handleLogoSelect,
-  removeLogo
+  removeLogo,
+  loadFromApi,
+  saveToApi
 } = useBusinessSettings()
 
 // ===== Usaha / Komoditas =====
@@ -27,9 +30,10 @@ const logoInput = ref(null)
 const logoError = ref('')
 const uploadingLogo = ref(false)
 
-function simpanUsaha() {
+async function simpanUsaha() {
   savingUsaha.value = true
   updateUsaha({ ...usaha.value })
+  await saveToApi()
   usahaMsg.value = 'Pengaturan usaha disimpan.'
   savingUsaha.value = false
   setTimeout(() => (usahaMsg.value = ''), 3000)
@@ -164,24 +168,19 @@ async function ubahSandi() {
   }
 }
 
-onMounted(muatAkun)
+onMounted(async () => {
+  await muatAkun()
+  await loadFromApi()
+})
 </script>
 
 <template>
-  <!--
-    PERBAIKAN LAYOUT:
-    - "max-w-3xl" dihapus -> tidak lagi membatasi lebar konten (penyebab area kosong di kanan).
-    - "w-full" ditambahkan supaya konten mengisi penuh ruang yang tersedia dari parent layout.
-    - Section-section kecil (Preferensi, Notifikasi, Profil, Tampilan, Ubah Sandi) disusun
-      dalam grid 2 kolom di layar besar (lg ke atas) supaya halaman terisi rapi,
-      sementara "Pengaturan usaha" tetap full-width karena field-nya paling banyak.
-  -->
   <div class="w-full space-y-6">
     <!-- Usaha / Komoditas (full width) -->
     <section class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5 w-full">
       <h2 class="text-[15px] font-semibold dark:text-white mb-1">Pengaturan usaha</h2>
       <p class="text-[12.5px] text-ink-400 dark:text-ink-300 mb-4">
-        Sesuaikan aplikasi dengan jenis usaha budidaya kamu — ikan, udang, kepiting, atau lainnya.
+        Data ini diisi saat registrasi. Anda bisa mengubahnya kapan saja.
       </p>
 
       <form class="space-y-3" @submit.prevent="simpanUsaha">
@@ -225,31 +224,19 @@ onMounted(muatAkun)
               placeholder="Contoh: Tambak Udang Pak Budi"
               class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
             />
-            <p class="text-[12px] text-ink-400 mt-1">Nama ini akan tampil di logo dan judul aplikasi.</p>
           </div>
 
           <div>
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jenis komoditas</label>
-            <select
-              :value="usaha.komoditas"
-              @change="setKomoditas($event.target.value)"
-              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
-            >
-              <option v-for="k in KOMODITAS_PRESET" :key="k.value" :value="k.value">{{ k.label }}</option>
-            </select>
-          </div>
-
-          <div v-if="usaha.komoditas === 'custom'">
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nama komoditas</label>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nomor telepon usaha</label>
             <input
-              v-model="usaha.komoditasCustom"
-              type="text"
-              placeholder="Contoh: Rumput laut, Lobster, Belut"
+              v-model="usaha.telepon"
+              type="tel"
+              placeholder="08xxxxxxxxxx"
               class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
             />
           </div>
 
-          <div>
+          <div class="sm:col-span-2 lg:col-span-1">
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Satuan hitung</label>
             <div class="flex gap-2">
               <select
@@ -270,25 +257,49 @@ onMounted(muatAkun)
                 class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
               />
             </div>
-            <p class="text-[12px] text-ink-400 mt-1">Misal "0 {{ usaha.satuan === 'custom' ? (usaha.satuanCustom || 'unit') : usaha.satuan }}".</p>
           </div>
 
-          <div>
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nomor telepon usaha</label>
-            <input
-              v-model="usaha.telepon"
-              type="tel"
-              placeholder="08xxxxxxxxxx"
-              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
-            />
-          </div>
-
-          <div class="sm:col-span-2 lg:col-span-2">
+          <div class="sm:col-span-2 lg:col-span-3">
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Alamat lokasi usaha</label>
             <input
               v-model="usaha.alamat"
               type="text"
               placeholder="Contoh: Desa Sukamaju, Kec. Wonoasri, Madiun"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
+            />
+          </div>
+        </div>
+
+        <!-- Multi Komoditas -->
+        <div>
+          <label class="block text-[13px] font-medium dark:text-ink-300 mb-2">Jenis komoditas</label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <div
+              v-for="k in KOMODITAS_PRESET"
+              :key="k.value"
+              @click="toggleCommodity(k.value)"
+              class="relative rounded-lg border p-3 cursor-pointer transition text-center select-none"
+              :class="isCommoditySelected(k.value)
+                ? 'border-brand-500 bg-brand-500/5'
+                : 'border-ink-100 dark:border-ink-500 hover:border-ink-300'"
+            >
+              <div class="text-[13px] font-medium dark:text-white">{{ k.label }}</div>
+              <div
+                v-if="isCommoditySelected(k.value)"
+                class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isCommoditySelected('custom')" class="mt-3">
+            <input
+              v-model="usaha.komoditasCustom"
+              type="text"
+              placeholder="Contoh: Rumput laut, Lobster, Belut"
               class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
             />
           </div>
@@ -313,7 +324,7 @@ onMounted(muatAkun)
       </form>
     </section>
 
-    <!-- Grid 2 kolom untuk section-section yang lebih kecil -->
+    <!-- Grid 2 kolom -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Preferensi Aplikasi -->
       <section class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
@@ -379,7 +390,6 @@ onMounted(muatAkun)
       <section class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
         <h2 class="text-[15px] font-semibold dark:text-white mb-4">Profil</h2>
 
-        <!-- Foto -->
         <div class="flex items-center gap-4 mb-5 pb-5 border-b border-ink-100 dark:border-ink-500">
           <div class="w-16 h-16 rounded-full bg-brand-500 flex items-center justify-center text-white font-semibold text-xl shrink-0 overflow-hidden">
             <img v-if="profile.photo" :src="profile.photo" alt="Foto profil" class="w-full h-full object-cover" />
@@ -410,7 +420,6 @@ onMounted(muatAkun)
           </div>
         </div>
 
-        <!-- Data akun -->
         <form class="space-y-3" @submit.prevent="simpanAkun">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -433,9 +442,8 @@ onMounted(muatAkun)
         </form>
       </section>
 
-      <!-- Tampilan + Ubah Sandi digabung dalam satu kolom -->
+      <!-- Tampilan + Ubah Sandi -->
       <div class="space-y-6">
-        <!-- Tampilan -->
         <section class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
           <h2 class="text-[15px] font-semibold dark:text-white mb-4">Tampilan</h2>
           <div class="flex items-center justify-between">
@@ -451,7 +459,6 @@ onMounted(muatAkun)
           </div>
         </section>
 
-        <!-- Ubah Sandi -->
         <section class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
           <h2 class="text-[15px] font-semibold dark:text-white mb-1">Ubah sandi</h2>
           <p class="text-[12.5px] text-ink-400 dark:text-ink-300 mb-4">Gunakan sandi minimal 8 karakter yang belum pernah dipakai sebelumnya.</p>

@@ -1,14 +1,24 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import NavIcon from '../components/NavIcon.vue'
 import Header from '../components/Header.vue'
 import { logout } from '../utils/auth.js'
+import { useBusinessSettings } from '../composables/useBusinessSettings.js'
 
 const route = useRoute()
 const collapsed = ref(false)
 const jadwalTerbuka = ref(route.path.startsWith('/jadwal'))
 const laporanTerbuka = ref(route.path.startsWith('/laporan'))
+
+const { settings: usaha } = useBusinessSettings()
+
+// Nama usaha yang ditampilkan di bawah logo
+const namaUsahaTampil = computed(() => {
+  const nama = usaha.value?.namaUsaha?.trim()
+  if (!nama || nama === 'Usaha Saya') return null
+  return nama
+})
 
 // Modal logout
 const showLogoutModal = ref(false)
@@ -84,18 +94,30 @@ function konfirmasiLogout() {
         collapsed ? 'w-[72px]' : 'w-64'
       ]"
     >
-      <!-- Logo -->
-      <div class="h-16 flex items-center gap-2 px-4 border-b border-white/10 overflow-hidden">
+      <!-- Logo + Nama Usaha -->
+      <div class="min-h-16 flex items-center gap-2.5 px-4 border-b border-white/10 overflow-hidden py-3">
         <div class="w-8 h-8 rounded-lg bg-gold-500 flex items-center justify-center text-brand-900 shrink-0">
           <NavIcon name="kolam" :size="18" />
         </div>
-        <span v-show="!collapsed" class="font-semibold whitespace-nowrap">Manajement Kolam</span>
+
+        <div v-show="!collapsed" class="min-w-0 flex-1">
+          <p class="font-semibold text-[13.5px] leading-tight whitespace-nowrap truncate">
+            Manajement Kolam
+          </p>
+          <p
+            v-if="namaUsahaTampil"
+            class="text-[11.5px] text-white/70 leading-tight mt-0.5 truncate"
+            :title="namaUsahaTampil"
+          >
+            {{ namaUsahaTampil }}
+          </p>
+        </div>
 
         <button
           v-if="!collapsed"
           type="button"
           @click="toggleSidebar"
-          class="ml-auto w-7 h-7 rounded-lg flex items-center justify-center text-white/80 hover:bg-white/10 hover:text-white transition"
+          class="ml-auto w-7 h-7 rounded-lg flex items-center justify-center text-white/80 hover:bg-white/10 hover:text-white transition shrink-0"
           title="Tutup menu"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -256,21 +278,18 @@ function konfirmasiLogout() {
       </main>
     </div>
 
-    <!-- ==================== MODAL KONFIRMASI LOGOUT ==================== -->
+    <!-- Modal Logout -->
     <Teleport to="body">
       <div
         v-if="showLogoutModal"
         class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       >
-        <!-- Backdrop -->
         <div
           class="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
           @click="tutupModalLogout"
         ></div>
 
-        <!-- Modal -->
-        <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          <!-- Icon -->
+        <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
           <div class="pt-6 pb-2 flex justify-center">
             <div class="w-14 h-14 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-500">
@@ -281,7 +300,6 @@ function konfirmasiLogout() {
             </div>
           </div>
 
-          <!-- Text -->
           <div class="px-6 pb-2 text-center">
             <h3 class="text-[16px] font-semibold text-ink-900 dark:text-white">
               Keluar dari Dashboard?
@@ -291,7 +309,6 @@ function konfirmasiLogout() {
             </p>
           </div>
 
-          <!-- Buttons -->
           <div class="px-6 pb-6 pt-4 flex gap-3">
             <button
               type="button"

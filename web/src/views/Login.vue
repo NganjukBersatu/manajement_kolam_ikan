@@ -153,7 +153,8 @@ async function submit() {
 
       <!-- Footer -->
       <p class="text-center text-ink-500 text-[12px] mt-6">
-        Sistem Manajemen Kolam Ikan
+        Belum punya akun?
+        <router-link to="/register" class="text-brand-500 font-semibold hover:underline">Daftar di sini</router-link>
       </p>
     </div>
   </div>

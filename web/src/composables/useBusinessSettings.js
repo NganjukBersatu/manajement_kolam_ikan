@@ -2,8 +2,6 @@ import { ref, computed, watch } from 'vue'
 
 const STORAGE_KEY = 'business_settings'
 
-// Preset komoditas umum. "custom" memungkinkan pengguna menulis jenis usahanya sendiri
-// kalau tidak ada di daftar (misal: lele, gurame, lobster, rumput laut, dst).
 export const KOMODITAS_PRESET = [
   { value: 'ikan', label: 'Ikan', satuanDefault: 'ekor' },
   { value: 'udang', label: 'Udang', satuanDefault: 'kg' },
@@ -13,20 +11,21 @@ export const KOMODITAS_PRESET = [
 ]
 
 const defaultSettings = {
-  logo: null,               // base64 gambar logo usaha, atau null (pakai inisial nama)
+  logo: null,
   namaUsaha: 'Usaha Saya',
-  komoditas: 'ikan',        // salah satu value di KOMODITAS_PRESET
-  komoditasCustom: '',      // dipakai kalau komoditas === 'custom'
-  satuan: 'ekor',           // ekor, kg, ton, atau satuan custom
+  // Multi komoditas (konsisten dengan registrasi)
+  commodities: [], // [{ key: 'ikan', label: 'Ikan', initialPools: 2 }, ...]
+  komoditasCustom: '',
+  satuan: 'ekor',
   satuanCustom: '',
   alamat: '',
   telepon: '',
   deskripsi: '',
 
-  // Preferensi aplikasi
-  bahasa: 'id',              // id, en
-  zonaWaktu: 'Asia/Jakarta', // WIB, WITA, WIT
-  mataUang: 'IDR',           // IDR, USD
+  // Preferensi
+  bahasa: 'id',
+  zonaWaktu: 'Asia/Jakarta',
+  mataUang: 'IDR',
 
   // Notifikasi
   notifPanen: true,
@@ -34,7 +33,7 @@ const defaultSettings = {
   notifJadwal: true
 }
 
-function loadSettings() {
+function loadFromLocal() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return { ...defaultSettings, ...JSON.parse(raw) }
@@ -44,8 +43,9 @@ function loadSettings() {
   return { ...defaultSettings }
 }
 
-const settings = ref(loadSettings())
+const settings = ref(loadFromLocal())
 
+// Auto-save ke localStorage
 watch(
   settings,
   (val) => {
@@ -70,13 +70,13 @@ export const MATA_UANG_OPTIONS = [
 ]
 
 export function useBusinessSettings() {
-  // Label komoditas yang siap ditampilkan, misal untuk judul "Total {{ label }} hidup"
+  // Label gabungan, contoh: "Ikan, Udang"
   const komoditasLabel = computed(() => {
-    if (settings.value.komoditas === 'custom') {
-      return settings.value.komoditasCustom || 'Komoditas'
-    }
-    const preset = KOMODITAS_PRESET.find((k) => k.value === settings.value.komoditas)
-    return preset?.label || 'Komoditas'
+    if (!settings.value.commodities?.length) return 'Komoditas'
+    return settings.value.commodities
+      .map((c) => (c.key === 'custom' ? settings.value.komoditasCustom || c.label : c.label))
+      .filter(Boolean)
+      .join(', ')
   })
 
   const satuanLabel = computed(() => {
@@ -85,29 +85,72 @@ export function useBusinessSettings() {
       : settings.value.satuan
   })
 
+  // Total kolam awal dari semua komoditas
+  const totalInitialPools = computed(() =>
+    (settings.value.commodities || []).reduce((sum, c) => sum + (Number(c.initialPools) || 0), 0)
+  )
+
   function updateSettings(data) {
     settings.value = { ...settings.value, ...data }
   }
 
-  // Set satuan default begitu jenis komoditas diganti, kecuali user sudah pernah ubah manual
-  function setKomoditas(value) {
-    const preset = KOMODITAS_PRESET.find((k) => k.value === value)
-    settings.value.komoditas = value
-    if (preset && preset.value !== 'custom') {
-      settings.value.satuan = preset.satuanDefault
+  // Dipakai setelah registrasi sukses
+  function setFromRegistration({ name, address, phone, commodities = [] }) {
+    settings.value = {
+      ...settings.value,
+      namaUsaha: name || settings.value.namaUsaha,
+      alamat: address || '',
+      telepon: phone || '',
+      commodities: commodities.map((c) => ({
+        key: c.key,
+        label: c.label,
+        initialPools: Number(c.initialPools) || 0
+      }))
+    }
+
+    // Set satuan default berdasarkan komoditas pertama
+    if (commodities.length > 0) {
+      const first = KOMODITAS_PRESET.find((k) => k.value === commodities[0].key)
+      if (first) settings.value.satuan = first.satuanDefault
     }
   }
 
-  // Upload logo usaha (base64), dengan validasi tipe dan ukuran file
+  // Toggle komoditas (untuk UI multi-select)
+  function toggleCommodity(key) {
+    const list = settings.value.commodities || []
+    const idx = list.findIndex((c) => c.key === key)
+
+    if (idx === -1) {
+      const preset = KOMODITAS_PRESET.find((k) => k.value === key)
+      list.push({
+        key,
+        label: preset?.label || key,
+        initialPools: 1
+      })
+    } else {
+      list.splice(idx, 1)
+    }
+    settings.value.commodities = [...list]
+  }
+
+  function isCommoditySelected(key) {
+    return (settings.value.commodities || []).some((c) => c.key === key)
+  }
+
+  function updatePoolCount(key, count) {
+    const item = (settings.value.commodities || []).find((c) => c.key === key)
+    if (item) item.initialPools = Number(count) || 0
+  }
+
+  // Upload logo
   function handleLogoSelect(file) {
     return new Promise((resolve, reject) => {
       if (!file) return reject(new Error('Tidak ada file dipilih'))
       if (!file.type.startsWith('image/')) {
         return reject(new Error('File harus berupa gambar'))
       }
-      const maxSizeMB = 2
-      if (file.size > maxSizeMB * 1024 * 1024) {
-        return reject(new Error(`Ukuran gambar maksimal ${maxSizeMB}MB`))
+      if (file.size > 2 * 1024 * 1024) {
+        return reject(new Error('Ukuran gambar maksimal 2MB'))
       }
       const reader = new FileReader()
       reader.onload = () => {
@@ -123,13 +166,59 @@ export function useBusinessSettings() {
     settings.value.logo = null
   }
 
+  // ===== API Sync (aman terhadap 404) =====
+  async function loadFromApi() {
+    try {
+      const res = await fetch('/api/pengaturan/usaha')
+
+      // Endpoint belum ada di backend → diam saja, pakai data lokal
+      if (res.status === 404) {
+        console.warn('Endpoint /api/pengaturan/usaha belum tersedia, pakai data lokal')
+        return
+      }
+
+      if (!res.ok) return
+
+      const json = await res.json()
+      if (json.data) {
+        settings.value = { ...defaultSettings, ...json.data }
+      }
+    } catch (e) {
+      console.warn('Gagal load pengaturan dari server:', e.message)
+    }
+  }
+
+  async function saveToApi() {
+    try {
+      const res = await fetch('/api/pengaturan/usaha', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings.value)
+      })
+
+      if (res.status === 404) {
+        console.warn('Endpoint /api/pengaturan/usaha belum tersedia, hanya disimpan lokal')
+        return
+      }
+    } catch (e) {
+      console.warn('Gagal simpan pengaturan ke server:', e.message)
+    }
+  }
+
   return {
     settings,
     komoditasLabel,
     satuanLabel,
+    totalInitialPools,
     updateSettings,
-    setKomoditas,
+    setFromRegistration,
+    toggleCommodity,
+    isCommoditySelected,
+    updatePoolCount,
     handleLogoSelect,
-    removeLogo
+    removeLogo,
+    loadFromApi,
+    saveToApi,
+    KOMODITAS_PRESET
   }
 }

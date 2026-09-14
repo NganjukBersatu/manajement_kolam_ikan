@@ -10,6 +10,12 @@ const routes = [
     meta: { public: true, title: 'Login' }
   },
   {
+    path: '/register',
+    name: 'register',
+    component: () => import('../views/Register.vue'),
+    meta: { public: true, title: 'Daftar' }
+  },
+  {
     path: '/',
     component: DashboardLayout,
     children: [
@@ -45,9 +51,9 @@ const router = createRouter({ history: createWebHistory(), routes })
 router.beforeEach((to, from, next) => {
   const loggedIn = isLoggedIn()
 
-  // Halaman publik (cuma /login): kalau sudah login, jangan biarkan buka /login lagi
+  // Halaman publik (login & register): kalau sudah login, jangan biarkan buka lagi
   if (to.meta.public) {
-    if (loggedIn && to.name === 'login') return next('/')
+    if (loggedIn && (to.name === 'login' || to.name === 'register')) return next('/')
     return next()
   }
 
