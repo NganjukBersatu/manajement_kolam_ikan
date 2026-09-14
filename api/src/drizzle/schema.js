@@ -1,6 +1,29 @@
 import { pgTable, serial, varchar, numeric, timestamp, foreignKey, integer, date, text, unique, check } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
+export const businesses = pgTable("businesses", {
+	id: serial().primaryKey().notNull(),
+	name: varchar({ length: 150 }).notNull(),
+	address: text(),
+	phone: varchar({ length: 30 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const businessCommodities = pgTable("business_commodities", {
+	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
+	commodityKey: varchar("commodity_key", { length: 20 }).notNull(),
+	label: varchar({ length: 50 }).notNull(),
+	initialPools: integer("initial_pools").default(0),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.businessId],
+			foreignColumns: [businesses.id],
+			name: "business_commodities_business_id_fkey"
+		}).onDelete("cascade"),
+]);
+
 export const kolam = pgTable("kolam", {
 	id: serial().primaryKey().notNull(),
 	namaKolam: varchar("nama_kolam", { length: 50 }).notNull(),
@@ -8,15 +31,6 @@ export const kolam = pgTable("kolam", {
 	status: varchar({ length: 20 }).default('kosong').notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
-});
-
-export const jenisIkan = pgTable("jenis_ikan", {
-	id: serial().primaryKey().notNull(),
-	nama: varchar({ length: 100 }).notNull(),
-	hariSortir: integer("hari_sortir").notNull(),
-	hariPanen: integer("hari_panen").notNull(),
-	hargaPerKg: numeric("harga_per_kg").default('0').notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
 export const tebar = pgTable("tebar", {
@@ -30,16 +44,25 @@ export const tebar = pgTable("tebar", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
 	foreignKey({
-		columns: [table.kolamId],
-		foreignColumns: [kolam.id],
-		name: "tebar_kolam_id_fkey"
-	}),
+			columns: [table.kolamId],
+			foreignColumns: [kolam.id],
+			name: "tebar_kolam_id_fkey"
+		}),
 	foreignKey({
-		columns: [table.jenisIkanId],
-		foreignColumns: [jenisIkan.id],
-		name: "tebar_jenis_ikan_id_fkey"
-	}),
+			columns: [table.jenisIkanId],
+			foreignColumns: [jenisIkan.id],
+			name: "tebar_jenis_ikan_id_fkey"
+		}),
 ]);
+
+export const jenisIkan = pgTable("jenis_ikan", {
+	id: serial().primaryKey().notNull(),
+	nama: varchar({ length: 100 }).notNull(),
+	hariSortir: integer("hari_sortir").notNull(),
+	hariPanen: integer("hari_panen").notNull(),
+	hargaPerKg: numeric("harga_per_kg").default('0').notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
 
 export const jadwal = pgTable("jadwal", {
 	id: serial().primaryKey().notNull(),
@@ -51,15 +74,15 @@ export const jadwal = pgTable("jadwal", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
 	foreignKey({
-		columns: [table.tebarId],
-		foreignColumns: [tebar.id],
-		name: "jadwal_tebar_id_fkey"
-	}),
+			columns: [table.tebarId],
+			foreignColumns: [tebar.id],
+			name: "jadwal_tebar_id_fkey"
+		}),
 	foreignKey({
-		columns: [table.kolamId],
-		foreignColumns: [kolam.id],
-		name: "jadwal_kolam_id_fkey"
-	}),
+			columns: [table.kolamId],
+			foreignColumns: [kolam.id],
+			name: "jadwal_kolam_id_fkey"
+		}),
 ]);
 
 export const sortir = pgTable("sortir", {
@@ -70,24 +93,48 @@ export const sortir = pgTable("sortir", {
 	tanggal: date().notNull(),
 	jumlahMati: integer("jumlah_mati").default(0).notNull(),
 	catatan: text(),
-	sortirKe: integer("sortir_ke").default(1).notNull(), // ← kolom baru
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
 	foreignKey({
-		columns: [table.jadwalId],
-		foreignColumns: [jadwal.id],
-		name: "sortir_jadwal_id_fkey"
-	}),
+			columns: [table.jadwalId],
+			foreignColumns: [jadwal.id],
+			name: "sortir_jadwal_id_fkey"
+		}),
 	foreignKey({
-		columns: [table.tebarId],
-		foreignColumns: [tebar.id],
-		name: "sortir_tebar_id_fkey"
-	}),
+			columns: [table.tebarId],
+			foreignColumns: [tebar.id],
+			name: "sortir_tebar_id_fkey"
+		}),
 	foreignKey({
-		columns: [table.kolamId],
-		foreignColumns: [kolam.id],
-		name: "sortir_kolam_id_fkey"
-	}),
+			columns: [table.kolamId],
+			foreignColumns: [kolam.id],
+			name: "sortir_kolam_id_fkey"
+		}),
+]);
+
+export const pakan = pgTable("pakan", {
+	id: serial().primaryKey().notNull(),
+	kolamId: integer("kolam_id").notNull(),
+	tanggal: date().notNull(),
+	jumlahKg: numeric("jumlah_kg").notNull(),
+	biaya: numeric().default('0').notNull(),
+	catatan: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	stokPakanId: integer("stok_pakan_id"),
+	sesi: varchar({ length: 10 }).notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.kolamId],
+			foreignColumns: [kolam.id],
+			name: "pakan_kolam_id_fkey"
+		}),
+	foreignKey({
+			columns: [table.stokPakanId],
+			foreignColumns: [stokPakan.id],
+			name: "pakan_stok_pakan_id_fkey"
+		}).onDelete("set null"),
+	unique("uq_pakan_kolam_tanggal_sesi").on(table.tanggal, table.sesi, table.kolamId),
+	check("pakan_sesi_check", sql`(sesi)::text = ANY ((ARRAY['pagi'::character varying, 'siang'::character varying, 'sore'::character varying])::text[])`),
 ]);
 
 export const panen = pgTable("panen", {
@@ -102,54 +149,20 @@ export const panen = pgTable("panen", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
 	foreignKey({
-		columns: [table.jadwalId],
-		foreignColumns: [jadwal.id],
-		name: "panen_jadwal_id_fkey"
-	}),
+			columns: [table.jadwalId],
+			foreignColumns: [jadwal.id],
+			name: "panen_jadwal_id_fkey"
+		}),
 	foreignKey({
-		columns: [table.tebarId],
-		foreignColumns: [tebar.id],
-		name: "panen_tebar_id_fkey"
-	}),
+			columns: [table.tebarId],
+			foreignColumns: [tebar.id],
+			name: "panen_tebar_id_fkey"
+		}),
 	foreignKey({
-		columns: [table.kolamId],
-		foreignColumns: [kolam.id],
-		name: "panen_kolam_id_fkey"
-	}),
-]);
-
-export const stokPakan = pgTable("stok_pakan", {
-	id: serial().primaryKey().notNull(),
-	nama: varchar({ length: 100 }).notNull(),
-	stok: numeric({ precision: 12, scale: 2 }).default('0').notNull(),
-	satuan: varchar({ length: 20 }).default('kg').notNull(),
-	stokMinimum: numeric("stok_minimum", { precision: 12, scale: 2 }).default('10').notNull(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-});
-
-export const pakan = pgTable("pakan", {
-	id: serial().primaryKey().notNull(),
-	kolamId: integer("kolam_id").notNull(),
-	tanggal: date().notNull(),
-	sesi: varchar({ length: 10 }).notNull(),
-	jumlahKg: numeric("jumlah_kg").notNull(),
-	biaya: numeric().default('0').notNull(),
-	catatan: text(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	stokPakanId: integer("stok_pakan_id"),
-}, (table) => [
-	foreignKey({
-		columns: [table.kolamId],
-		foreignColumns: [kolam.id],
-		name: "pakan_kolam_id_fkey"
-	}),
-	foreignKey({
-		columns: [table.stokPakanId],
-		foreignColumns: [stokPakan.id],
-		name: "pakan_stok_pakan_id_fkey"
-	}).onDelete("set null"),
-	unique("uq_pakan_kolam_tanggal_sesi").on(table.tanggal, table.sesi, table.kolamId),
-	check("pakan_sesi_check", sql`(sesi)::text = ANY ((ARRAY['pagi'::character varying, 'siang'::character varying, 'sore'::character varying])::text[])`),
+			columns: [table.kolamId],
+			foreignColumns: [kolam.id],
+			name: "panen_kolam_id_fkey"
+		}),
 ]);
 
 export const penjualan = pgTable("penjualan", {
@@ -164,15 +177,15 @@ export const penjualan = pgTable("penjualan", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
 	foreignKey({
-		columns: [table.jenisIkanId],
-		foreignColumns: [jenisIkan.id],
-		name: "penjualan_jenis_ikan_id_fkey"
-	}),
+			columns: [table.jenisIkanId],
+			foreignColumns: [jenisIkan.id],
+			name: "penjualan_jenis_ikan_id_fkey"
+		}),
 	foreignKey({
-		columns: [table.kolamId],
-		foreignColumns: [kolam.id],
-		name: "penjualan_kolam_id_fkey"
-	}),
+			columns: [table.kolamId],
+			foreignColumns: [kolam.id],
+			name: "penjualan_kolam_id_fkey"
+		}),
 ]);
 
 export const pengeluaran = pgTable("pengeluaran", {
@@ -193,30 +206,24 @@ export const pengaturanAkun = pgTable("pengaturan_akun", {
 
 export const users = pgTable("users", {
 	id: serial().primaryKey().notNull(),
-	username: varchar({ length: 50 }).notNull().unique(),
+	username: varchar({ length: 50 }).notNull(),
 	passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+	businessId: integer("business_id"),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-});
-
-export const obat = pgTable("obat", {
-	id: serial().primaryKey().notNull(),
-	kolamId: integer("kolam_id").notNull(),
-	tanggal: date().notNull(),
-	namaObat: varchar("nama_obat", { length: 100 }).notNull(),
-	dosis: varchar({ length: 50 }),
-	biaya: numeric().default('0'),
-	catatan: text(),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	jadwalId: integer("jadwal_id"),
 }, (table) => [
+	unique("users_username_unique").on(table.username),
 	foreignKey({
-		columns: [table.kolamId],
-		foreignColumns: [kolam.id],
-		name: "obat_kolam_id_fkey"
-	}),
-	foreignKey({
-		columns: [table.jadwalId],
-		foreignColumns: [jadwal.id],
-		name: "obat_jadwal_id_fkey"
-	}).onDelete("set null"),
+			columns: [table.businessId],
+			foreignColumns: [businesses.id],
+			name: "users_business_id_fkey"
+		}),
 ]);
+
+export const stokPakan = pgTable("stok_pakan", {
+	id: serial().primaryKey().notNull(),
+	nama: varchar({ length: 100 }).notNull(),
+	stok: numeric({ precision: 12, scale:  2 }).default('0').notNull(),
+	satuan: varchar({ length: 20 }).default('kg').notNull(),
+	stokMinimum: numeric("stok_minimum", { precision: 12, scale:  2 }).default('10').notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow(),
+});

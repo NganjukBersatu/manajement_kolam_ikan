@@ -12,7 +12,7 @@ const showRiwayatModal = ref(false)
 const isEdit = ref(false)
 const editId = ref(null)
 
-// Modal sukses (muncul setelah tambah/edit jenis pakan berhasil disimpan)
+// Modal sukses
 const showSuksesModal = ref(false)
 const pesanSukses = ref('')
 
@@ -173,8 +173,9 @@ async function simpan() {
   }
   await Promise.all([muat(), muatRiwayat()])
 
-  // Tampilkan modal sukses setelah data selesai dimuat ulang
-  pesanSukses.value = sedangEdit ? 'Jenis pakan berhasil diperbarui.' : 'Jenis pakan berhasil ditambahkan.'
+  pesanSukses.value = sedangEdit
+    ? 'Jenis pakan berhasil diperbarui.'
+    : 'Jenis pakan berhasil ditambahkan.'
   showSuksesModal.value = true
 }
 
@@ -252,7 +253,10 @@ onMounted(() => {
       </div>
       <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4">
         <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Stok menipis</p>
-        <p class="text-2xl font-bold mt-1" :class="stokMenipis > 0 ? 'text-danger-600 dark:text-danger-400' : 'dark:text-white'">
+        <p
+          class="text-2xl font-bold mt-1"
+          :class="stokMenipis > 0 ? 'text-danger-600 dark:text-danger-400' : 'dark:text-white'"
+        >
           {{ stokMenipis }}
         </p>
       </div>
@@ -366,176 +370,253 @@ onMounted(() => {
     </div>
 
     <!-- Modal Tambah / Edit Jenis Pakan -->
-    <div v-if="showForm" class="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div class="absolute inset-0 bg-black/40" @click="showForm = false" />
-      <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5 z-10">
-        <h2 class="text-[16px] font-semibold dark:text-white mb-4">
-          {{ isEdit ? 'Edit Jenis Pakan' : 'Tambah Jenis Pakan' }}
-        </h2>
-        <form class="space-y-3.5" @submit.prevent="simpan">
-          <div>
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nama Pakan</label>
-            <input
-              v-model="form.nama"
-              type="text"
-              required
-              placeholder="Contoh: Pelet PF-1000, 781-2"
-              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
+    <Teleport to="body">
+      <div v-if="showForm" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="showForm = false" />
+        <div class="relative bg-white dark:bg-ink-700 rounded-2xl shadow-2xl w-full max-w-md p-5">
+          <h2 class="text-[16px] font-semibold dark:text-white mb-4">
+            {{ isEdit ? 'Edit Jenis Pakan' : 'Tambah Jenis Pakan' }}
+          </h2>
+          <form class="space-y-3.5" @submit.prevent="simpan">
             <div>
-              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Stok Awal / Sisa Stok</label>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Nama Pakan</label>
               <input
-                v-model="form.stok_awal"
-                type="number"
-                min="0"
-                step="0.1"
+                v-model="form.nama"
+                type="text"
                 required
-                placeholder="Contoh: 50"
+                placeholder="Contoh: Pelet PF-1000, 781-2"
                 class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
               />
             </div>
-            <div>
-              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Satuan</label>
-              <select
-                v-model="form.satuan"
-                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
-              >
-                <option value="kg">kg</option>
-                <option value="sak">sak</option>
-                <option value="liter">liter</option>
-              </select>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Stok Awal / Sisa Stok</label>
+                <input
+                  v-model="form.stok_awal"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  required
+                  placeholder="Contoh: 50"
+                  class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
+                />
+              </div>
+              <div>
+                <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Satuan</label>
+                <select
+                  v-model="form.satuan"
+                  class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
+                >
+                  <option value="kg">kg</option>
+                  <option value="sak">sak</option>
+                  <option value="liter">liter</option>
+                </select>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Batas Minimum Peringatan</label>
-            <input
-              v-model="form.stok_minimum"
-              type="number"
-              min="0"
-              step="0.1"
-              placeholder="Contoh: 10"
-              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
-            />
-            <p class="text-[11.5px] text-ink-400 mt-1">Sistem akan memberi notifikasi saat sisa stok di bawah batas ini.</p>
-          </div>
+            <div>
+              <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Batas Minimum Peringatan</label>
+              <input
+                v-model="form.stok_minimum"
+                type="number"
+                min="0"
+                step="0.1"
+                placeholder="Contoh: 10"
+                class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
+              />
+              <p class="text-[11.5px] text-ink-400 mt-1">
+                Sistem akan memberi notifikasi saat sisa stok di bawah batas ini.
+              </p>
+            </div>
 
-          <div class="flex gap-3 pt-2">
-            <button
-              type="button"
-              class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold"
-              @click="showForm = false"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600 transition"
-            >
-              {{ isEdit ? 'Simpan Perubahan' : 'Simpan' }}
-            </button>
-          </div>
-        </form>
+            <div class="flex gap-3 pt-2">
+              <button
+                type="button"
+                class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold"
+                @click="showForm = false"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600 transition"
+              >
+                {{ isEdit ? 'Simpan Perubahan' : 'Simpan' }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Modal Riwayat Aktivitas Pakan -->
-    <div v-if="showRiwayatModal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div class="absolute inset-0 bg-black/40" @click="showRiwayatModal = false" />
-      <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-3xl max-h-[85vh] flex flex-col z-10">
-        <div class="p-4 border-b border-ink-100 dark:border-ink-500 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <div class="flex items-center gap-2">
-              <NavIcon name="utensils" :size="16" class="text-brand-500" />
-              <h2 class="text-[15px] font-semibold dark:text-white">Riwayat Pakan Keluar (Aktivitas per Kolam)</h2>
+    <Teleport to="body">
+      <div
+        v-if="showRiwayatModal"
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      >
+        <div
+          class="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+          @click="showRiwayatModal = false"
+        />
+
+        <div
+          class="relative bg-white dark:bg-ink-700 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+        >
+          <!-- Header -->
+          <div class="px-5 py-4 border-b border-ink-100 dark:border-ink-500 flex items-start justify-between gap-3 shrink-0">
+            <div>
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-600 flex items-center justify-center">
+                  <NavIcon name="utensils" :size="16" />
+                </div>
+                <h2 class="text-[15px] font-semibold dark:text-white">
+                  Riwayat Pakan Keluar
+                </h2>
+              </div>
+              <p class="text-[12.5px] text-ink-500 dark:text-ink-300 mt-1">
+                Catatan pemakaian pakan harian ke masing-masing kolam budidaya.
+              </p>
             </div>
-            <p class="text-[12.5px] text-ink-500 dark:text-ink-300 mt-0.5">
-              Catatan pemakaian pakan harian ke masing-masing kolam budidaya.
-            </p>
-          </div>
-          <button type="button" class="text-ink-400 hover:text-ink-600 dark:hover:text-white" @click="showRiwayatModal = false">
-            <NavIcon name="x" :size="18" />
-          </button>
-        </div>
-
-        <div class="p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 border-b border-ink-100 dark:border-ink-500">
-          <div class="relative flex-1">
-            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              v-model="pencarianAktivitas"
-              type="text"
-              placeholder="Cari kolam / pakan..."
-              class="w-full pl-8 pr-2.5 py-1.5 text-[12.5px] border border-ink-100 dark:border-ink-500 rounded-lg dark:bg-ink-900 dark:text-white"
-            />
+            <button
+              type="button"
+              class="w-8 h-8 rounded-lg flex items-center justify-center text-ink-400 hover:text-ink-700 hover:bg-ink-100 dark:hover:bg-ink-600 dark:hover:text-white transition"
+              @click="showRiwayatModal = false"
+            >
+              <NavIcon name="x" :size="18" />
+            </button>
           </div>
 
-          <select
-            v-model="filterKolam"
-            class="text-[12.5px] border border-ink-100 dark:border-ink-500 rounded-lg px-2.5 py-1.5 bg-white dark:bg-ink-900 dark:text-white"
-          >
-            <option value="">Semua Kolam</option>
-            <option v-for="k in daftarKolamTersedia" :key="k" :value="k">{{ k }}</option>
-          </select>
-        </div>
-
-        <div class="overflow-y-auto overflow-x-auto flex-1">
-          <table class="w-full text-left text-[13px]">
-            <thead>
-              <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40 sticky top-0">
-                <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tanggal & Sesi</th>
-                <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam Tujuan</th>
-                <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jenis Pakan</th>
-                <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jumlah Keluar</th>
-                <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Catatan</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loadingRiwayat">
-                <td colspan="5" class="px-4 py-8 text-center text-ink-400">Memuat riwayat pemakaian pakan...</td>
-              </tr>
-              <tr v-else-if="!riwayatTerfilter.length">
-                <td colspan="5" class="px-4 py-8 text-center text-ink-400">
-                  {{ pencarianAktivitas || filterKolam ? 'Tidak ada riwayat pakan yang sesuai pencarian.' : 'Belum ada catatan aktivitas pakan keluar.' }}
-                </td>
-              </tr>
-              <tr
-                v-for="r in riwayatTerfilter"
-                :key="r.id"
-                class="border-b border-ink-100 dark:border-ink-500 last:border-0 hover:bg-ink-50/30 dark:hover:bg-ink-900/20 dark:text-ink-100"
+          <!-- Filter -->
+          <div class="px-5 py-3 border-b border-ink-100 dark:border-ink-500 flex flex-col sm:flex-row gap-2.5 shrink-0">
+            <div class="relative flex-1">
+              <svg
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
               >
-                <td class="px-4 py-3 whitespace-nowrap">
-                  <div class="font-medium">{{ tanggal(r.tanggal) }}</div>
-                  <span class="inline-block mt-0.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 capitalize">
-                    Sesi {{ labelSesi(r.sesi) }}
-                  </span>
-                </td>
-                <td class="px-4 py-3 font-semibold">
-                  <span class="inline-flex items-center gap-1.5 text-brand-600 dark:text-brand-400">
-                    <NavIcon name="fish" :size="13" />
-                    {{ r.nama_kolam || '-' }}
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-ink-700 dark:text-ink-200">
-                  {{ r.nama_pakan || 'Pakan Umum' }}
-                </td>
-                <td class="px-4 py-3 font-semibold text-danger-600 dark:text-danger-400 whitespace-nowrap">
-                  - {{ r.jumlah_kg }} kg
-                </td>
-                <td class="px-4 py-3 text-ink-500 dark:text-ink-400 text-[12px]">
-                  {{ r.catatan || '-' }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                v-model="pencarianAktivitas"
+                type="text"
+                placeholder="Cari kolam / pakan / catatan..."
+                class="w-full pl-9 pr-3 py-2 text-[13px] border border-ink-100 dark:border-ink-500 rounded-xl dark:bg-ink-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+              />
+            </div>
+
+            <select
+              v-model="filterKolam"
+              class="text-[13px] border border-ink-100 dark:border-ink-500 rounded-xl px-3 py-2 bg-white dark:bg-ink-900 dark:text-white min-w-[140px]"
+            >
+              <option value="">Semua Kolam</option>
+              <option v-for="k in daftarKolamTersedia" :key="k" :value="k">
+                {{ k }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Table -->
+          <div class="overflow-auto flex-1">
+            <table class="w-full text-left text-[13px]">
+              <thead class="sticky top-0 z-10">
+                <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50 dark:bg-ink-900">
+                  <th class="px-5 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">
+                    Tanggal & Sesi
+                  </th>
+                  <th class="px-5 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">
+                    Kolam
+                  </th>
+                  <th class="px-5 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">
+                    Jenis Pakan
+                  </th>
+                  <th class="px-5 py-3 text-ink-500 dark:text-ink-300 font-semibold whitespace-nowrap">
+                    Jumlah Keluar
+                  </th>
+                  <th class="px-5 py-3 text-ink-500 dark:text-ink-300 font-semibold">
+                    Catatan
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="loadingRiwayat">
+                  <td colspan="5" class="px-5 py-12 text-center text-ink-400">
+                    Memuat riwayat pemakaian pakan...
+                  </td>
+                </tr>
+
+                <tr v-else-if="!riwayatTerfilter.length">
+                  <td colspan="5" class="px-5 py-12 text-center text-ink-400">
+                    {{
+                      pencarianAktivitas || filterKolam
+                        ? 'Tidak ada riwayat yang sesuai filter.'
+                        : 'Belum ada catatan aktivitas pakan keluar.'
+                    }}
+                  </td>
+                </tr>
+
+                <tr
+                  v-for="r in riwayatTerfilter"
+                  :key="r.id"
+                  class="border-b border-ink-100 dark:border-ink-500 last:border-0 hover:bg-ink-50/50 dark:hover:bg-ink-900/30 dark:text-ink-100 transition"
+                >
+                  <td class="px-5 py-3.5 whitespace-nowrap">
+                    <div class="font-medium dark:text-white">{{ tanggal(r.tanggal) }}</div>
+                    <span
+                      class="inline-block mt-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 capitalize"
+                    >
+                      Sesi {{ labelSesi(r.sesi) }}
+                    </span>
+                  </td>
+
+                  <td class="px-5 py-3.5 font-semibold whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1.5 text-brand-600 dark:text-brand-400">
+                      <NavIcon name="fish" :size="13" />
+                      {{ r.nama_kolam || '-' }}
+                    </span>
+                  </td>
+
+                  <td class="px-5 py-3.5 text-ink-700 dark:text-ink-200 whitespace-nowrap">
+                    {{ r.nama_pakan || 'Pakan Umum' }}
+                  </td>
+
+                  <td class="px-5 py-3.5 font-semibold text-danger-600 dark:text-danger-400 whitespace-nowrap">
+                    − {{ Number(r.jumlah_kg || 0).toLocaleString('id-ID') }} kg
+                  </td>
+
+                  <td class="px-5 py-3.5 text-ink-500 dark:text-ink-400 text-[12.5px] max-w-[180px] truncate">
+                    {{ r.catatan || '—' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Footer -->
+          <div
+            class="px-5 py-3 border-t border-ink-100 dark:border-ink-500 flex items-center justify-between text-[12.5px] text-ink-500 dark:text-ink-300 shrink-0 bg-ink-50/50 dark:bg-ink-900/40"
+          >
+            <span>
+              Menampilkan
+              <strong class="text-ink-700 dark:text-ink-100">{{ riwayatTerfilter.length }}</strong>
+              dari {{ riwayatPakan.length }} aktivitas
+            </span>
+            <span>
+              Total keluar:
+              <strong class="text-danger-600 dark:text-danger-400">
+                {{ totalPakanKeluarKg.toLocaleString('id-ID') }} kg
+              </strong>
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Modal Konfirmasi Hapus -->
     <Teleport to="body">
@@ -557,10 +638,18 @@ onMounted(() => {
             </p>
           </div>
           <div class="px-6 pb-6 pt-4 flex gap-3">
-            <button type="button" @click="tutupHapus" class="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-600 text-[13.5px] font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-700 transition">
+            <button
+              type="button"
+              @click="tutupHapus"
+              class="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-600 text-[13.5px] font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-700 transition"
+            >
               Batal
             </button>
-            <button type="button" @click="konfirmasiHapus" class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-medium transition">
+            <button
+              type="button"
+              @click="konfirmasiHapus"
+              class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-medium transition"
+            >
               Ya, Hapus
             </button>
           </div>
@@ -568,7 +657,7 @@ onMounted(() => {
       </div>
     </Teleport>
 
-    <!-- Modal Sukses (tambah/edit jenis pakan berhasil disimpan) -->
+    <!-- Modal Sukses -->
     <Teleport to="body">
       <div v-if="showSuksesModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="tutupSukses"></div>
@@ -587,7 +676,11 @@ onMounted(() => {
             </p>
           </div>
           <div class="px-6 pb-6 pt-4">
-            <button type="button" @click="tutupSukses" class="w-full px-4 py-2.5 rounded-xl bg-ok-500 hover:bg-ok-600 text-white text-[13.5px] font-medium transition">
+            <button
+              type="button"
+              @click="tutupSukses"
+              class="w-full px-4 py-2.5 rounded-xl bg-ok-500 hover:bg-ok-600 text-white text-[13.5px] font-medium transition"
+            >
               Oke
             </button>
           </div>

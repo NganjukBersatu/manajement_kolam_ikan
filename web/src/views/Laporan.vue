@@ -1,16 +1,21 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const data = ref(null)
 const loading = ref(true)
 
-const namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
+const namaBulan = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+]
 
 const now = new Date()
-const bulanDipilih = ref(now.getMonth() + 1) // 1-12
+const bulanDipilih = ref(now.getMonth() + 1)
 const tahunDipilih = ref(now.getFullYear())
 
-// Daftar tahun: 3 tahun ke belakang s/d tahun berjalan
 const tahunTersedia = computed(() => {
   const arr = []
   for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) arr.push(y)
@@ -38,6 +43,13 @@ function tanggal(d) {
   })
 }
 
+function persenPerubahan(sekarang, sebelumnya) {
+  const a = Number(sekarang || 0)
+  const b = Number(sebelumnya || 0)
+  if (b === 0) return a > 0 ? 100 : 0
+  return Math.round(((a - b) / Math.abs(b)) * 100)
+}
+
 async function muat() {
   loading.value = true
   try {
@@ -46,9 +58,14 @@ async function muat() {
     data.value = json.data
   } catch (err) {
     console.error(err)
+    data.value = null
   } finally {
     loading.value = false
   }
+}
+
+function keHalaman(path) {
+  router.push(path)
 }
 
 onMounted(muat)
@@ -57,13 +74,13 @@ watch([bulanDipilih, tahunDipilih], muat)
 
 <template>
   <div class="space-y-6">
-    <!-- Filter Bulan & Tahun (untuk melihat laporan sebelumnya) -->
+    <!-- Filter Periode -->
     <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <p class="text-[13.5px] font-medium dark:text-white">Pilih Periode Laporan</p>
           <p class="text-[12.5px] text-ink-500 dark:text-ink-300 mt-0.5">
-            Laporan di-refresh per bulan. Pilih bulan & tahun untuk melihat laporan sebelumnya.
+            Ringkasan ini merangkum data Penjualan, Pengeluaran, dan Panen.
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -84,31 +101,71 @@ watch([bulanDipilih, tahunDipilih], muat)
     </div>
 
     <div v-if="loading" class="text-[13.5px] text-ink-500 dark:text-ink-300 py-10 text-center">
-      Memuat laporan {{ namaBulanDipilih }}...
+      Memuat ringkasan {{ namaBulanDipilih }}...
     </div>
 
     <template v-else-if="data">
-      <!-- Kartu Ringkasan -->
+      <!-- Kartu Ringkasan Utama -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4">
-          <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Total Penjualan</p>
+        <!-- Penjualan -->
+        <button
+          type="button"
+          class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 text-left hover:border-brand-400 transition group"
+          @click="keHalaman('/laporan/penjualan')"
+        >
+          <div class="flex items-center justify-between">
+            <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Total Penjualan</p>
+            <span class="text-[11px] text-brand-500 opacity-0 group-hover:opacity-100 transition">Detail →</span>
+          </div>
           <p class="text-xl font-bold text-brand-600 dark:text-brand-400 mt-1">{{ rupiah(data.total_penjualan) }}</p>
-        </div>
-        <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4">
-          <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Total Pengeluaran</p>
+          <p class="text-[11.5px] text-ink-400 mt-1">
+            {{ persenPerubahan(data.total_penjualan, data.bulan_lalu?.penjualan) >= 0 ? '+' : '' }}{{ persenPerubahan(data.total_penjualan, data.bulan_lalu?.penjualan) }}% vs bulan lalu
+          </p>
+        </button>
+
+        <!-- Pengeluaran -->
+        <button
+          type="button"
+          class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 text-left hover:border-danger-400 transition group"
+          @click="keHalaman('/laporan/pengeluaran')"
+        >
+          <div class="flex items-center justify-between">
+            <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Total Pengeluaran</p>
+            <span class="text-[11px] text-danger-500 opacity-0 group-hover:opacity-100 transition">Detail →</span>
+          </div>
           <p class="text-xl font-bold text-danger-600 dark:text-danger-500 mt-1">{{ rupiah(data.total_pengeluaran) }}</p>
-        </div>
+          <p class="text-[11.5px] text-ink-400 mt-1">
+            {{ persenPerubahan(data.total_pengeluaran, data.bulan_lalu?.pengeluaran) >= 0 ? '+' : '' }}{{ persenPerubahan(data.total_pengeluaran, data.bulan_lalu?.pengeluaran) }}% vs bulan lalu
+          </p>
+        </button>
+
+        <!-- Keuntungan -->
         <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4">
           <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Keuntungan</p>
-          <p class="text-xl font-bold mt-1" :class="data.keuntungan >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-danger-600 dark:text-danger-500'">
+          <p
+            class="text-xl font-bold mt-1"
+            :class="data.keuntungan >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-danger-600 dark:text-danger-500'"
+          >
             {{ rupiah(data.keuntungan) }}
           </p>
+          <p class="text-[11.5px] text-ink-400 mt-1">
+            Penjualan − Pengeluaran
+          </p>
         </div>
-        <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4">
-          <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Total Panen</p>
+
+        <!-- Panen -->
+        <button
+          type="button"
+          class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 text-left hover:border-brand-400 transition group"
+          @click="keHalaman('/laporan/panen')"
+        >
+          <div class="flex items-center justify-between">
+            <p class="text-[12.5px] text-ink-500 dark:text-ink-300">Total Panen</p>
+            <span class="text-[11px] text-brand-500 opacity-0 group-hover:opacity-100 transition">Detail →</span>
+          </div>
           <p class="text-xl font-bold dark:text-white mt-1">{{ data.total_panen_ekor || 0 }} ekor</p>
           <p class="text-[12px] text-ink-500 dark:text-ink-300">{{ data.total_panen_kg || 0 }} kg</p>
-        </div>
+        </button>
       </div>
 
       <!-- Perbandingan Periode -->
@@ -139,7 +196,10 @@ watch([bulanDipilih, tahunDipilih], muat)
             </div>
             <div class="border-t border-ink-100 dark:border-ink-500 pt-3 flex justify-between">
               <span class="font-medium dark:text-white">Keuntungan</span>
-              <span class="font-bold" :class="data.keuntungan >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-danger-600 dark:text-danger-500'">
+              <span
+                class="font-bold"
+                :class="data.keuntungan >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-danger-600 dark:text-danger-500'"
+              >
                 {{ rupiah(data.keuntungan) }}
               </span>
             </div>
@@ -172,7 +232,10 @@ watch([bulanDipilih, tahunDipilih], muat)
             </div>
             <div class="border-t border-ink-100 dark:border-ink-500 pt-3 flex justify-between">
               <span class="font-medium dark:text-white">Keuntungan</span>
-              <span class="font-bold" :class="(data.bulan_lalu?.keuntungan || 0) >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-danger-600 dark:text-danger-500'">
+              <span
+                class="font-bold"
+                :class="(data.bulan_lalu?.keuntungan || 0) >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-danger-600 dark:text-danger-500'"
+              >
                 {{ rupiah(data.bulan_lalu?.keuntungan) }}
               </span>
             </div>
@@ -180,41 +243,99 @@ watch([bulanDipilih, tahunDipilih], muat)
         </div>
       </div>
 
+      <!-- Pintasan ke Laporan Detail -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button
+          type="button"
+          class="flex items-center gap-3 bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 hover:border-brand-400 transition text-left"
+          @click="keHalaman('/laporan/penjualan')"
+        >
+          <div class="w-10 h-10 rounded-lg bg-brand-500/10 text-brand-600 flex items-center justify-center shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-[13.5px] font-semibold dark:text-white">Penjualan</p>
+            <p class="text-[12px] text-ink-500 dark:text-ink-300">Lihat detail transaksi jual</p>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="flex items-center gap-3 bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 hover:border-danger-400 transition text-left"
+          @click="keHalaman('/laporan/pengeluaran')"
+        >
+          <div class="w-10 h-10 rounded-lg bg-danger-500/10 text-danger-600 flex items-center justify-center shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-[13.5px] font-semibold dark:text-white">Pengeluaran</p>
+            <p class="text-[12px] text-ink-500 dark:text-ink-300">Lihat detail biaya operasional</p>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          class="flex items-center gap-3 bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 hover:border-brand-400 transition text-left"
+          @click="keHalaman('/laporan/panen')"
+        >
+          <div class="w-10 h-10 rounded-lg bg-brand-500/10 text-brand-600 flex items-center justify-center shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-[13.5px] font-semibold dark:text-white">Panen</p>
+            <p class="text-[12px] text-ink-500 dark:text-ink-300">Lihat detail hasil panen</p>
+          </div>
+        </button>
+      </div>
+
       <!-- Stok Kolam -->
       <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden">
         <div class="px-4 py-3 border-b border-ink-100 dark:border-ink-500 font-semibold text-[14px] dark:text-white">
-          Stok Ikan per Kolam
+          Stok per Kolam
         </div>
-        <table class="w-full text-left text-[13.5px]">
-          <thead>
-            <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
-              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam</th>
-              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jenis Ikan</th>
-              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Bibit Awal</th>
-              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Bibit Akhir</th>
-              <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tgl Tebar</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="k in data.per_kolam"
-              :key="k.nama_kolam"
-              class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100"
-            >
-              <td class="px-4 py-3 font-semibold">{{ k.nama_kolam }}</td>
-              <td class="px-4 py-3">{{ k.jenis_ikan || '-' }}</td>
-              <td class="px-4 py-3">{{ k.jumlah_bibit?.toLocaleString('id-ID') || '-' }}</td>
-              <td class="px-4 py-3">{{ k.jumlah_saat_ini?.toLocaleString('id-ID') || '-' }}</td>
-              <td class="px-4 py-3">{{ tanggal(k.tanggal_tebar) }}</td>
-            </tr>
-            <tr v-if="!data.per_kolam?.length">
-              <td colspan="5" class="px-4 py-8 text-center text-ink-400 dark:text-ink-300">
-                Belum ada data stok kolam
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-[13.5px]">
+            <thead>
+              <tr class="border-b border-ink-100 dark:border-ink-500 bg-ink-50/50 dark:bg-ink-900/40">
+                <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Kolam</th>
+                <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Jenis</th>
+                <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Bibit Awal</th>
+                <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Saat Ini</th>
+                <th class="px-4 py-3 text-ink-500 dark:text-ink-300 font-semibold">Tgl Tebar</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="k in data.per_kolam"
+                :key="k.nama_kolam"
+                class="border-b border-ink-100 dark:border-ink-500 last:border-0 dark:text-ink-100"
+              >
+                <td class="px-4 py-3 font-semibold">{{ k.nama_kolam }}</td>
+                <td class="px-4 py-3">{{ k.jenis_ikan || '-' }}</td>
+                <td class="px-4 py-3">{{ k.jumlah_bibit?.toLocaleString('id-ID') || '-' }}</td>
+                <td class="px-4 py-3">{{ k.jumlah_saat_ini?.toLocaleString('id-ID') || '-' }}</td>
+                <td class="px-4 py-3">{{ tanggal(k.tanggal_tebar) }}</td>
+              </tr>
+              <tr v-if="!data.per_kolam?.length">
+                <td colspan="5" class="px-4 py-8 text-center text-ink-400 dark:text-ink-300">
+                  Belum ada data stok kolam
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </template>
+
+    <div v-else class="text-[13.5px] text-ink-500 dark:text-ink-300 py-10 text-center">
+      Gagal memuat data laporan.
+    </div>
   </div>
 </template>
