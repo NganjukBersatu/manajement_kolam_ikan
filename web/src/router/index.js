@@ -3,6 +3,13 @@ import DashboardLayout from '../layouts/DashboardLayout.vue'
 import { isLoggedIn } from '../utils/auth.js'
 
 const routes = [
+  // ===== Halaman publik (belum login) =====
+  {
+    path: '/welcome',
+    name: 'welcome',
+    component: () => import('../views/Welcome.vue'),
+    meta: { public: true, title: 'Selamat Datang' }
+  },
   {
     path: '/login',
     name: 'login',
@@ -15,51 +22,197 @@ const routes = [
     component: () => import('../views/Register.vue'),
     meta: { public: true, title: 'Daftar' }
   },
+
+  // ===== Halaman yang butuh login =====
   {
     path: '/',
     component: DashboardLayout,
     children: [
-      { path: '', name: 'dashboard', component: () => import('../views/Dashboard.vue'), meta: { title: 'Dashboard', subtitle: 'Ringkasan aktivitas budidaya, status kolam, dan performa keuangan' } },
-      { path: 'transaksi', name: 'transaksi', component: () => import('../views/Transaksi.vue'), meta: { title: 'Transaksi Penjualan', subtitle: 'Catat dan pantau transaksi penjualan ikan langsung dari kolam' } },
-      { path: 'jadwal/sortir', name: 'jadwal-sortir', component: () => import('../views/JadwalSortir.vue'), meta: { title: 'Jadwal Sortir', subtitle: 'Pantau dan catat kegiatan sortir ukuran dan kematian ikan' } },
-      { path: 'jadwal/panen', name: 'jadwal-panen', component: () => import('../views/JadwalPanen.vue'), meta: { title: 'Jadwal Panen', subtitle: 'Jadwal panen ikan dan pencatatan hasil panen per kolam' } },
-      { path: 'jadwal/ganti-air', name: 'jadwal-ganti-air', component: () => import('../views/JadwalGantiAir.vue'), meta: { title: 'Jadwal Ganti Air', subtitle: 'Jadwal pengurasan dan sirkulasi air untuk menjaga kualitas kolam' } },
-      { path: 'jadwal/pemberian-makan', name: 'jadwal-pemberian-makan', component: () => import('../views/JadwalPemberianMakan.vue'), meta: { title: 'Jadwal Pemberian Makan', subtitle: 'Pencatatan pemberian pakan harian sesi pagi, siang, dan sore' } },
-      { path: 'jadwal/pemberian-obat', name: 'jadwal-pemberian-obat', component: () => import('../views/JadwalPemberianObat.vue'), meta: { title: 'Jadwal Pemberian Obat', subtitle: 'Jadwal dan riwayat pemberian vitamin serta obat pencegahan hama' } },
-      { path: 'kolam', name: 'kolam', component: () => import('../views/Kolam.vue'), meta: { title: 'Daftar Kolam', subtitle: 'Kelola daftar kolam budidaya dan aktivitas tebar bibit ikan' } },
-      { path: 'jenis-ikan', name: 'jenis-ikan', component: () => import('../views/JenisIkan.vue'), meta: { title: 'Jenis Ikan & Harga Jual', subtitle: 'Kelola jenis ikan ternak dan tentukan harga jual perkilo acuan transaksi' } },
-      { path: 'pengeluaran', name: 'pengeluaran', component: () => import('../views/Pengeluaran.vue'), meta: { title: 'Pengeluaran', subtitle: 'Catat biaya operasional budidaya seperti listrik, obat, dan perlengkapan' } },
-
-      // Stok Pakan
-      { path: 'stok-pakan', name: 'stok-pakan', component: () => import('../views/StokPakan.vue'), meta: { title: 'Stok Pakan', subtitle: 'Daftar jenis pakan, sisa stok, dan riwayat aktivitas pemakaian pakan' } },
-
-      // Laporan
-      { path: 'laporan', name: 'laporan', component: () => import('../views/Laporan.vue'), meta: { title: 'Laporan Ringkasan', subtitle: 'Analisis performa budidaya, keuntungan, dan ringkasan keuangan' } },
-      { path: 'laporan/penjualan', name: 'laporan-penjualan', component: () => import('../views/LaporanPenjualan.vue'), meta: { title: 'Laporan Penjualan', subtitle: 'Riwayat penjualan tercatat otomatis dari seluruh transaksi' } },
-      { path: 'laporan/pengeluaran', name: 'laporan-pengeluaran', component: () => import('../views/LaporanPengeluaran.vue'), meta: { title: 'Laporan Pengeluaran', subtitle: 'Detail dan total pengeluaran operasional per bulan' } },
-      { path: 'laporan/panen', name: 'laporan-panen', component: () => import('../views/LaporanPanen.vue'), meta: { title: 'Laporan Panen', subtitle: 'Hasil panen dari catatan jadwal panen per periode' } },
-
-      { path: 'pengaturan', name: 'pengaturan', component: () => import('../views/Pengaturan.vue'), meta: { title: 'Pengaturan Usaha & Akun', subtitle: 'Sesuaikan identitas usaha budidaya, ganti kata sandi, dan preferensi' } },
-      { path: 'profile', name: 'profile', component: () => import('../views/Profile.vue'), meta: { title: 'Profil Saya', subtitle: 'Informasi dan foto profil akun pengelola kolam' } }
+      {
+        path: '',
+        name: 'dashboard',
+        component: () => import('../views/Dashboard.vue'),
+        meta: {
+          title: 'Dashboard',
+          subtitle: 'Ringkasan aktivitas budidaya, status kolam, dan performa keuangan'
+        }
+      },
+      {
+        path: 'transaksi',
+        name: 'transaksi',
+        component: () => import('../views/Transaksi.vue'),
+        meta: {
+          title: 'Transaksi Penjualan',
+          subtitle: 'Catat dan pantau transaksi penjualan ikan langsung dari kolam'
+        }
+      },
+      {
+        path: 'jadwal/sortir',
+        name: 'jadwal-sortir',
+        component: () => import('../views/JadwalSortir.vue'),
+        meta: {
+          title: 'Jadwal Sortir',
+          subtitle: 'Pantau dan catat kegiatan sortir ukuran dan kematian ikan'
+        }
+      },
+      {
+        path: 'jadwal/panen',
+        name: 'jadwal-panen',
+        component: () => import('../views/JadwalPanen.vue'),
+        meta: {
+          title: 'Jadwal Panen',
+          subtitle: 'Jadwal panen ikan dan pencatatan hasil panen per kolam'
+        }
+      },
+      {
+        path: 'jadwal/ganti-air',
+        name: 'jadwal-ganti-air',
+        component: () => import('../views/JadwalGantiAir.vue'),
+        meta: {
+          title: 'Jadwal Ganti Air',
+          subtitle: 'Jadwal pengurasan dan sirkulasi air untuk menjaga kualitas kolam'
+        }
+      },
+      {
+        path: 'jadwal/pemberian-makan',
+        name: 'jadwal-pemberian-makan',
+        component: () => import('../views/JadwalPemberianMakan.vue'),
+        meta: {
+          title: 'Jadwal Pemberian Makan',
+          subtitle: 'Pencatatan pemberian pakan harian sesi pagi, siang, dan sore'
+        }
+      },
+      {
+        path: 'jadwal/pemberian-obat',
+        name: 'jadwal-pemberian-obat',
+        component: () => import('../views/JadwalPemberianObat.vue'),
+        meta: {
+          title: 'Jadwal Pemberian Obat',
+          subtitle: 'Jadwal dan riwayat pemberian vitamin serta obat pencegahan hama'
+        }
+      },
+      {
+        path: 'kolam',
+        name: 'kolam',
+        component: () => import('../views/Kolam.vue'),
+        meta: {
+          title: 'Daftar Kolam',
+          subtitle: 'Kelola daftar kolam budidaya dan aktivitas tebar bibit ikan'
+        }
+      },
+      {
+        path: 'jenis-ikan',
+        name: 'jenis-ikan',
+        component: () => import('../views/JenisIkan.vue'),
+        meta: {
+          title: 'Jenis Ikan & Harga Jual',
+          subtitle: 'Kelola jenis ikan ternak dan tentukan harga jual perkilo acuan transaksi'
+        }
+      },
+      {
+        path: 'pengeluaran',
+        name: 'pengeluaran',
+        component: () => import('../views/Pengeluaran.vue'),
+        meta: {
+          title: 'Pengeluaran',
+          subtitle: 'Catat biaya operasional budidaya seperti listrik, obat, dan perlengkapan'
+        }
+      },
+      {
+        path: 'stok-pakan',
+        name: 'stok-pakan',
+        component: () => import('../views/StokPakan.vue'),
+        meta: {
+          title: 'Stok Pakan',
+          subtitle: 'Daftar jenis pakan, sisa stok, dan riwayat aktivitas pemakaian pakan'
+        }
+      },
+      {
+        path: 'laporan',
+        name: 'laporan',
+        component: () => import('../views/Laporan.vue'),
+        meta: {
+          title: 'Laporan Ringkasan',
+          subtitle: 'Analisis performa budidaya, keuntungan, dan ringkasan keuangan'
+        }
+      },
+      {
+        path: 'laporan/penjualan',
+        name: 'laporan-penjualan',
+        component: () => import('../views/LaporanPenjualan.vue'),
+        meta: {
+          title: 'Laporan Penjualan',
+          subtitle: 'Riwayat penjualan tercatat otomatis dari seluruh transaksi'
+        }
+      },
+      {
+        path: 'laporan/pengeluaran',
+        name: 'laporan-pengeluaran',
+        component: () => import('../views/LaporanPengeluaran.vue'),
+        meta: {
+          title: 'Laporan Pengeluaran',
+          subtitle: 'Detail dan total pengeluaran operasional per bulan'
+        }
+      },
+      {
+        path: 'laporan/panen',
+        name: 'laporan-panen',
+        component: () => import('../views/LaporanPanen.vue'),
+        meta: {
+          title: 'Laporan Panen',
+          subtitle: 'Hasil panen dari catatan jadwal panen per periode'
+        }
+      },
+      {
+        path: 'pengaturan',
+        name: 'pengaturan',
+        component: () => import('../views/Pengaturan.vue'),
+        meta: {
+          title: 'Pengaturan Usaha & Akun',
+          subtitle: 'Sesuaikan identitas usaha budidaya, ganti kata sandi, dan preferensi'
+        }
+      },
+      {
+        path: 'profile',
+        name: 'profile',
+        component: () => import('../views/Profile.vue'),
+        meta: {
+          title: 'Profil Saya',
+          subtitle: 'Informasi dan foto profil akun pengelola kolam'
+        }
+      }
     ]
+  },
+
+  // Redirect root yang tidak dikenal
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
   }
 ]
 
-const router = createRouter({ history: createWebHistory(), routes })
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
 
-// Route guard: cek token sebelum masuk ke halaman mana pun
+// ===== Route Guard =====
 router.beforeEach((to, from, next) => {
   const loggedIn = isLoggedIn()
 
-  // Halaman publik (login & register): kalau sudah login, jangan biarkan buka lagi
+  // Halaman publik (welcome, login, register)
   if (to.meta.public) {
-    if (loggedIn && (to.name === 'login' || to.name === 'register')) return next('/')
+    // Kalau sudah login, jangan boleh buka welcome/login/register lagi
+    if (loggedIn && ['welcome', 'login', 'register'].includes(to.name)) {
+      return next({ name: 'dashboard' })
+    }
     return next()
   }
 
-  // Halaman lain semuanya butuh login
+  // Halaman yang butuh login
   if (!loggedIn) {
-    return next({ name: 'login' })
+    // Belum login → arahkan ke Welcome (tampilan awal)
+    return next({ name: 'welcome' })
   }
 
   next()
