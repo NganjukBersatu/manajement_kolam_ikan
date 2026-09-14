@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 const daftarKolam = ref([])
 const riwayatPakan = ref([])
@@ -14,7 +14,29 @@ const showRiwayat = ref(false)
 const riwayatKolamDipilih = ref(null)
 const riwayatDetail = ref([])
 
-const hariIni = new Date().toISOString().slice(0, 10)
+const hariIniISO = new Date().toISOString().slice(0, 10)
+
+// Tanggal yang sedang difilter/ditampilkan di tabel. Default: hari ini.
+const tanggalDipilih = ref(hariIniISO)
+
+const isToday = computed(() => tanggalDipilih.value === hariIniISO)
+const isPast = computed(() => tanggalDipilih.value < hariIniISO)
+const isFuture = computed(() => tanggalDipilih.value > hariIniISO)
+
+function resetKeHariIni() {
+  tanggalDipilih.value = hariIniISO
+}
+
+// Waktu "sekarang" yang reaktif, diperbarui tiap menit supaya label
+// "Terlambat Xj Ym" berjalan otomatis tanpa perlu refresh halaman.
+const now = ref(new Date())
+let timerJam
+onMounted(() => {
+  timerJam = setInterval(() => {
+    now.value = new Date()
+  }, 60_000)
+})
+onUnmounted(() => clearInterval(timerJam))
 
 function keTanggalISO(d) {
   if (!d) return null
@@ -29,25 +51,64 @@ const DAFTAR_SESI = [
   { key: 'sore', label: 'Sore', jam_mulai: 16, jam_selesai: 19 }
 ]
 
+// Format menit total jadi teks "Xj Ym" / "Ym" / "Xh Yj" untuk keterlambatan panjang
+function formatDurasi(totalMenit) {
+  if (totalMenit < 60) return `${totalMenit}m`
+  const jam = Math.floor(totalMenit / 60)
+  const menit = totalMenit % 60
+  if (jam < 24) return menit > 0 ? `${jam}j ${menit}m` : `${jam}j`
+  const hari = Math.floor(jam / 24)
+  const sisaJam = jam % 24
+  return sisaJam > 0 ? `${hari}h ${sisaJam}j` : `${hari}h`
+}
+
+// Bikin objek Date untuk batas akhir sebuah sesi pada TANGGAL TERTENTU (bukan selalu hari ini)
+function batasWaktuSesiTanggal(sesi, tanggalISO) {
+  const d = new Date(tanggalISO + 'T00:00:00')
+  d.setHours(sesi.jam_selesai, 0, 0, 0)
+  return d
+}
+
 const kolamAktif = computed(() => daftarKolam.value.filter(k => k.status === 'aktif'))
 
 const daftarGabungan = computed(() => {
-  const jamSekarang = new Date().getHours()
+  const jamSekarang = now.value.getHours()
 
   return kolamAktif.value.map(k => {
-    const riwayatHariIni = riwayatPakan.value.filter(
-      r => r.kolam_id === k.id && keTanggalISO(r.tanggal) === hariIni
+    const riwayatTanggalTerpilih = riwayatPakan.value.filter(
+      r => r.kolam_id === k.id && keTanggalISO(r.tanggal) === tanggalDipilih.value
     )
 
     const sesiStatus = DAFTAR_SESI.map(s => {
-      const sudahDicatat = riwayatHariIni.some(r => r.sesi === s.key)
+      const sudahDicatat = riwayatTanggalTerpilih.some(r => r.sesi === s.key)
       let status = 'belum'
+      let labelTerlambat = ''
+
       if (sudahDicatat) {
         status = 'sudah'
-      } else if (jamSekarang > s.jam_selesai) {
+      } else if (isFuture.value) {
+        // Tanggal belum terjadi — tidak mungkin sudah/terlambat, tombol aksi dinonaktifkan di template
+        status = 'belum'
+      } else if (isPast.value) {
+        // Tanggal sudah lewat sepenuhnya dan belum pernah dicatat -> otomatis terlambat
         status = 'terlambat'
+        const batas = batasWaktuSesiTanggal(s, tanggalDipilih.value)
+        const selisihMenit = Math.max(0, Math.floor((now.value - batas.getTime()) / 60000))
+        labelTerlambat = formatDurasi(selisihMenit)
+      } else if (jamSekarang > s.jam_selesai) {
+        // Hari ini, dan sudah lewat jam batas sesi
+        status = 'terlambat'
+        const batas = batasWaktuSesiTanggal(s, tanggalDipilih.value)
+        const selisihMenit = Math.max(0, Math.floor((now.value - batas.getTime()) / 60000))
+        labelTerlambat = formatDurasi(selisihMenit)
       }
-      return { ...s, status }
+
+      return {
+        ...s,
+        status,
+        labelTerlambat,
+        jamBatasLabel: `${String(s.jam_selesai).padStart(2, '0')}:00`
+      }
     })
 
     return { ...k, sesiStatus }
@@ -83,7 +144,7 @@ async function muatStokPakan() {
 }
 
 function bukaForm(k, sesi) {
-  if (sesi.status === 'sudah') return
+  if (sesi.status === 'sudah' || isFuture.value) return
   kolamDipilih.value = k
   sesiDipilih.value = sesi
   form.value = { stok_pakan_id: '', jumlah_kg: '', catatan: '' }
@@ -102,7 +163,7 @@ async function simpan() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       kolam_id: kolamDipilih.value.id,
-      tanggal: hariIni,
+      tanggal: tanggalDipilih.value,
       sesi: sesiDipilih.value.key,
       jumlah_kg: form.value.jumlah_kg,
       catatan: form.value.catatan,
@@ -149,6 +210,36 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- Filter tanggal -->
+  <div class="flex items-center gap-3 mb-4">
+    <label class="text-[13px] font-medium text-ink-500 dark:text-ink-300">Tanggal</label>
+    <input
+      v-model="tanggalDipilih"
+      type="date"
+      class="rounded-lg border border-ink-100 dark:border-ink-600 dark:bg-ink-900 dark:text-white px-3 py-2 text-[13.5px]"
+    />
+    <button
+      v-if="!isToday"
+      type="button"
+      class="px-3 py-2 rounded-lg border border-ink-100 dark:border-ink-600 dark:text-ink-300 text-[12.5px] font-semibold"
+      @click="resetKeHariIni"
+    >
+      Hari ini
+    </button>
+    <span
+      v-if="isFuture"
+      class="text-[12px] text-warn-600 dark:text-warn-500"
+    >
+      Tanggal ini belum terjadi — pencatatan belum bisa dilakukan.
+    </span>
+    <span
+      v-else-if="isPast"
+      class="text-[12px] text-ink-400 dark:text-ink-300"
+    >
+      Menampilkan data tanggal lampau.
+    </span>
+  </div>
+
   <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden">
     <table class="w-full text-left text-[13.5px]">
       <thead>
@@ -172,20 +263,28 @@ onMounted(() => {
           <td class="px-4 py-3 font-semibold">{{ k.nama_kolam }}</td>
           <td class="px-4 py-3">{{ k.nama_ikan || '-' }}</td>
           <td class="px-4 py-3">{{ rupiah(k.jumlah_saat_ini) }}</td>
-          <td class="px-4 py-3">{{ tanggal(hariIni) }}</td>
+          <td class="px-4 py-3">{{ tanggal(tanggalDipilih) }}</td>
 
           <td v-for="s in k.sesiStatus" :key="s.key" class="px-4 py-3 text-center">
             <button
               type="button"
-              class="px-2.5 py-1 rounded-full text-[11.5px] font-semibold"
+              class="px-2.5 py-1 rounded-full text-[11.5px] font-semibold whitespace-nowrap"
               :class="{
                 'bg-ok-100 text-ok-600 dark:bg-ok-600/25 dark:text-ok-500 cursor-default': s.status === 'sudah',
                 'bg-red-100 text-red-600 dark:bg-red-600/25 dark:text-red-400': s.status === 'terlambat',
-                'bg-warn-100 text-warn-600 dark:bg-warn-600/25 dark:text-warn-500': s.status === 'belum'
+                'bg-warn-100 text-warn-600 dark:bg-warn-600/25 dark:text-warn-500': s.status === 'belum' && !isFuture,
+                'bg-ink-100 text-ink-400 dark:bg-ink-600/40 dark:text-ink-400 cursor-not-allowed': s.status === 'belum' && isFuture
               }"
+              :title="isFuture ? 'Tanggal ini belum terjadi' : `Batas sesi ${s.label}: ${s.jamBatasLabel}`"
               @click="bukaForm(k, s)"
             >
-              {{ s.status === 'sudah' ? 'Sudah' : s.status === 'terlambat' ? 'Terlambat' : 'Belum' }}
+              {{
+                s.status === 'sudah'
+                  ? 'Sudah'
+                  : s.status === 'terlambat'
+                    ? `Terlambat ${s.labelTerlambat}`
+                    : 'Belum'
+              }}
             </button>
           </td>
 
@@ -216,7 +315,7 @@ onMounted(() => {
         Catat Pemberian Makan — {{ kolamDipilih?.nama_kolam }}
       </h2>
       <p class="text-[12.5px] text-ink-500 dark:text-ink-300 mb-4">
-        Sesi {{ sesiDipilih?.label }} · {{ tanggal(hariIni) }}
+        Sesi {{ sesiDipilih?.label }} · {{ tanggal(tanggalDipilih) }}
       </p>
       <form class="space-y-3" @submit.prevent="simpan">
         <div>

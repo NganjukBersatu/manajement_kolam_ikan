@@ -42,6 +42,25 @@ function formatTanggal(d) {
   return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+// Nama kolam di database kadang sudah mengandung kata "Kolam"/"kolam" (mis. "Kolam A5"),
+// kadang belum (mis. "A5" saja). Helper ini mencegah teks jadi "Kolam Kolam A5".
+function namaKolamDisplay(nama) {
+  if (!nama) return 'Kolam'
+  const trimmed = String(nama).trim()
+  return /^kolam\b/i.test(trimmed) ? trimmed : `Kolam ${trimmed}`
+}
+
+// Format total menit jadi teks durasi singkat: "45m", "2j 15m", "1h 3j"
+function formatDurasi(totalMenit) {
+  if (totalMenit < 60) return `${totalMenit}m`
+  const jam = Math.floor(totalMenit / 60)
+  const menit = totalMenit % 60
+  if (jam < 24) return menit > 0 ? `${jam}j ${menit}m` : `${jam}j`
+  const hari = Math.floor(jam / 24)
+  const sisaJam = jam % 24
+  return sisaJam > 0 ? `${hari}h ${sisaJam}j` : `${hari}h`
+}
+
 const DAFTAR_SESI_MAKAN = [
   { key: 'pagi', label: 'Pagi', jam_mulai: 6, jam_selesai: 10 },
   { key: 'siang', label: 'Siang', jam_mulai: 11, jam_selesai: 15 },
@@ -64,9 +83,20 @@ export function useNotifications() {
     notifications.value = []
   }
 
+  // Dulu: kalau key sudah ada, notifikasi baru diabaikan (skip).
+  // Sekarang: kalau key sudah ada, ISI-nya di-update (upsert). Ini penting untuk
+  // notifikasi yang dikelompokkan (mis. "3 kolam telat sesi Siang") supaya jumlah
+  // dan durasi keterlambatannya ikut ter-refresh tiap sinkronisasi, bukan macet
+  // di data pertama kali notifikasi itu dibuat.
   function addNotification({ type = 'default', title, message, route = null, key = null }) {
-    if (key && notifications.value.some((n) => n.key === key)) {
-      return // Jangan duplikasi notifikasi dengan key yang sama
+    if (key) {
+      const existing = notifications.value.find((n) => n.key === key)
+      if (existing) {
+        existing.title = title
+        existing.message = message
+        existing.route = route
+        return
+      }
     }
     notifications.value.unshift({
       id: Date.now() + Math.random(),
@@ -102,6 +132,7 @@ export function useNotifications() {
           const tglJadwalStr = new Date(j.tanggal_jadwal).toISOString().slice(0, 10)
           const tglJadwalDate = new Date(tglJadwalStr)
           const diffDays = Math.round((tglJadwalDate - hariIniDate) / (1000 * 60 * 60 * 24))
+          const namaKolam = namaKolamDisplay(j.nama_kolam)
 
           // Jadwal Sortir
           if (j.jenis === 'sortir') {
@@ -110,7 +141,7 @@ export function useNotifications() {
                 key: `sortir-${j.id}-terlewat-${hariIniStr}`,
                 type: 'sortir',
                 title: 'Jadwal Sortir Terlewat',
-                message: `Kolam ${j.nama_kolam} (${j.nama_ikan}) terlewat jadwal sortir (${formatTanggal(j.tanggal_jadwal)}).`,
+                message: `${namaKolam} (${j.nama_ikan}) terlewat jadwal sortir (${formatTanggal(j.tanggal_jadwal)}).`,
                 route: '/jadwal/sortir'
               })
             } else if (diffDays === 0) {
@@ -118,7 +149,7 @@ export function useNotifications() {
                 key: `sortir-${j.id}-hari-ini-${hariIniStr}`,
                 type: 'sortir',
                 title: 'Waktunya Sortir Ikan',
-                message: `Kolam ${j.nama_kolam} (${j.nama_ikan}) terjadwal sortir hari ini.`,
+                message: `${namaKolam} (${j.nama_ikan}) terjadwal sortir hari ini.`,
                 route: '/jadwal/sortir'
               })
             } else if (diffDays <= 3) {
@@ -126,7 +157,7 @@ export function useNotifications() {
                 key: `sortir-${j.id}-mendekati-${hariIniStr}`,
                 type: 'sortir',
                 title: 'Jadwal Sortir Mendekati',
-                message: `Kolam ${j.nama_kolam} (${j.nama_ikan}) akan sortir dalam ${diffDays} hari (${formatTanggal(j.tanggal_jadwal)}).`,
+                message: `${namaKolam} (${j.nama_ikan}) akan sortir dalam ${diffDays} hari (${formatTanggal(j.tanggal_jadwal)}).`,
                 route: '/jadwal/sortir'
               })
             }
@@ -139,7 +170,7 @@ export function useNotifications() {
                 key: `panen-${j.id}-terlewat-${hariIniStr}`,
                 type: 'panen',
                 title: 'Jadwal Panen Terlewat',
-                message: `Kolam ${j.nama_kolam} (${j.nama_ikan}) telah melewati estimasi panen (${formatTanggal(j.tanggal_jadwal)}).`,
+                message: `${namaKolam} (${j.nama_ikan}) telah melewati estimasi panen (${formatTanggal(j.tanggal_jadwal)}).`,
                 route: '/jadwal/panen'
               })
             } else if (diffDays === 0) {
@@ -147,7 +178,7 @@ export function useNotifications() {
                 key: `panen-${j.id}-hari-ini-${hariIniStr}`,
                 type: 'panen',
                 title: 'Waktunya Panen Ikan',
-                message: `Kolam ${j.nama_kolam} (${j.nama_ikan}) siap dipanen hari ini!`,
+                message: `${namaKolam} (${j.nama_ikan}) siap dipanen hari ini!`,
                 route: '/jadwal/panen'
               })
             } else if (diffDays <= 7) {
@@ -155,7 +186,7 @@ export function useNotifications() {
                 key: `panen-${j.id}-mendekati-${hariIniStr}`,
                 type: 'panen',
                 title: 'Jadwal Panen Mendekati',
-                message: `Kolam ${j.nama_kolam} (${j.nama_ikan}) panen dalam ${diffDays} hari (${formatTanggal(j.tanggal_jadwal)}).`,
+                message: `${namaKolam} (${j.nama_ikan}) panen dalam ${diffDays} hari (${formatTanggal(j.tanggal_jadwal)}).`,
                 route: '/jadwal/panen'
               })
             }
@@ -168,7 +199,7 @@ export function useNotifications() {
                 key: `obat-${j.id}-terlewat-${hariIniStr}`,
                 type: 'obat',
                 title: 'Pemberian Obat Terlambat',
-                message: `Kolam ${j.nama_kolam} (${j.nama_ikan}) terlambat diberi obat (jadwal ${formatTanggal(j.tanggal_jadwal)}).`,
+                message: `${namaKolam} (${j.nama_ikan}) terlambat diberi obat (jadwal ${formatTanggal(j.tanggal_jadwal)}).`,
                 route: '/jadwal/pemberian-obat'
               })
             } else if (diffDays === 0) {
@@ -176,7 +207,7 @@ export function useNotifications() {
                 key: `obat-${j.id}-hari-ini-${hariIniStr}`,
                 type: 'obat',
                 title: 'Waktunya Pemberian Obat',
-                message: `Kolam ${j.nama_kolam} (${j.nama_ikan}) perlu diberi obat hari ini.`,
+                message: `${namaKolam} (${j.nama_ikan}) perlu diberi obat hari ini.`,
                 route: '/jadwal/pemberian-obat'
               })
             } else if (diffDays <= 2) {
@@ -184,7 +215,7 @@ export function useNotifications() {
                 key: `obat-${j.id}-mendekati-${hariIniStr}`,
                 type: 'obat',
                 title: 'Jadwal Obat Mendekati',
-                message: `Kolam ${j.nama_kolam} (${j.nama_ikan}) jadwal pemberian obat ${diffDays === 1 ? 'besok' : `${diffDays} hari lagi`}.`,
+                message: `${namaKolam} (${j.nama_ikan}) jadwal pemberian obat ${diffDays === 1 ? 'besok' : `${diffDays} hari lagi`}.`,
                 route: '/jadwal/pemberian-obat'
               })
             }
@@ -197,7 +228,7 @@ export function useNotifications() {
                 key: `ganti-air-${j.id}-terlewat-${hariIniStr}`,
                 type: 'ganti_air',
                 title: 'Jadwal Ganti Air Terlambat',
-                message: `Kolam ${j.nama_kolam} terlewat jadwal ganti air (${formatTanggal(j.tanggal_jadwal)}).`,
+                message: `${namaKolam} terlewat jadwal ganti air (${formatTanggal(j.tanggal_jadwal)}).`,
                 route: '/jadwal/ganti-air'
               })
             } else if (diffDays === 0) {
@@ -205,7 +236,7 @@ export function useNotifications() {
                 key: `ganti-air-${j.id}-hari-ini-${hariIniStr}`,
                 type: 'ganti_air',
                 title: 'Waktunya Ganti Air',
-                message: `Kolam ${j.nama_kolam} terjadwal ganti air hari ini.`,
+                message: `${namaKolam} terjadwal ganti air hari ini.`,
                 route: '/jadwal/ganti-air'
               })
             } else if (diffDays <= 2) {
@@ -213,7 +244,7 @@ export function useNotifications() {
                 key: `ganti-air-${j.id}-mendekati-${hariIniStr}`,
                 type: 'ganti_air',
                 title: 'Jadwal Ganti Air Mendekati',
-                message: `Kolam ${j.nama_kolam} jadwal ganti air ${diffDays === 1 ? 'besok' : `${diffDays} hari lagi`}.`,
+                message: `${namaKolam} jadwal ganti air ${diffDays === 1 ? 'besok' : `${diffDays} hari lagi`}.`,
                 route: '/jadwal/ganti-air'
               })
             }
@@ -222,6 +253,8 @@ export function useNotifications() {
       }
 
       // 2. Notifikasi Jadwal Pemberian Makan (Pagi, Siang, Sore) untuk Kolam Aktif
+      //    Dikelompokkan per sesi (bukan per kolam) supaya tidak menumpuk,
+      //    dan disertai durasi keterlambatan.
       const [resKolam, resPakan] = await Promise.all([
         fetch('/api/kolam'),
         fetch('/api/pakan')
@@ -233,35 +266,59 @@ export function useNotifications() {
         const kolamAktif = (kolamJson.data || []).filter((k) => k.status === 'aktif')
         const riwayatPakan = pakanJson.data || []
 
-        for (const k of kolamAktif) {
-          const riwayatHariIni = riwayatPakan.filter((r) => {
-            const tgl = new Date(r.tanggal).toISOString().slice(0, 10)
-            return r.kolam_id === k.id && tgl === hariIniStr
-          })
+        for (const sesi of DAFTAR_SESI_MAKAN) {
+          const belumWaktu = []
+          const terlambatInfo = [] // { kolam, menitTerlambat }
 
-          for (const sesi of DAFTAR_SESI_MAKAN) {
+          for (const k of kolamAktif) {
+            const riwayatHariIni = riwayatPakan.filter((r) => {
+              const tgl = new Date(r.tanggal).toISOString().slice(0, 10)
+              return r.kolam_id === k.id && tgl === hariIniStr
+            })
             const sudahDicatat = riwayatHariIni.some((r) => r.sesi === sesi.key)
             if (sudahDicatat) continue
 
-            // Sedang masuk waktu makan (misal pagi 06:00 - 10:00)
             if (nowHour >= sesi.jam_mulai && nowHour <= sesi.jam_selesai) {
-              addNotification({
-                key: `makan-${k.id}-${hariIniStr}-${sesi.key}-waktunya`,
-                type: 'makan',
-                title: `Waktunya Beri Makan (${sesi.label})`,
-                message: `Kolam ${k.nama_kolam} belum diberi pakan sesi ${sesi.label} hari ini.`,
-                route: '/jadwal/pemberian-makan'
-              })
+              belumWaktu.push(k)
             } else if (nowHour > sesi.jam_selesai) {
-              // Terlewat waktu makan
-              addNotification({
-                key: `makan-${k.id}-${hariIniStr}-${sesi.key}-terlewat`,
-                type: 'makan',
-                title: `Pemberian Makan Terlewat (${sesi.label})`,
-                message: `Kolam ${k.nama_kolam} melewatkan sesi makan ${sesi.label} hari ini.`,
-                route: '/jadwal/pemberian-makan'
-              })
+              const batas = new Date()
+              batas.setHours(sesi.jam_selesai, 0, 0, 0)
+              const menitTerlambat = Math.max(0, Math.floor((Date.now() - batas.getTime()) / 60000))
+              terlambatInfo.push({ kolam: k, menitTerlambat })
             }
+          }
+
+          // Sedang masuk waktu makan tapi belum dicatat
+          if (belumWaktu.length > 0) {
+            const daftarNama = belumWaktu.map((k) => namaKolamDisplay(k.nama_kolam)).join(', ')
+            addNotification({
+              key: `makan-${hariIniStr}-${sesi.key}-waktunya`,
+              type: 'makan',
+              title: `Waktunya Beri Makan (${sesi.label})`,
+              message:
+                belumWaktu.length === 1
+                  ? `${daftarNama} belum diberi pakan sesi ${sesi.label} hari ini.`
+                  : `${belumWaktu.length} kolam belum diberi pakan sesi ${sesi.label} hari ini (${daftarNama}).`,
+              route: '/jadwal/pemberian-makan'
+            })
+          }
+
+          // Sudah lewat batas waktu sesi dan belum dicatat
+          if (terlambatInfo.length > 0) {
+            const jamBatasLabel = `${String(sesi.jam_selesai).padStart(2, '0')}:00`
+            const maxMenit = Math.max(...terlambatInfo.map((t) => t.menitTerlambat))
+            const daftarNama = terlambatInfo.map((t) => namaKolamDisplay(t.kolam.nama_kolam)).join(', ')
+
+            addNotification({
+              key: `makan-${hariIniStr}-${sesi.key}-terlewat`,
+              type: 'makan',
+              title: `Pemberian Makan Terlambat (${sesi.label})`,
+              message:
+                terlambatInfo.length === 1
+                  ? `${daftarNama} melewatkan sesi makan ${sesi.label}, sudah terlambat ${formatDurasi(terlambatInfo[0].menitTerlambat)} dari batas jam ${jamBatasLabel}.`
+                  : `${terlambatInfo.length} kolam melewatkan sesi makan ${sesi.label} (${daftarNama}), terlambat hingga ${formatDurasi(maxMenit)} dari batas jam ${jamBatasLabel}.`,
+              route: '/jadwal/pemberian-makan'
+            })
           }
         }
       }

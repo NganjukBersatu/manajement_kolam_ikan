@@ -56,6 +56,34 @@ function tanggal(d) {
   })
 }
 
+// Cek apakah jadwal sortir sudah lewat tanggal dan belum pernah disortir
+function isTerlambat(j) {
+  if (j.jumlah_sortir > 0) return false
+  const hariIni = new Date()
+  hariIni.setHours(0, 0, 0, 0)
+  const jadwal = new Date(j.tanggal_jadwal)
+  jadwal.setHours(0, 0, 0, 0)
+  return jadwal < hariIni
+}
+
+// Label status: Sudah pernah / Terlambat / Belum
+function labelStatus(j) {
+  if (j.jumlah_sortir > 0) return 'Sudah pernah'
+  if (isTerlambat(j)) return 'Terlambat'
+  return 'Belum'
+}
+
+// Class badge sesuai status
+function classStatus(j) {
+  if (j.jumlah_sortir > 0) {
+    return 'bg-ok-100 text-ok-600 dark:bg-ok-600/25 dark:text-ok-500'
+  }
+  if (isTerlambat(j)) {
+    return 'bg-danger-100 text-danger-600 dark:bg-danger-600/25 dark:text-danger-500'
+  }
+  return 'bg-warn-100 text-warn-600 dark:bg-warn-600/25 dark:text-warn-500'
+}
+
 onMounted(muat)
 </script>
 
@@ -82,7 +110,15 @@ onMounted(muat)
           <td class="px-4 py-3 font-semibold">{{ j.nama_kolam }}</td>
           <td class="px-4 py-3">{{ j.nama_ikan }}</td>
           <td class="px-4 py-3">{{ j.jumlah_saat_ini }}</td>
-          <td class="px-4 py-3">{{ tanggal(j.tanggal_jadwal) }}</td>
+          <td class="px-4 py-3">
+            {{ tanggal(j.tanggal_jadwal) }}
+            <span
+              v-if="isTerlambat(j)"
+              class="ml-1 text-danger-600 dark:text-danger-500 text-[11.5px] font-semibold"
+            >
+              (lewat jadwal)
+            </span>
+          </td>
           <td class="px-4 py-3">
             <span class="font-medium">
               {{ j.jumlah_sortir || 0 }}×
@@ -94,11 +130,9 @@ onMounted(muat)
           <td class="px-4 py-3">
             <span
               class="px-2 py-1 rounded-full text-[11.5px] font-semibold"
-              :class="j.jumlah_sortir > 0
-                ? 'bg-ok-100 text-ok-600 dark:bg-ok-600/25 dark:text-ok-500'
-                : 'bg-warn-100 text-warn-600 dark:bg-warn-600/25 dark:text-warn-500'"
+              :class="classStatus(j)"
             >
-              {{ j.jumlah_sortir > 0 ? 'Sudah pernah' : 'Belum' }}
+              {{ labelStatus(j) }}
             </span>
           </td>
           <td class="px-4 py-3 text-right">
