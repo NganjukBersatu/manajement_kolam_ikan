@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import NavIcon from '../components/NavIcon.vue'
 import Header from '../components/Header.vue'
@@ -8,19 +8,18 @@ import { useBusinessSettings } from '../composables/useBusinessSettings.js'
 
 const route = useRoute()
 const collapsed = ref(false)
+const mobileOpen = ref(false)
 const jadwalTerbuka = ref(route.path.startsWith('/jadwal'))
 const laporanTerbuka = ref(route.path.startsWith('/laporan'))
 
 const { settings: usaha } = useBusinessSettings()
 
-// Nama usaha yang ditampilkan di bawah logo
 const namaUsahaTampil = computed(() => {
   const nama = usaha.value?.namaUsaha?.trim()
   if (!nama || nama === 'Usaha Saya') return null
   return nama
 })
 
-// Modal logout
 const showLogoutModal = ref(false)
 
 const menu = [
@@ -45,16 +44,29 @@ const laporanSub = [
   { to: '/laporan/panen', label: 'Panen', icon: 'fish' }
 ]
 
+// Tutup drawer mobile saat pindah halaman
+watch(() => route.path, () => {
+  mobileOpen.value = false
+})
+
+function isDesktop() {
+  return window.innerWidth >= 1024
+}
+
 function toggleSidebar() {
-  collapsed.value = !collapsed.value
-  if (collapsed.value) {
-    jadwalTerbuka.value = false
-    laporanTerbuka.value = false
+  if (isDesktop()) {
+    collapsed.value = !collapsed.value
+    if (collapsed.value) {
+      jadwalTerbuka.value = false
+      laporanTerbuka.value = false
+    }
+  } else {
+    mobileOpen.value = !mobileOpen.value
   }
 }
 
 function bukaJadwal() {
-  if (collapsed.value) {
+  if (collapsed.value && isDesktop()) {
     collapsed.value = false
     setTimeout(() => { jadwalTerbuka.value = true }, 150)
   } else {
@@ -63,7 +75,7 @@ function bukaJadwal() {
 }
 
 function bukaLaporan() {
-  if (collapsed.value) {
+  if (collapsed.value && isDesktop()) {
     collapsed.value = false
     setTimeout(() => { laporanTerbuka.value = true }, 150)
   } else {
@@ -83,15 +95,31 @@ function konfirmasiLogout() {
   showLogoutModal.value = false
   logout()
 }
+
+function handleResize() {
+  if (isDesktop()) mobileOpen.value = false
+}
+
+onMounted(() => window.addEventListener('resize', handleResize))
+onUnmounted(() => window.removeEventListener('resize', handleResize))
 </script>
 
 <template>
   <div class="flex h-screen overflow-hidden">
+    <!-- Overlay mobile -->
+    <div
+      v-if="mobileOpen"
+      class="fixed inset-0 z-40 bg-black/50 lg:hidden"
+      @click="mobileOpen = false"
+    />
+
     <!-- SIDEBAR -->
     <aside
       :class="[
-        'bg-brand-700 text-white h-screen flex flex-col shrink-0 transition-all duration-300 relative',
-        collapsed ? 'w-[72px]' : 'w-64'
+        'bg-brand-700 text-white h-screen flex flex-col shrink-0 transition-all duration-300 z-50',
+        'hidden lg:flex',
+        collapsed ? 'lg:w-[72px]' : 'lg:w-64',
+        mobileOpen ? '!flex fixed inset-y-0 left-0 w-64 shadow-2xl' : ''
       ]"
     >
       <!-- Logo + Nama Usaha -->
@@ -100,7 +128,7 @@ function konfirmasiLogout() {
           <NavIcon name="kolam" :size="18" />
         </div>
 
-        <div v-show="!collapsed" class="min-w-0 flex-1">
+        <div v-show="!collapsed || mobileOpen" class="min-w-0 flex-1">
           <p class="font-semibold text-[13.5px] leading-tight whitespace-nowrap truncate">
             Manajement Kolam
           </p>
@@ -114,7 +142,6 @@ function konfirmasiLogout() {
         </div>
 
         <button
-          v-if="!collapsed"
           type="button"
           @click="toggleSidebar"
           class="ml-auto w-7 h-7 rounded-lg flex items-center justify-center text-white/80 hover:bg-white/10 hover:text-white transition shrink-0"
@@ -129,7 +156,7 @@ function konfirmasiLogout() {
       <!-- Navigasi -->
       <nav class="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-1 text-[13.5px]">
         <button
-          v-if="collapsed"
+          v-if="collapsed && !mobileOpen"
           type="button"
           @click="toggleSidebar"
           class="w-full flex items-center justify-center px-3 py-2.5 rounded-lg hover:bg-white/10 transition text-white/80 hover:text-white mb-1"
@@ -140,18 +167,17 @@ function konfirmasiLogout() {
           </svg>
         </button>
 
-        <!-- Menu utama -->
         <router-link
           v-for="m in menu"
           :key="m.to"
           :to="m.to"
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
-          :class="collapsed ? 'justify-center' : ''"
+          :class="collapsed && !mobileOpen ? 'justify-center' : ''"
           exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
-          :title="collapsed ? m.label : ''"
+          :title="collapsed && !mobileOpen ? m.label : ''"
         >
           <NavIcon :name="m.icon" :size="16" class="shrink-0" />
-          <span v-show="!collapsed" class="whitespace-nowrap">{{ m.label }}</span>
+          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">{{ m.label }}</span>
         </router-link>
 
         <!-- Jadwal -->
@@ -159,18 +185,18 @@ function konfirmasiLogout() {
           <button
             type="button"
             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
-            :class="collapsed ? 'justify-center' : 'justify-between'"
+            :class="collapsed && !mobileOpen ? 'justify-center' : 'justify-between'"
             @click="bukaJadwal"
-            :title="collapsed ? 'Jadwal' : ''"
+            :title="collapsed && !mobileOpen ? 'Jadwal' : ''"
           >
             <span class="flex items-center gap-3">
               <NavIcon name="calendar" :size="16" class="shrink-0" />
-              <span v-show="!collapsed">Jadwal</span>
+              <span v-show="!collapsed || mobileOpen">Jadwal</span>
             </span>
-            <span v-show="!collapsed" :class="{ 'rotate-180': jadwalTerbuka }" class="transition-transform">▾</span>
+            <span v-show="!collapsed || mobileOpen" :class="{ 'rotate-180': jadwalTerbuka }" class="transition-transform">▾</span>
           </button>
 
-          <div v-show="jadwalTerbuka && !collapsed" class="pl-4 space-y-1 mt-1">
+          <div v-show="jadwalTerbuka && (!collapsed || mobileOpen)" class="pl-4 space-y-1 mt-1">
             <router-link
               v-for="s in jadwalSub"
               :key="s.to"
@@ -184,28 +210,26 @@ function konfirmasiLogout() {
           </div>
         </div>
 
-        <!-- Pengeluaran -->
         <router-link
           to="/pengeluaran"
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
-          :class="collapsed ? 'justify-center' : ''"
+          :class="collapsed && !mobileOpen ? 'justify-center' : ''"
           exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
-          :title="collapsed ? 'Pengeluaran' : ''"
+          :title="collapsed && !mobileOpen ? 'Pengeluaran' : ''"
         >
           <NavIcon name="file" :size="16" class="shrink-0" />
-          <span v-show="!collapsed" class="whitespace-nowrap">Pengeluaran</span>
+          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">Pengeluaran</span>
         </router-link>
 
-        <!-- Stok Pakan -->
         <router-link
           to="/stok-pakan"
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
-          :class="collapsed ? 'justify-center' : ''"
+          :class="collapsed && !mobileOpen ? 'justify-center' : ''"
           exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
-          :title="collapsed ? 'Stok Pakan' : ''"
+          :title="collapsed && !mobileOpen ? 'Stok Pakan' : ''"
         >
           <NavIcon name="package" :size="16" class="shrink-0" />
-          <span v-show="!collapsed" class="whitespace-nowrap">Stok Pakan</span>
+          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">Stok Pakan</span>
         </router-link>
 
         <!-- Laporan -->
@@ -213,18 +237,18 @@ function konfirmasiLogout() {
           <button
             type="button"
             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
-            :class="collapsed ? 'justify-center' : 'justify-between'"
+            :class="collapsed && !mobileOpen ? 'justify-center' : 'justify-between'"
             @click="bukaLaporan"
-            :title="collapsed ? 'Laporan' : ''"
+            :title="collapsed && !mobileOpen ? 'Laporan' : ''"
           >
             <span class="flex items-center gap-3">
               <NavIcon name="chart" :size="16" class="shrink-0" />
-              <span v-show="!collapsed">Laporan</span>
+              <span v-show="!collapsed || mobileOpen">Laporan</span>
             </span>
-            <span v-show="!collapsed" :class="{ 'rotate-180': laporanTerbuka }" class="transition-transform">▾</span>
+            <span v-show="!collapsed || mobileOpen" :class="{ 'rotate-180': laporanTerbuka }" class="transition-transform">▾</span>
           </button>
 
-          <div v-show="laporanTerbuka && !collapsed" class="pl-4 space-y-1 mt-1">
+          <div v-show="laporanTerbuka && (!collapsed || mobileOpen)" class="pl-4 space-y-1 mt-1">
             <router-link
               v-for="s in laporanSub"
               :key="s.to"
@@ -238,57 +262,49 @@ function konfirmasiLogout() {
           </div>
         </div>
 
-        <!-- Pengaturan -->
         <router-link
           to="/pengaturan"
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
-          :class="collapsed ? 'justify-center' : ''"
+          :class="collapsed && !mobileOpen ? 'justify-center' : ''"
           exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
-          :title="collapsed ? 'Pengaturan' : ''"
+          :title="collapsed && !mobileOpen ? 'Pengaturan' : ''"
         >
           <NavIcon name="gear" :size="16" class="shrink-0" />
-          <span v-show="!collapsed" class="whitespace-nowrap">Pengaturan</span>
+          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">Pengaturan</span>
         </router-link>
       </nav>
 
-      <!-- Tombol Keluar -->
+      <!-- Keluar -->
       <div class="px-2 py-3 border-t border-white/10">
         <button
           type="button"
           class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 text-[13.5px] text-left transition"
-          :class="collapsed ? 'justify-center' : ''"
+          :class="collapsed && !mobileOpen ? 'justify-center' : ''"
           @click="bukaModalLogout"
-          :title="collapsed ? 'Keluar' : ''"
+          :title="collapsed && !mobileOpen ? 'Keluar' : ''"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <polyline points="16 17 21 12 16 7" />
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          <span v-show="!collapsed">Keluar</span>
+          <span v-show="!collapsed || mobileOpen">Keluar</span>
         </button>
       </div>
     </aside>
 
     <!-- Konten kanan -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <Header />
-      <main class="flex-1 overflow-y-auto p-6 bg-ink-50 dark:bg-ink-900">
+    <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+      <Header :on-open-sidebar="() => (mobileOpen = true)" />
+      <main class="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-6 bg-ink-50 dark:bg-ink-900">
         <router-view />
       </main>
     </div>
 
     <!-- Modal Logout -->
     <Teleport to="body">
-      <div
-        v-if="showLogoutModal"
-        class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      >
-        <div
-          class="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
-          @click="tutupModalLogout"
-        ></div>
-
+      <div v-if="showLogoutModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="tutupModalLogout"></div>
         <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
           <div class="pt-6 pb-2 flex justify-center">
             <div class="w-14 h-14 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
@@ -299,29 +315,17 @@ function konfirmasiLogout() {
               </svg>
             </div>
           </div>
-
           <div class="px-6 pb-2 text-center">
-            <h3 class="text-[16px] font-semibold text-ink-900 dark:text-white">
-              Keluar dari Dashboard?
-            </h3>
+            <h3 class="text-[16px] font-semibold text-ink-900 dark:text-white">Keluar dari Dashboard?</h3>
             <p class="text-[13.5px] text-ink-500 dark:text-ink-300 mt-1.5 leading-relaxed">
               Kamu akan keluar dari akun ini. Data yang belum disimpan mungkin hilang.
             </p>
           </div>
-
           <div class="px-6 pb-6 pt-4 flex gap-3">
-            <button
-              type="button"
-              @click="tutupModalLogout"
-              class="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-600 text-[13.5px] font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-700 transition"
-            >
+            <button type="button" @click="tutupModalLogout" class="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-600 text-[13.5px] font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-700 transition">
               Batal
             </button>
-            <button
-              type="button"
-              @click="konfirmasiLogout"
-              class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-medium transition"
-            >
+            <button type="button" @click="konfirmasiLogout" class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-medium transition">
               Ya, Keluar
             </button>
           </div>

@@ -29,10 +29,9 @@ ChartJS.register(
 const loading = ref(true)
 const data = ref(null)
 const jadwalGabungan = ref([])
-const pakanSesi = ref([])       // [{ nama: 'Pagi', sudah, belum, terlambat }, ...]
-const perluPerhatian = ref([])  // daftar kolam yang butuh aksi hari ini
+const pakanSesi = ref([])
+const perluPerhatian = ref([])
 
-// ===================== PAGINATION "PERLU PERHATIAN" =====================
 const tampilkanSemuaPerhatian = ref(false)
 const BATAS_TAMPIL_PERHATIAN = 5
 
@@ -46,16 +45,13 @@ function toggleTampilanPerhatian() {
 }
 
 function rupiah(n) {
-  return 'Rp' + Number(n).toLocaleString('id-ID')
+  return 'Rp' + Number(n || 0).toLocaleString('id-ID')
 }
 function tanggal(d) {
   if (!d) return '-'
   return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
 }
 
-// ===================== URGENSI TANGGAL (dipakai di Jadwal Mendatang) =====================
-// Menghitung selisih hari dari hari ini ke tanggal target, lalu memberi label + warna
-// supaya orang bisa langsung lihat mana yang mendesak tanpa harus menghitung sendiri.
 function selisihHari(d) {
   if (!d) return null
   const hariIni = new Date(); hariIni.setHours(0, 0, 0, 0)
@@ -78,13 +74,10 @@ function chipUrgensi(d) {
   return 'bg-ok-100 text-ok-600 border border-ok-200'
 }
 
-// ===================== UMUR KOLAM (dipakai di tabel Ikan per Kolam) =====================
-// Menghitung sudah berapa hari sejak tanggal tebar. Dipakai sebagai info pendamping
-// tanggal tebar supaya tidak perlu menghitung manual usia budidaya berjalan.
 function umurHari(tanggalTebar) {
   const selisih = selisihHari(tanggalTebar)
   if (selisih === null) return null
-  return Math.abs(selisih) // tanggal tebar selalu di masa lalu/hari ini
+  return Math.abs(selisih)
 }
 
 const LABEL_KATEGORI = {
@@ -103,7 +96,6 @@ const WARNA_KATEGORI = {
   perlengkapan: 'bg-ok-500',
   lainnya: 'bg-ink-400'
 }
-// Versi hex dari warna kategori, dipakai khusus untuk chart donut (Chart.js butuh hex, bukan class Tailwind)
 const HEX_KATEGORI = {
   pakan: '#D4A017',
   obat: '#6366F1',
@@ -119,15 +111,10 @@ const totalPengeluaranBreakdown = computed(() =>
 )
 
 const ikanPerKolam = computed(() => data.value?.ikanPerKolam || [])
-
-// Diurutkan dari survival rate PALING RENDAH -> paling tinggi, supaya kolam yang
-// paling butuh perhatian langsung terlihat di baris paling atas, bukan tersembunyi
-// di tengah urutan alfabetis.
 const ikanPerKolamUrut = computed(() =>
   [...ikanPerKolam.value].sort((a, b) => a.survivalRate - b.survivalRate)
 )
 
-// Baris Total/Ringkasan di bawah tabel Ikan per Kolam
 const totalIkanPerKolam = computed(() => {
   const list = ikanPerKolam.value
   const totalBibit = list.reduce((sum, k) => sum + (k.jumlahBibit || 0), 0)
@@ -136,8 +123,6 @@ const totalIkanPerKolam = computed(() => {
   return { totalBibit, totalSekarang, rataSurvival }
 })
 
-// Tanggal tebar per kolam. Sesuaikan nama field k.tanggalTebar dengan yang
-// dikembalikan endpoint /api/dashboard jika field aslinya berbeda.
 function tanggalTebar(k) {
   return k.tanggalTebar ? tanggal(k.tanggalTebar) : '-'
 }
@@ -147,7 +132,6 @@ function umurKolamLabel(k) {
   return hari === null ? '' : `${hari} hari`
 }
 
-// ===================== DONUT: RINCIAN PENGELUARAN =====================
 const chartPengeluaranDonut = computed(() => ({
   labels: pengeluaranBreakdown.value.map(r => r.label),
   datasets: [{
@@ -171,22 +155,11 @@ const donutOptions = {
   }
 }
 
-// Indikator naik/turun dibanding periode sebelumnya
 function labelPerbandingan(persen) {
   if (persen === null || persen === undefined) return null
   const arah = persen > 0 ? '↑' : persen < 0 ? '↓' : '→'
   return `${arah} ${Math.abs(persen)}%`
 }
-// baik=true berarti "naik itu bagus" (penjualan, keuntungan).
-// Untuk ikan hidup, naik/turun sama-sama netral (turun bisa karena panen yang wajar),
-// jadi warnanya dibuat netral saja, bukan merah/hijau.
-function warnaPerbandingan(persen, baik = true) {
-  if (persen === null || persen === undefined || persen === 0) return 'text-ink-500 dark:text-ink-300'
-  const naik = persen > 0
-  if (!baik) return 'text-ink-500 dark:text-ink-300'
-  return naik ? 'text-ok-600 dark:text-ok-500' : 'text-danger-600 dark:text-danger-500'
-}
-// Chip warna untuk badge trend (background lembut + teks kuat), dipakai di kartu statistik gaya baru
 function chipPerbandingan(persen, baik = true) {
   if (persen === null || persen === undefined || persen === 0) return 'bg-ink-100 text-ink-500 border border-ink-200'
   const naik = persen > 0
@@ -194,7 +167,6 @@ function chipPerbandingan(persen, baik = true) {
   return naik ? 'bg-ok-100 text-ok-600 border border-ok-200' : 'bg-danger-100 text-danger-600 border border-danger-200'
 }
 
-// Ambang batas survival rate untuk pewarnaan. SESUAIKAN dengan standar budidaya kamu.
 function warnaSurvival(rate) {
   if (rate < 70) return 'text-danger-600 dark:text-danger-500'
   if (rate < 85) return 'text-warn-600 dark:text-warn-500'
@@ -204,16 +176,6 @@ function barSurvival(rate) {
   if (rate < 70) return 'bg-danger-500'
   if (rate < 85) return 'bg-warn-500'
   return 'bg-ok-500'
-}
-
-const badgeJenis = {
-  pakan: 'bg-gold-100 text-gold-600',
-  panen: 'bg-ok-100 text-ok-600',
-  sortir: 'bg-brand-50 text-brand-600',
-  tebar: 'bg-warn-100 text-warn-600'
-}
-function kelasBadge(jenis) {
-  return badgeJenis[jenis] || 'bg-ink-100 text-ink-500'
 }
 
 const statusStyle = {
@@ -234,7 +196,6 @@ const totalTerlambat = computed(
   () => perluPerhatian.value.filter((k) => k.status === 'terlambat').length
 )
 
-// ===================== CHART (data diambil dari /api/dashboard/grafik-bulanan) =====================
 const chartPenjualan = ref({
   labels: [],
   datasets: [{
@@ -250,7 +211,6 @@ const chartPenjualan = ref({
   }]
 })
 
-// Data mentah keuntungan bulanan (dipakai chartKeuntungan computed di bawah agar warnanya bisa dinamis)
 const dataKeuntunganBulanan = ref({ labels: [], values: [] })
 
 const chartKeuntungan = computed(() => {
@@ -287,13 +247,13 @@ const chartOptions = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { color: '#94a3b8', font: { size: 12 } }
+      ticks: { color: '#94a3b8', font: { size: 11 } }
     },
     y: {
       grid: { color: 'rgba(148, 163, 184, 0.15)' },
       ticks: {
         color: '#94a3b8',
-        font: { size: 12 },
+        font: { size: 11 },
         callback: (v) => {
           const abs = Math.abs(v)
           const tanda = v < 0 ? '-' : ''
@@ -306,15 +266,12 @@ const chartOptions = {
   }
 }
 
-// ===================== LOAD DATA =====================
 async function muat() {
   loading.value = true
 
-  // Ambil data dashboard (statistik + grafik)
   const resDashboard = await fetch('/api/dashboard')
   data.value = await resDashboard.json()
 
-  // Ambil data Sortir, Panen, ringkasan Pakan hari ini, dan grafik bulanan
   const [resSortir, resPanen, resPakan, resGrafik] = await Promise.all([
     fetch('/api/jadwal?jenis=sortir'),
     fetch('/api/jadwal?jenis=panen'),
@@ -331,7 +288,6 @@ async function muat() {
   const panen = jsonPanen.data || []
   const pakan = jsonPakan.data || []
 
-  // ---------- Grafik penjualan & keuntungan 6 bulan terakhir (data asli) ----------
   chartPenjualan.value = {
     labels: jsonGrafik.labels || [],
     datasets: [{ ...chartPenjualan.value.datasets[0], data: jsonGrafik.penjualan || [] }]
@@ -341,12 +297,9 @@ async function muat() {
     values: jsonGrafik.keuntungan || []
   }
 
-  // ---------- Jadwal mendatang (sortir + panen) ----------
   const map = {}
-
   sortir.forEach(item => {
     if (item.status === 'selesai') return
-
     const key = item.kolam_id
     if (!map[key]) {
       map[key] = {
@@ -367,7 +320,6 @@ async function muat() {
 
   panen.forEach(item => {
     if (item.status === 'selesai') return
-
     const key = item.kolam_id
     if (!map[key]) {
       map[key] = {
@@ -392,8 +344,6 @@ async function muat() {
     return new Date(tglA) - new Date(tglB)
   })
 
-  // ---------- Ringkasan hari ini: status pakan per sesi ----------
-  // Nilai `sesi` dari API adalah lowercase ('pagi'/'siang'/'sore') sesuai constraint DB
   const urutanSesi = [
     { key: 'pagi', label: 'Pagi' },
     { key: 'siang', label: 'Siang' },
@@ -409,9 +359,7 @@ async function muat() {
     }
   })
 
-  // ---------- Ringkasan hari ini: kolam yang butuh perhatian ----------
   const daftarPerhatian = []
-
   const labelSesi = { pagi: 'Pagi', siang: 'Siang', sore: 'Sore' }
   pakan
     .filter(p => p.status !== 'sudah')
@@ -438,10 +386,7 @@ async function muat() {
 
   const prioritas = { terlambat: 0, belum: 1, sudah: 2 }
   perluPerhatian.value = daftarPerhatian.sort((a, b) => prioritas[a.status] - prioritas[b.status])
-
-  // Reset tampilan "lihat semua" setiap kali data dimuat ulang
   tampilkanSemuaPerhatian.value = false
-
   loading.value = false
 }
 
@@ -449,12 +394,12 @@ onMounted(muat)
 </script>
 
 <template>
-  <div v-if="loading" class="text-[13.5px] text-ink-500">Memuat...</div>
+  <div v-if="loading" class="text-[13.5px] text-ink-500 py-10 text-center">Memuat...</div>
 
-  <div v-else class="space-y-5">
-    <!-- ===================== RINGKASAN HARI INI ===================== -->
-    <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
-      <div class="flex items-center justify-between mb-4">
+  <div v-else class="space-y-4 sm:space-y-5">
+    <!-- ===================== HARI INI ===================== -->
+    <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
         <div>
           <h2 class="text-[15px] font-semibold dark:text-white">Hari ini</h2>
           <p class="text-[12.5px] text-ink-500 dark:text-ink-300">
@@ -463,27 +408,26 @@ onMounted(muat)
         </div>
         <span
           v-if="totalPerluPerhatian > 0"
-          class="text-[12px] font-semibold px-3 py-1 rounded-full"
+          class="self-start text-[12px] font-semibold px-3 py-1 rounded-full"
           :class="totalTerlambat > 0 ? 'bg-danger-100 text-danger-600' : 'bg-warn-100 text-warn-600'"
         >
           {{ totalPerluPerhatian }} perlu perhatian
         </span>
       </div>
 
-      <!-- Chip status pakan per sesi -->
-      <div class="grid grid-cols-3 gap-3 mb-4">
+      <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
         <div
           v-for="sesi in pakanSesi"
           :key="sesi.nama"
-          class="rounded-lg border p-3"
+          class="rounded-lg border p-2.5 sm:p-3"
           :class="sesi.terlambat > 0
             ? statusStyle.terlambat.chip
             : sesi.belum > 0
               ? statusStyle.belum.chip
               : statusStyle.sudah.chip"
         >
-          <p class="text-[12px] opacity-80">{{ sesi.nama }}</p>
-          <p class="text-[14px] font-semibold mt-0.5">
+          <p class="text-[11px] sm:text-[12px] opacity-80">{{ sesi.nama }}</p>
+          <p class="text-[13px] sm:text-[14px] font-semibold mt-0.5">
             <template v-if="sesi.terlambat > 0">{{ sesi.terlambat }} terlambat</template>
             <template v-else-if="sesi.belum > 0">{{ sesi.belum }} belum</template>
             <template v-else>Selesai</template>
@@ -491,29 +435,25 @@ onMounted(muat)
         </div>
       </div>
 
-      <!-- Empty state -->
       <div v-if="totalPerluPerhatian === 0" class="text-[13.5px] text-ink-500 dark:text-ink-300 py-1">
         Semua kolam sudah ditangani hari ini. Tidak ada yang tertunda.
       </div>
 
-      <!-- Daftar kolam perlu perhatian (dibatasi 5, bisa "Lihat semua") -->
       <template v-else>
         <ul class="flex flex-col gap-1.5">
           <li
             v-for="item in perluPerhatianTampil"
             :key="item.id + item.alasan"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-ink-50 dark:bg-ink-900/40 cursor-pointer hover:bg-ink-100 dark:hover:bg-ink-900/70 transition"
+            class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-ink-50 dark:bg-ink-900/40"
           >
             <span class="w-2 h-2 rounded-full shrink-0" :class="statusStyle[item.status].dot"></span>
             <div class="min-w-0 flex-1">
               <p class="text-[13.5px] font-medium dark:text-white truncate">{{ item.nama }}</p>
               <p class="text-[12.5px] text-ink-500 dark:text-ink-300 truncate">{{ item.alasan }}</p>
             </div>
-            <span class="text-ink-400">›</span>
           </li>
         </ul>
 
-        <!-- Tombol lihat semua / tampilkan lebih sedikit -->
         <button
           v-if="totalPerluPerhatian > BATAS_TAMPIL_PERHATIAN"
           type="button"
@@ -525,10 +465,10 @@ onMounted(muat)
       </template>
     </div>
 
-    <!-- ===================== KARTU STATISTIK (icon + trend, gaya baru) ===================== -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <!-- ===================== KARTU STATISTIK ===================== -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
       <!-- Total ikan hidup -->
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
         <div class="flex items-start justify-between">
           <div class="w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-500/15 flex items-center justify-center">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" class="text-brand-600 dark:text-brand-400">
@@ -539,19 +479,17 @@ onMounted(muat)
           </div>
           <span
             v-if="labelPerbandingan(data.perbandingan?.ikanHidup?.persen)"
-            class="text-[11.5px] font-semibold px-2 py-1 rounded-full"
+            class="text-[11px] font-semibold px-2 py-1 rounded-full"
             :class="chipPerbandingan(data.perbandingan?.ikanHidup?.persen, false)"
           >
             {{ labelPerbandingan(data.perbandingan.ikanHidup.persen) }}
           </span>
         </div>
-
         <p class="text-[13px] text-ink-500 dark:text-ink-300 mt-3">Total ikan hidup</p>
-        <p class="text-[26px] leading-tight font-bold mt-0.5 dark:text-white">
+        <p class="text-[22px] sm:text-[26px] leading-tight font-bold mt-0.5 dark:text-white">
           {{ data.statistik.totalIkanHidup.toLocaleString('id-ID') }}
           <span class="text-sm font-medium text-ink-500 dark:text-ink-300">ekor</span>
         </p>
-
         <div class="mt-4">
           <div class="h-1.5 rounded-full bg-ink-100 dark:bg-ink-900 overflow-hidden">
             <div class="h-full bg-brand-500 dark:bg-brand-400 rounded-full" :style="{ width: persenKolamAktif + '%' }"></div>
@@ -563,8 +501,8 @@ onMounted(muat)
         </div>
       </div>
 
-      <!-- Penjualan bulan ini -->
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
+      <!-- Penjualan -->
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
         <div class="flex items-start justify-between">
           <div class="w-10 h-10 rounded-lg bg-gold-100 dark:bg-gold-500/15 flex items-center justify-center">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" class="text-gold-600 dark:text-gold-400">
@@ -574,15 +512,14 @@ onMounted(muat)
           </div>
           <span
             v-if="labelPerbandingan(data.perbandingan?.penjualan?.persen)"
-            class="text-[11.5px] font-semibold px-2 py-1 rounded-full"
+            class="text-[11px] font-semibold px-2 py-1 rounded-full"
             :class="chipPerbandingan(data.perbandingan?.penjualan?.persen, true)"
           >
             {{ labelPerbandingan(data.perbandingan.penjualan.persen) }}
           </span>
         </div>
-
         <p class="text-[13px] text-ink-500 dark:text-ink-300 mt-3">Penjualan bulan ini</p>
-        <p class="text-[26px] leading-tight font-bold mt-0.5 text-gold-600 dark:text-gold-400">
+        <p class="text-[22px] sm:text-[26px] leading-tight font-bold mt-0.5 text-gold-600 dark:text-gold-400">
           {{ rupiah(data.statistik.penjualanBulanIni) }}
         </p>
         <p class="text-[12px] text-ink-500 dark:text-ink-300 mt-4">
@@ -590,8 +527,8 @@ onMounted(muat)
         </p>
       </div>
 
-      <!-- Keuntungan bulan ini -->
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
+      <!-- Keuntungan -->
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
         <div class="flex items-start justify-between">
           <div
             class="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -607,16 +544,15 @@ onMounted(muat)
           </div>
           <span
             v-if="labelPerbandingan(data.perbandingan?.keuntungan?.persen)"
-            class="text-[11.5px] font-semibold px-2 py-1 rounded-full"
+            class="text-[11px] font-semibold px-2 py-1 rounded-full"
             :class="chipPerbandingan(data.perbandingan?.keuntungan?.persen, true)"
           >
             {{ labelPerbandingan(data.perbandingan.keuntungan.persen) }}
           </span>
         </div>
-
         <p class="text-[13px] text-ink-500 dark:text-ink-300 mt-3">Keuntungan bulan ini</p>
         <p
-          class="text-[26px] leading-tight font-bold mt-0.5"
+          class="text-[22px] sm:text-[26px] leading-tight font-bold mt-0.5"
           :class="data.statistik.keuntunganBulanIni >= 0 ? 'text-ok-600 dark:text-ok-500' : 'text-danger-600 dark:text-danger-500'"
         >
           {{ rupiah(data.statistik.keuntunganBulanIni) }}
@@ -627,95 +563,94 @@ onMounted(muat)
       </div>
     </div>
 
-    <!-- ===================== IKAN PER KOLAM (diperbaiki) ===================== -->
+    <!-- ===================== IKAN PER KOLAM (scroll horizontal di mobile) ===================== -->
     <div
       v-if="ikanPerKolam.length > 0"
-      class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5"
+      class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5"
     >
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
         <h2 class="text-[15px] font-semibold dark:text-white">Ikan per kolam</h2>
         <span class="text-[12px] text-ink-500 dark:text-ink-300">Diurutkan dari survival rate terendah</span>
       </div>
 
-      <!-- Header kolom: angka rata kanan supaya digit sejajar dan mudah dibandingkan -->
-      <div class="grid grid-cols-[1.1fr_0.75fr_0.8fr_1fr_0.9fr_1.3fr] gap-3 text-[13px] text-ink-500 dark:text-ink-300 font-medium pb-2 border-b border-ink-100 dark:border-ink-500">
-        <div>Kolam</div>
-        <div>Jenis Ikan</div>
-        <div class="text-right">Bibit Awal</div>
-        <div class="text-right">Hidup Sekarang</div>
-        <div class="text-right">Tanggal Tebar</div>
-        <div>Survival Rate</div>
-      </div>
-
-      <!-- Baris data -->
-      <div
-        v-for="k in ikanPerKolamUrut"
-        :key="k.kolamId"
-        class="grid grid-cols-[1.1fr_0.75fr_0.8fr_1fr_0.9fr_1.3fr] gap-3 text-[13.5px] py-2.5 border-b border-ink-100 dark:border-ink-500 last:border-0 items-center"
-      >
-        <div class="font-medium dark:text-white">{{ k.namaKolam }}</div>
-        <div class="dark:text-ink-100">{{ k.namaIkan }}</div>
-        <div class="dark:text-ink-100 text-right tabular-nums">{{ k.jumlahBibit.toLocaleString('id-ID') }}</div>
-        <div class="dark:text-ink-100 text-right tabular-nums">{{ k.jumlahSaatIni.toLocaleString('id-ID') }}</div>
-        <div class="text-right">
-          <p class="dark:text-ink-100 tabular-nums">{{ tanggalTebar(k) }}</p>
-          <p v-if="umurKolamLabel(k)" class="text-[11px] text-ink-500 dark:text-ink-300">{{ umurKolamLabel(k) }}</p>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <div class="h-1.5 flex-1 rounded-full bg-ink-100 dark:bg-ink-900 overflow-hidden">
-              <div
-                class="h-full rounded-full"
-                :class="barSurvival(k.survivalRate)"
-                :style="{ width: Math.min(k.survivalRate, 100) + '%' }"
-              ></div>
-            </div>
-            <span class="font-semibold w-11 text-right tabular-nums" :class="warnaSurvival(k.survivalRate)">
-              {{ k.survivalRate }}%
-            </span>
+      <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+        <div class="min-w-[640px]">
+          <div class="grid grid-cols-[1.1fr_0.9fr_0.8fr_1fr_0.9fr_1.3fr] gap-3 text-[12.5px] sm:text-[13px] text-ink-500 dark:text-ink-300 font-medium pb-2 border-b border-ink-100 dark:border-ink-500">
+            <div>Kolam</div>
+            <div>Jenis Ikan</div>
+            <div class="text-right">Bibit Awal</div>
+            <div class="text-right">Hidup Sekarang</div>
+            <div class="text-right">Tanggal Tebar</div>
+            <div>Survival Rate</div>
           </div>
-        </div>
-      </div>
 
-      <!-- Baris Total/Ringkasan -->
-      <div class="grid grid-cols-[1.1fr_0.75fr_0.8fr_1fr_0.9fr_1.3fr] gap-3 text-[13.5px] pt-3 mt-1 border-t-2 border-ink-200 dark:border-ink-500 items-center">
-        <div class="font-semibold dark:text-white">Total</div>
-        <div class="text-[12px] text-ink-500 dark:text-ink-300">{{ ikanPerKolam.length }} kolam</div>
-        <div class="font-semibold dark:text-white text-right tabular-nums">
-          {{ totalIkanPerKolam.totalBibit.toLocaleString('id-ID') }}
-        </div>
-        <div class="font-semibold dark:text-white text-right tabular-nums">
-          {{ totalIkanPerKolam.totalSekarang.toLocaleString('id-ID') }}
-        </div>
-        <div></div>
-        <div class="font-semibold w-11 text-right tabular-nums" :class="warnaSurvival(totalIkanPerKolam.rataSurvival)">
-          {{ totalIkanPerKolam.rataSurvival }}%
+          <div
+            v-for="k in ikanPerKolamUrut"
+            :key="k.kolamId"
+            class="grid grid-cols-[1.1fr_0.9fr_0.8fr_1fr_0.9fr_1.3fr] gap-3 text-[13px] sm:text-[13.5px] py-2.5 border-b border-ink-100 dark:border-ink-500 last:border-0 items-center"
+          >
+            <div class="font-medium dark:text-white truncate">{{ k.namaKolam }}</div>
+            <div class="dark:text-ink-100 truncate">{{ k.namaIkan }}</div>
+            <div class="dark:text-ink-100 text-right tabular-nums">{{ k.jumlahBibit.toLocaleString('id-ID') }}</div>
+            <div class="dark:text-ink-100 text-right tabular-nums">{{ k.jumlahSaatIni.toLocaleString('id-ID') }}</div>
+            <div class="text-right">
+              <p class="dark:text-ink-100 tabular-nums">{{ tanggalTebar(k) }}</p>
+              <p v-if="umurKolamLabel(k)" class="text-[11px] text-ink-500 dark:text-ink-300">{{ umurKolamLabel(k) }}</p>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <div class="h-1.5 flex-1 rounded-full bg-ink-100 dark:bg-ink-900 overflow-hidden">
+                  <div
+                    class="h-full rounded-full"
+                    :class="barSurvival(k.survivalRate)"
+                    :style="{ width: Math.min(k.survivalRate, 100) + '%' }"
+                  ></div>
+                </div>
+                <span class="font-semibold w-11 text-right tabular-nums" :class="warnaSurvival(k.survivalRate)">
+                  {{ k.survivalRate }}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-[1.1fr_0.9fr_0.8fr_1fr_0.9fr_1.3fr] gap-3 text-[13px] sm:text-[13.5px] pt-3 mt-1 border-t-2 border-ink-200 dark:border-ink-500 items-center">
+            <div class="font-semibold dark:text-white">Total</div>
+            <div class="text-[12px] text-ink-500 dark:text-ink-300">{{ ikanPerKolam.length }} kolam</div>
+            <div class="font-semibold dark:text-white text-right tabular-nums">
+              {{ totalIkanPerKolam.totalBibit.toLocaleString('id-ID') }}
+            </div>
+            <div class="font-semibold dark:text-white text-right tabular-nums">
+              {{ totalIkanPerKolam.totalSekarang.toLocaleString('id-ID') }}
+            </div>
+            <div></div>
+            <div class="font-semibold w-11 text-right tabular-nums" :class="warnaSurvival(totalIkanPerKolam.rataSurvival)">
+              {{ totalIkanPerKolam.rataSurvival }}%
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- ===================== GRAFIK ===================== -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <!-- Grafik Penjualan -->
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
-        <div class="flex items-center justify-between mb-1">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-1 gap-2">
           <h2 class="text-[15px] font-semibold dark:text-white">Penjualan per Bulan</h2>
-          <span class="text-[12px] text-ink-500 dark:text-ink-300">6 bulan terakhir</span>
+          <span class="text-[11px] sm:text-[12px] text-ink-500 dark:text-ink-300 shrink-0">6 bulan terakhir</span>
         </div>
         <p class="text-[13px] text-ink-500 dark:text-ink-300 mb-3">
           Bulan ini
           <span class="font-semibold text-gold-600 dark:text-gold-400">{{ rupiah(data.statistik.penjualanBulanIni) }}</span>
         </p>
-        <div class="h-56">
+        <div class="h-48 sm:h-56">
           <Line :data="chartPenjualan" :options="chartOptions" />
         </div>
       </div>
 
-      <!-- Grafik Keuntungan -->
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
-        <div class="flex items-center justify-between mb-1">
+      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-1 gap-2">
           <h2 class="text-[15px] font-semibold dark:text-white">Keuntungan per Bulan</h2>
-          <span class="text-[12px] text-ink-500 dark:text-ink-300">6 bulan terakhir</span>
+          <span class="text-[11px] sm:text-[12px] text-ink-500 dark:text-ink-300 shrink-0">6 bulan terakhir</span>
         </div>
         <p class="text-[13px] text-ink-500 dark:text-ink-300 mb-3">
           Bulan ini
@@ -726,39 +661,37 @@ onMounted(muat)
             {{ rupiah(data.statistik.keuntunganBulanIni) }}
           </span>
         </p>
-        <div class="h-56">
+        <div class="h-48 sm:h-56">
           <Line :data="chartKeuntungan" :options="chartOptions" />
         </div>
       </div>
     </div>
 
-    <!-- ===================== RINCIAN PENGELUARAN (donut + legenda) ===================== -->
+    <!-- ===================== RINCIAN PENGELUARAN ===================== -->
     <div
       v-if="pengeluaranBreakdown.length > 0"
-      class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5"
+      class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5"
     >
-      <div class="flex items-center justify-between mb-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
         <h2 class="text-[15px] font-semibold dark:text-white">Rincian pengeluaran bulan ini</h2>
         <span class="text-[12px] text-ink-500 dark:text-ink-300">Total {{ rupiah(totalPengeluaranBreakdown) }}</span>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-6 items-center">
-        <!-- Donut -->
-        <div class="relative h-52 mx-auto w-full max-w-[220px]">
+      <div class="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-5 sm:gap-6 items-center">
+        <div class="relative h-44 sm:h-52 mx-auto w-full max-w-[200px] sm:max-w-[220px]">
           <Doughnut :data="chartPengeluaranDonut" :options="donutOptions" />
           <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <p class="text-[11.5px] text-ink-500 dark:text-ink-300">Total biaya</p>
-            <p class="text-[15px] font-bold dark:text-white">{{ rupiah(totalPengeluaranBreakdown) }}</p>
+            <p class="text-[11px] text-ink-500 dark:text-ink-300">Total biaya</p>
+            <p class="text-[14px] sm:text-[15px] font-bold dark:text-white">{{ rupiah(totalPengeluaranBreakdown) }}</p>
           </div>
         </div>
 
-        <!-- Legenda -->
-        <div class="flex flex-col gap-3">
-          <div v-for="r in pengeluaranBreakdown" :key="r.kategori" class="flex items-center gap-3">
+        <div class="flex flex-col gap-2.5 sm:gap-3">
+          <div v-for="r in pengeluaranBreakdown" :key="r.kategori" class="flex items-center gap-2.5 sm:gap-3">
             <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="WARNA_KATEGORI[r.kategori] || 'bg-ink-400'"></span>
-            <span class="text-[13.5px] dark:text-white flex-1 min-w-0 truncate">{{ r.label }}</span>
-            <span class="text-[13.5px] font-semibold dark:text-white">{{ rupiah(r.total) }}</span>
-            <span class="text-[12px] text-ink-500 dark:text-ink-300 w-11 text-right">
+            <span class="text-[13px] sm:text-[13.5px] dark:text-white flex-1 min-w-0 truncate">{{ r.label }}</span>
+            <span class="text-[13px] sm:text-[13.5px] font-semibold dark:text-white shrink-0">{{ rupiah(r.total) }}</span>
+            <span class="text-[12px] text-ink-500 dark:text-ink-300 w-10 text-right shrink-0">
               {{ Math.round((r.total / totalPengeluaranBreakdown) * 100) }}%
             </span>
           </div>
@@ -766,13 +699,13 @@ onMounted(muat)
       </div>
     </div>
 
-    <!-- Jadwal Mendatang -->
-    <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-5">
+    <!-- ===================== JADWAL MENDATANG ===================== -->
+    <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
       <h2 class="text-[15px] font-semibold dark:text-white mb-4">Jadwal mendatang</h2>
 
-      <div v-if="jadwalGabungan.length === 0" class="flex items-center gap-4 py-2">
-        <div class="w-11 h-11 rounded-card bg-gold-100 flex items-center justify-center shrink-0">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" class="text-gold-600">
+      <div v-if="jadwalGabungan.length === 0" class="flex items-start sm:items-center gap-3 sm:gap-4 py-2">
+        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-card bg-gold-100 flex items-center justify-center shrink-0">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" class="text-gold-600">
             <rect x="4" y="5" width="16" height="15" rx="2" />
             <path d="M4 10h16M9 3v4M15 3v4" />
           </svg>
@@ -787,52 +720,49 @@ onMounted(muat)
         <div
           v-for="j in jadwalGabungan"
           :key="j.kolam_id"
-          class="flex flex-wrap items-center gap-x-6 gap-y-3 py-3.5 first:pt-0 last:pb-0"
+          class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-x-6 sm:gap-y-3 py-3.5 first:pt-0 last:pb-0"
         >
-          <!-- Kolam & ikan -->
-          <div class="min-w-[150px] flex-1">
+          <div class="min-w-0 sm:min-w-[140px] sm:flex-1">
             <p class="text-[13.5px] font-medium dark:text-white">{{ j.nama_kolam }}</p>
             <p class="text-[12.5px] text-ink-500 dark:text-ink-300">
               {{ j.nama_ikan }}<span v-if="j.jumlah"> · {{ Number(j.jumlah).toLocaleString('id-ID') }} ekor</span>
             </p>
           </div>
 
-          <!-- Sortir -->
-          <div v-if="j.tanggal_sortir" class="flex items-center gap-2.5 min-w-[190px]">
-            <div class="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-500/15 flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" class="text-brand-600 dark:text-brand-400">
-                <path d="M6 3 20 17M20 3 6 17" />
-                <circle cx="6" cy="19" r="2.2" />
-                <circle cx="20" cy="19" r="2.2" />
-              </svg>
+          <div class="flex flex-col xs:flex-row gap-2.5 sm:gap-4">
+            <div v-if="j.tanggal_sortir" class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-500/15 flex items-center justify-center shrink-0">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" class="text-brand-600 dark:text-brand-400">
+                  <path d="M6 3 20 17M20 3 6 17" />
+                  <circle cx="6" cy="19" r="2.2" />
+                  <circle cx="20" cy="19" r="2.2" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <p class="text-[12px] text-ink-500 dark:text-ink-300">Sortir · {{ tanggal(j.tanggal_sortir) }}</p>
+                <span class="inline-block mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="chipUrgensi(j.tanggal_sortir)">
+                  {{ labelUrgensi(j.tanggal_sortir) }}
+                </span>
+              </div>
             </div>
-            <div class="min-w-0">
-              <p class="text-[12px] text-ink-500 dark:text-ink-300">Sortir · {{ tanggal(j.tanggal_sortir) }}</p>
-              <span class="inline-block mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="chipUrgensi(j.tanggal_sortir)">
-                {{ labelUrgensi(j.tanggal_sortir) }}
-              </span>
-            </div>
-          </div>
-          <div v-else class="min-w-[190px] text-[12.5px] text-ink-400">Sortir belum dijadwalkan</div>
+            <div v-else class="text-[12.5px] text-ink-400">Sortir belum dijadwalkan</div>
 
-          <!-- Panen -->
-          <div v-if="j.tanggal_panen" class="flex items-center gap-2.5 min-w-[190px]">
-            <div class="w-8 h-8 rounded-lg bg-gold-100 dark:bg-gold-500/15 flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" class="text-gold-600 dark:text-gold-400">
-                <path d="M4 20c4-8 12-8 16-16" />
-                <path d="M9 20c1-3 4-6 8-8" />
-              </svg>
+            <div v-if="j.tanggal_panen" class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-gold-100 dark:bg-gold-500/15 flex items-center justify-center shrink-0">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" class="text-gold-600 dark:text-gold-400">
+                  <path d="M4 20c4-8 12-8 16-16" />
+                  <path d="M9 20c1-3 4-6 8-8" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <p class="text-[12px] text-ink-500 dark:text-ink-300">Panen · {{ tanggal(j.tanggal_panen) }}</p>
+                <span class="inline-block mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="chipUrgensi(j.tanggal_panen)">
+                  {{ labelUrgensi(j.tanggal_panen) }}
+                </span>
+              </div>
             </div>
-            <div class="min-w-0">
-              <p class="text-[12px] text-ink-500 dark:text-ink-300">Panen · {{ tanggal(j.tanggal_panen) }}</p>
-              <span class="inline-block mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="chipUrgensi(j.tanggal_panen)">
-                {{ labelUrgensi(j.tanggal_panen) }}
-              </span>
-            </div>
+            <div v-else class="text-[12.5px] text-ink-400">Panen belum dijadwalkan</div>
           </div>
-          <div v-else class="min-w-[190px] text-[12.5px] text-ink-400">Panen belum dijadwalkan</div>
-
-          <span class="text-ink-400 ml-auto shrink-0">›</span>
         </div>
       </div>
     </div>
