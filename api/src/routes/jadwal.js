@@ -65,4 +65,58 @@ router.post('/', async (req, res) => {
   }
 })
 
+// PUT /api/jadwal/:id → ubah jadwal yang sudah ada
+// Dipakai untuk mengedit tanggal, catatan, atau status jadwal tanpa membuat baris baru.
+router.put('/:id', async (req, res) => {
+  const { id } = req.params
+  const { tanggal_jadwal, catatan, status } = req.body
+
+  try {
+    const result = await pool.query(
+      `UPDATE jadwal
+       SET tanggal_jadwal = COALESCE($1, tanggal_jadwal),
+           catatan = COALESCE($2, catatan),
+           status = COALESCE($3, status)
+       WHERE id = $4
+       RETURNING *`,
+      [tanggal_jadwal, catatan, status, id]
+    )
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Jadwal tidak ditemukan' })
+    }
+
+    res.json({ data: result.rows[0] })
+  } catch (err) {
+    res.status(500).json({ message: 'Gagal mengubah jadwal', error: err.message })
+  }
+})
+
+// DELETE /api/jadwal/:id → hapus jadwal
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params
+
+  try {
+    const result = await pool.query(
+      `DELETE FROM jadwal WHERE id = $1 RETURNING *`,
+      [id]
+    )
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Jadwal tidak ditemukan' })
+    }
+
+    res.json({ message: 'Jadwal berhasil dihapus', data: result.rows[0] })
+  } catch (err) {
+    // Kode 23503 = foreign key violation di PostgreSQL
+    // Terjadi kalau jadwal ini masih dirujuk oleh data lain (misalnya riwayat obat)
+    if (err.code === '23503') {
+      return res.status(409).json({
+        message: 'Jadwal ini sudah terhubung dengan riwayat pemberian obat, tidak bisa dihapus langsung'
+      })
+    }
+    res.status(500).json({ message: 'Gagal menghapus jadwal', error: err.message })
+  }
+})
+
 export default router
