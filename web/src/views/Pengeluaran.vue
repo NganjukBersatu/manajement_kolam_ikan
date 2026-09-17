@@ -29,14 +29,6 @@ const form = ref({
 })
 const formError = ref('')
 
-const KATEGORI_OPTIONS = [
-  { value: 'obat', label: 'Obat' },
-  { value: 'listrik', label: 'Listrik' },
-  { value: 'gaji', label: 'Gaji' },
-  { value: 'perlengkapan', label: 'Perlengkapan' },
-  { value: 'lainnya', label: 'Lainnya' }
-]
-
 const daftarBulan = [
   { value: 1, label: 'Januari' },
   { value: 2, label: 'Februari' },
@@ -233,8 +225,8 @@ async function simpan() {
     formError.value = 'Tanggal wajib diisi'
     return
   }
-  if (!form.value.kategori) {
-    formError.value = 'Kategori wajib dipilih'
+  if (!form.value.kategori || !form.value.kategori.trim()) {
+    formError.value = 'Kategori wajib diisi'
     return
   }
   if (!form.value.jumlah || isNaN(form.value.jumlah) || Number(form.value.jumlah) <= 0) {
@@ -247,7 +239,7 @@ async function simpan() {
   try {
     const body = {
       tanggal: form.value.tanggal,
-      kategori: form.value.kategori,
+      kategori: form.value.kategori.trim(),
       deskripsi: form.value.deskripsi || null,
       jumlah: Number(form.value.jumlah)
     }
@@ -556,25 +548,18 @@ onMounted(muat)
               />
             </div>
 
-            <!-- Kategori -->
+            <!-- Kategori (INPUT BEBAS) -->
             <div>
               <label class="block text-[13px] font-medium text-ink-600 dark:text-ink-300 mb-1.5">
                 Kategori <span class="text-red-500">*</span>
               </label>
-              <select
+              <input
                 v-model="form.kategori"
+                type="text"
                 required
+                placeholder="Contoh: Obat, Listrik, Gaji, Perlengkapan, dll"
                 class="w-full rounded-lg border border-ink-200 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px] focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-              >
-                <option value="" disabled>Pilih kategori</option>
-                <option
-                  v-for="k in KATEGORI_OPTIONS"
-                  :key="k.value"
-                  :value="k.value"
-                >
-                  {{ k.label }}
-                </option>
-              </select>
+              />
             </div>
 
             <!-- Deskripsi -->
