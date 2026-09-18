@@ -21,15 +21,13 @@ router.get('/', async (req, res) => {
 
 // POST tambah penjualan
 router.post('/', async (req, res) => {
-  const { 
-    tanggal, 
-    jenis_ikan_id, 
-    kolam_id, 
-    jumlah_kg, 
-    harga_per_kg, 
-    nama_pembeli, 
-    no_hp, 
-    catatan 
+  const {
+    tanggal,
+    jenis_ikan_id,
+    kolam_id,
+    jumlah_kg,
+    harga_per_kg,
+    catatan
   } = req.body
 
   if (!tanggal || !jenis_ikan_id || !jumlah_kg || !harga_per_kg) {
@@ -41,38 +39,35 @@ router.post('/', async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO penjualan 
-        (tanggal, jenis_ikan_id, kolam_id, jumlah_kg, harga_per_kg, total, nama_pembeli, no_hp, catatan)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+        (tanggal, jenis_ikan_id, kolam_id, jumlah_kg, harga_per_kg, total, catatan)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
       [
-        tanggal, 
-        jenis_ikan_id, 
-        kolam_id || null, 
-        jumlah_kg, 
-        harga_per_kg, 
-        total, 
-        nama_pembeli || null, 
-        no_hp || null, 
+        tanggal,
+        jenis_ikan_id,
+        kolam_id || null,
+        jumlah_kg,
+        harga_per_kg,
+        total,
         catatan || null
       ]
     )
     res.status(201).json({ data: result.rows[0] })
   } catch (err) {
+    console.error('Error tambah penjualan:', err)
     res.status(500).json({ message: 'Gagal mencatat penjualan', error: err.message })
   }
 })
 
-        // PUT update penjualan
+// PUT update penjualan
 router.put('/:id', async (req, res) => {
-  const { 
-    tanggal, 
-    jenis_ikan_id, 
-    kolam_id, 
-    jumlah_kg, 
-    harga_per_kg, 
-    nama_pembeli, 
-    no_hp, 
-    catatan 
+  const {
+    tanggal,
+    jenis_ikan_id,
+    kolam_id,
+    jumlah_kg,
+    harga_per_kg,
+    catatan
   } = req.body
 
   if (!tanggal || !jenis_ikan_id || !jumlah_kg || !harga_per_kg) {
@@ -90,10 +85,8 @@ router.put('/:id', async (req, res) => {
         jumlah_kg = $4,
         harga_per_kg = $5,
         total = $6,
-        nama_pembeli = $7,
-        no_hp = $8,
-        catatan = $9
-       WHERE id = $10
+        catatan = $7
+       WHERE id = $8
        RETURNING *`,
       [
         tanggal,
@@ -102,8 +95,6 @@ router.put('/:id', async (req, res) => {
         jumlah_kg,
         harga_per_kg,
         total,
-        nama_pembeli || null,
-        no_hp || null,
         catatan || null,
         req.params.id
       ]

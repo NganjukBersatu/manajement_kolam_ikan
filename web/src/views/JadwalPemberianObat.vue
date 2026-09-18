@@ -15,7 +15,6 @@ const form = ref({
   tanggal: new Date().toISOString().slice(0, 10),
   nama_obat: '',
   dosis: '',
-  biaya: '',
   catatan: '',
   buat_jadwal_berikutnya: true,
   interval_hari: 14
@@ -131,7 +130,6 @@ function bukaForm(k) {
     tanggal: k.jadwal_terdekat ? k.jadwal_terdekat.tanggal_jadwal : new Date().toISOString().slice(0, 10),
     nama_obat: '',
     dosis: '',
-    biaya: '',
     catatan: '',
     buat_jadwal_berikutnya: true,
     interval_hari: 14
@@ -151,7 +149,7 @@ async function simpan() {
         tanggal: form.value.tanggal,
         nama_obat: form.value.nama_obat,
         dosis: form.value.dosis,
-        biaya: form.value.biaya || 0,
+        biaya: 0,
         catatan: form.value.catatan,
         jadwal_id: jadwalDipilih.value?.id || null
       })
@@ -541,12 +539,6 @@ onUnmounted(() => {
             <input v-model="form.dosis" type="text" placeholder="Contoh: 5ml / 100L air" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
           </div>
           <div>
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">
-              Biaya (Rp) <span class="text-ink-400 font-normal">(opsional)</span>
-            </label>
-            <input v-model="form.biaya" type="number" min="0" placeholder="Contoh: 25000" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
-          </div>
-          <div>
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Catatan (opsional)</label>
             <textarea v-model="form.catatan" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"></textarea>
           </div>
@@ -656,7 +648,6 @@ onUnmounted(() => {
               <th class="py-2 pr-2">Tanggal</th>
               <th class="py-2 pr-2">Obat</th>
               <th class="py-2 pr-2">Dosis</th>
-              <th class="py-2">Biaya</th>
             </tr>
           </thead>
           <tbody>
@@ -668,10 +659,9 @@ onUnmounted(() => {
               <td class="py-2 pr-2">{{ tanggal(r.tanggal) }}</td>
               <td class="py-2 pr-2">{{ r.nama_obat }}</td>
               <td class="py-2 pr-2">{{ r.dosis || '-' }}</td>
-              <td class="py-2">Rp {{ rupiah(r.biaya) }}</td>
             </tr>
             <tr v-if="!(daftarGabungan.find(k => k.id === riwayatKolamDipilih?.id)?.riwayat?.length)">
-              <td colspan="4" class="py-4 text-center text-ink-500 dark:text-ink-300">Belum ada riwayat.</td>
+              <td colspan="3" class="py-4 text-center text-ink-500 dark:text-ink-300">Belum ada riwayat.</td>
             </tr>
           </tbody>
         </table>

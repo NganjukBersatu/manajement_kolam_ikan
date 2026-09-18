@@ -29,6 +29,14 @@ const form = ref({
 })
 const formError = ref('')
 
+// ===================== Modal Hapus & Sukses =====================
+const showConfirmHapus = ref(false)
+const itemHapus = ref(null)
+const hapusLoading = ref(false)
+
+const showSukses = ref(false)
+const pesanSukses = ref('')
+
 const daftarBulan = [
   { value: 1, label: 'Januari' },
   { value: 2, label: 'Februari' },
@@ -183,7 +191,7 @@ function resetFilter() {
   tanggalAkhir.value = ''
 }
 
-// ===================== Modal Functions =====================
+// ===================== Modal Form Functions =====================
 function bukaTambah() {
   isEdit.value = false
   form.value = {
@@ -198,7 +206,7 @@ function bukaTambah() {
 }
 
 function bukaEdit(item) {
-  if (item.isPakan) return // Pakan tidak bisa diedit dari sini
+  if (item.isPakan) return
 
   isEdit.value = true
   form.value = {
@@ -220,7 +228,6 @@ function tutupModal() {
 async function simpan() {
   formError.value = ''
 
-  // Validasi
   if (!form.value.tanggal) {
     formError.value = 'Tanggal wajib diisi'
     return
@@ -267,7 +274,11 @@ async function simpan() {
     }
 
     tutupModal()
-    await muat() // refresh data
+    pesanSukses.value = isEdit.value
+      ? 'Pengeluaran berhasil diperbarui.'
+      : 'Pengeluaran berhasil ditambahkan.'
+    showSukses.value = true
+    await muat()
   } catch (err) {
     console.error(err)
     formError.value = 'Terjadi kesalahan jaringan'
@@ -276,32 +287,54 @@ async function simpan() {
   }
 }
 
-async function hapus(item) {
+// ===================== Modal Hapus & Sukses Functions =====================
+function bukaKonfirmasiHapus(item) {
   if (item.isPakan) {
-    alert('Data Pakan Harian tidak bisa dihapus dari halaman ini.')
+    pesanSukses.value = 'Data Pakan Harian tidak bisa dihapus dari halaman ini.'
+    showSukses.value = true
     return
   }
+  itemHapus.value = item
+  showConfirmHapus.value = true
+}
 
-  if (!confirm(`Yakin ingin menghapus pengeluaran "${item.deskripsi || item.kategori}"?`)) {
-    return
-  }
+function tutupKonfirmasiHapus() {
+  showConfirmHapus.value = false
+  itemHapus.value = null
+}
 
+async function konfirmasiHapus() {
+  if (!itemHapus.value) return
+
+  hapusLoading.value = true
   try {
-    const res = await fetch(`/api/pengeluaran/${item.id}`, {
+    const res = await fetch(`/api/pengeluaran/${itemHapus.value.id}`, {
       method: 'DELETE'
     })
 
     if (!res.ok) {
       const json = await res.json()
-      alert(json.message || 'Gagal menghapus')
+      pesanSukses.value = json.message || 'Gagal menghapus'
+      showSukses.value = true
       return
     }
 
+    tutupKonfirmasiHapus()
+    pesanSukses.value = 'Pengeluaran berhasil dihapus.'
+    showSukses.value = true
     await muat()
   } catch (err) {
     console.error(err)
-    alert('Terjadi kesalahan jaringan')
+    pesanSukses.value = 'Terjadi kesalahan jaringan'
+    showSukses.value = true
+  } finally {
+    hapusLoading.value = false
   }
+}
+
+function tutupSukses() {
+  showSukses.value = false
+  pesanSukses.value = ''
 }
 
 watch([selectedMonth, selectedYear], () => {
@@ -440,7 +473,6 @@ onMounted(muat)
             <td class="px-4 py-3 text-right font-semibold">{{ rupiah(p.jumlah) }}</td>
             <td class="px-4 py-3">
               <div class="flex items-center justify-center gap-2">
-                <!-- Edit (hanya untuk data pengeluaran biasa) -->
                 <button
                   v-if="!p.isPakan"
                   @click="bukaEdit(p)"
@@ -449,16 +481,14 @@ onMounted(muat)
                   Edit
                 </button>
 
-                <!-- Hapus -->
                 <button
                   v-if="!p.isPakan"
-                  @click="hapus(p)"
+                  @click="bukaKonfirmasiHapus(p)"
                   class="px-2.5 py-1.5 rounded-md text-[12px] font-medium bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition"
                 >
                   Hapus
                 </button>
 
-                <!-- Label untuk data pakan -->
                 <span
                   v-else
                   class="text-[11px] text-ink-400 dark:text-ink-400 italic"
@@ -502,15 +532,12 @@ onMounted(muat)
         v-if="showModal"
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
-        <!-- Backdrop -->
         <div
           class="absolute inset-0 bg-black/60 backdrop-blur-sm"
           @click="tutupModal"
         ></div>
 
-        <!-- Modal Content -->
         <div class="relative w-full max-w-md rounded-xl bg-white dark:bg-ink-800 shadow-2xl border border-ink-100 dark:border-ink-600">
-          <!-- Header -->
           <div class="flex items-center justify-between border-b border-ink-100 dark:border-ink-600 px-6 py-4">
             <h2 class="text-lg font-semibold text-ink-800 dark:text-white">
               {{ isEdit ? 'Edit Pengeluaran' : 'Tambah Pengeluaran' }}
@@ -525,9 +552,7 @@ onMounted(muat)
             </button>
           </div>
 
-          <!-- Body -->
           <form @submit.prevent="simpan" class="p-6 space-y-4">
-            <!-- Error message -->
             <div
               v-if="formError"
               class="rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[13px] px-4 py-3"
@@ -535,7 +560,6 @@ onMounted(muat)
               {{ formError }}
             </div>
 
-            <!-- Tanggal -->
             <div>
               <label class="block text-[13px] font-medium text-ink-600 dark:text-ink-300 mb-1.5">
                 Tanggal <span class="text-red-500">*</span>
@@ -548,7 +572,6 @@ onMounted(muat)
               />
             </div>
 
-            <!-- Kategori (INPUT BEBAS) -->
             <div>
               <label class="block text-[13px] font-medium text-ink-600 dark:text-ink-300 mb-1.5">
                 Kategori <span class="text-red-500">*</span>
@@ -562,7 +585,6 @@ onMounted(muat)
               />
             </div>
 
-            <!-- Deskripsi -->
             <div>
               <label class="block text-[13px] font-medium text-ink-600 dark:text-ink-300 mb-1.5">
                 Deskripsi
@@ -575,7 +597,6 @@ onMounted(muat)
               ></textarea>
             </div>
 
-            <!-- Jumlah -->
             <div>
               <label class="block text-[13px] font-medium text-ink-600 dark:text-ink-300 mb-1.5">
                 Jumlah (Rp) <span class="text-red-500">*</span>
@@ -591,7 +612,6 @@ onMounted(muat)
               />
             </div>
 
-            <!-- Tombol -->
             <div class="flex gap-3 pt-2">
               <button
                 type="button"
@@ -609,6 +629,93 @@ onMounted(muat)
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- ===================== MODAL KONFIRMASI HAPUS ===================== -->
+    <Teleport to="body">
+      <div
+        v-if="showConfirmHapus"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        <div
+          class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          @click="tutupKonfirmasiHapus"
+        ></div>
+
+        <div class="relative w-full max-w-sm rounded-xl bg-white dark:bg-ink-800 shadow-2xl border border-ink-100 dark:border-ink-600 p-6 text-center">
+          <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30">
+            <svg class="h-7 w-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </div>
+
+          <h3 class="text-lg font-semibold text-ink-800 dark:text-white mb-2">
+            Hapus Pengeluaran?
+          </h3>
+          <p class="text-[13.5px] text-ink-500 dark:text-ink-300 mb-6">
+            Pengeluaran
+            <span class="font-medium text-ink-700 dark:text-ink-100">
+              "{{ itemHapus?.deskripsi || itemHapus?.kategori }}"
+            </span>
+            akan dihapus permanen.
+          </p>
+
+          <div class="flex gap-3">
+            <button
+              type="button"
+              @click="tutupKonfirmasiHapus"
+              class="flex-1 px-4 py-2.5 rounded-lg border border-ink-200 dark:border-ink-500 text-ink-600 dark:text-ink-300 text-[13.5px] font-medium hover:bg-ink-50 dark:hover:bg-ink-700 transition"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              @click="konfirmasiHapus"
+              :disabled="hapusLoading"
+              class="flex-1 px-4 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white text-[13.5px] font-semibold transition"
+            >
+              {{ hapusLoading ? 'Menghapus...' : 'Ya, Hapus' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- ===================== MODAL SUKSES ===================== -->
+    <Teleport to="body">
+      <div
+        v-if="showSukses"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        <div
+          class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          @click="tutupSukses"
+        ></div>
+
+        <div class="relative w-full max-w-sm rounded-xl bg-white dark:bg-ink-800 shadow-2xl border border-ink-100 dark:border-ink-600 p-6 text-center">
+          <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-900/30">
+            <svg class="h-8 w-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+
+          <h3 class="text-lg font-semibold text-ink-800 dark:text-white mb-2">
+            Berhasil!
+          </h3>
+          <p class="text-[13.5px] text-ink-500 dark:text-ink-300 mb-6">
+            {{ pesanSukses }}
+          </p>
+
+          <button
+            type="button"
+            @click="tutupSukses"
+            class="w-full px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[13.5px] font-semibold transition"
+          >
+            Oke
+          </button>
         </div>
       </div>
     </Teleport>

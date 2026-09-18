@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { pool } from '../config/db.js'
 
 const router = Router()
-const KATEGORI_VALID = ['obat', 'listrik', 'gaji', 'perlengkapan', 'lainnya']
+const KATEGORI_VALID = ['pakan', 'obat', 'listrik', 'gaji', 'perlengkapan', 'lainnya']
 
 // GET /api/pengeluaran
 // Support filter bulan & tahun (opsional)

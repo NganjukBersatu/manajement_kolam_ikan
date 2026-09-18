@@ -4,16 +4,16 @@ import { pool } from '../config/db.js'
 const router = Router()
 
 router.post('/', async (req, res) => {
-  const { kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit } = req.body
-  if (!kolam_id || !jenis_ikan_id || !tanggal_tebar || !jumlah_bibit) {
-    return res.status(400).json({ message: 'kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit wajib diisi' })
+  let { kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit } = req.body
+  if (!kolam_id || !tanggal_tebar || !jumlah_bibit) {
+    return res.status(400).json({ message: 'kolam_id, tanggal_tebar, jumlah_bibit wajib diisi' })
   }
 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
-    const kolamCek = await client.query(`SELECT status FROM kolam WHERE id = $1`, [kolam_id])
+    const kolamCek = await client.query(`SELECT status, jenis_ikan_id FROM kolam WHERE id = $1`, [kolam_id])
     if (kolamCek.rows.length === 0) {
       await client.query('ROLLBACK')
       return res.status(404).json({ message: 'Kolam tidak ditemukan' })
@@ -21,6 +21,15 @@ router.post('/', async (req, res) => {
     if (kolamCek.rows[0].status === 'aktif') {
       await client.query('ROLLBACK')
       return res.status(409).json({ message: 'Kolam ini masih ada tebar aktif' })
+    }
+
+    if (!jenis_ikan_id) {
+      jenis_ikan_id = kolamCek.rows[0].jenis_ikan_id
+    }
+
+    if (!jenis_ikan_id) {
+      await client.query('ROLLBACK')
+      return res.status(400).json({ message: 'Jenis ikan pada kolam ini belum ditentukan. Silakan edit kolam untuk memilih jenis ikan.' })
     }
 
     const jenisResult = await client.query(
@@ -40,7 +49,7 @@ router.post('/', async (req, res) => {
     )
     const tebarBaru = tebarResult.rows[0]
 
-    await client.query(`UPDATE kolam SET status = 'aktif', updated_at = NOW() WHERE id = $1`, [kolam_id])
+    await client.query(`UPDATE kolam SET status = 'aktif', jenis_ikan_id = $1, updated_at = NOW() WHERE id = $2`, [jenis_ikan_id, kolam_id])
 
     // Jadwal sortir & panen otomatis dari tanggal_tebar + hari yang ditentukan jenis ikan
     await client.query(
