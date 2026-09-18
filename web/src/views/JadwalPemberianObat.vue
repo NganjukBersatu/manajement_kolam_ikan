@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 const daftarKolam = ref([])
 const riwayatObat = ref([])
@@ -33,6 +33,10 @@ const jadwalForm = ref({
   tanggal_jadwal: new Date().toISOString().slice(0, 10),
   catatan: ''
 })
+
+// Modal konfirmasi hapus jadwal (menggantikan window.confirm)
+const showHapusJadwalModal = ref(false)
+const jadwalYangAkanDihapus = ref(null) // menyimpan objek kolam (k) yang jadwalnya mau dihapus
 
 const filterStatus = ref('semua') // semua | terlambat | jatuh_tempo | mendatang | belum_ada
 
@@ -269,9 +273,24 @@ async function simpanJadwal() {
   }
 }
 
-async function hapusJadwal(k) {
+// ===== Hapus Jadwal (pakai modal kustom, bukan window.confirm) =====
+function bukaHapusJadwal(k) {
   if (!k.jadwal_terdekat) return
-  if (!confirm(`Hapus jadwal ${tanggal(k.jadwal_terdekat.tanggal_jadwal)} untuk ${k.nama_kolam}?`)) return
+  jadwalYangAkanDihapus.value = k
+  showHapusJadwalModal.value = true
+}
+
+function tutupHapusJadwal() {
+  showHapusJadwalModal.value = false
+  jadwalYangAkanDihapus.value = null
+}
+
+async function konfirmasiHapusJadwal() {
+  const k = jadwalYangAkanDihapus.value
+  if (!k || !k.jadwal_terdekat) {
+    tutupHapusJadwal()
+    return
+  }
 
   isSaving.value = true
   try {
@@ -281,6 +300,7 @@ async function hapusJadwal(k) {
       tampilkanToast(err.message || 'Gagal menghapus jadwal', 'error')
       return
     }
+    tutupHapusJadwal()
     await muatSemua()
     tampilkanToast('Jadwal berhasil dihapus')
   } finally {
@@ -303,10 +323,6 @@ function labelStatusJadwal(status) {
   if (status === 'mendatang') return 'Terjadwal'
   return 'Belum ada jadwal'
 }
-
-onMounted(() => {
-  muatSemua()
-})
 
 const showFilter = ref(false)
 
@@ -339,12 +355,9 @@ onMounted(() => {
   document.addEventListener('click', handleClickOutside)
 })
 
-// Jangan lupa hapus listener kalau component unmount (opsional)
-import { onUnmounted } from 'vue'
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
-
 </script>
 
 <template>
@@ -358,53 +371,53 @@ onUnmounted(() => {
       {{ toast.message }}
     </div>
 
-<!-- Header + Filter + Tambah -->
-<div class="flex flex-wrap items-center justify-between gap-3">
-  <div class="flex items-center gap-2">
-    <label class="text-[13px] text-ink-500 dark:text-ink-300">Filter:</label>
-    
-    <!-- Custom Filter Dropdown -->
-    <div class="relative">
+    <!-- Header + Filter + Tambah -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <label class="text-[13px] text-ink-500 dark:text-ink-300">Filter:</label>
+
+        <!-- Custom Filter Dropdown -->
+        <div class="relative">
+          <button
+            type="button"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ink-100 dark:border-ink-500 bg-white dark:bg-ink-800 text-[13px] font-medium dark:text-ink-100 hover:bg-ink-50 dark:hover:bg-ink-700 transition"
+            @click="showFilter = !showFilter"
+          >
+            <span>{{ labelFilter }}</span>
+            <svg class="w-4 h-4 text-ink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div
+            v-if="showFilter"
+            class="absolute left-0 mt-1 w-52 rounded-lg border border-ink-100 dark:border-ink-500 bg-white dark:bg-ink-800 shadow-lg z-20 overflow-hidden"
+          >
+            <button
+              v-for="opt in opsiFilter"
+              :key="opt.value"
+              type="button"
+              class="w-full text-left px-3 py-2.5 text-[13px] transition"
+              :class="filterStatus === opt.value
+                ? 'bg-brand-500 text-white font-semibold'
+                : 'dark:text-ink-100 hover:bg-ink-100 dark:hover:bg-ink-700'"
+              @click="pilihFilter(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <button
         type="button"
-        class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ink-100 dark:border-ink-500 bg-white dark:bg-ink-800 text-[13px] font-medium dark:text-ink-100 hover:bg-ink-50 dark:hover:bg-ink-700 transition"
-        @click="showFilter = !showFilter"
+        class="px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-[13px] font-semibold"
+        @click="bukaTambahJadwal"
       >
-        <span>{{ labelFilter }}</span>
-        <svg class="w-4 h-4 text-ink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-        </svg>
+        + Tambah Jadwal
       </button>
-
-      <!-- Dropdown Menu -->
-<div
-  v-if="showFilter"
-  class="absolute left-0 mt-1 w-52 rounded-lg border border-ink-100 dark:border-ink-500 bg-white dark:bg-ink-800 shadow-lg z-20 overflow-hidden"
->
-  <button
-    v-for="opt in opsiFilter"
-    :key="opt.value"
-    type="button"
-    class="w-full text-left px-3 py-2.5 text-[13px] transition"
-    :class="filterStatus === opt.value
-      ? 'bg-brand-500 text-white font-semibold'
-      : 'dark:text-ink-100 hover:bg-ink-100 dark:hover:bg-ink-700'"
-    @click="pilihFilter(opt.value)"
-  >
-    {{ opt.label }}
-  </button>
-</div>
     </div>
-  </div>
-
-  <button
-    type="button"
-    class="px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-[13px] font-semibold"
-    @click="bukaTambahJadwal"
-  >
-    + Tambah Jadwal
-  </button>
-</div>      
 
     <!-- Tabel -->
     <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden relative">
@@ -453,7 +466,7 @@ onUnmounted(() => {
                   <button
                     type="button"
                     class="text-[11px] text-red-500 hover:underline"
-                    @click="hapusJadwal(k)"
+                    @click="bukaHapusJadwal(k)"
                   >
                     Hapus
                   </button>
@@ -667,5 +680,48 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
+
+    <!-- Modal: Konfirmasi Hapus Jadwal (pengganti window.confirm) -->
+    <Teleport to="body">
+      <div v-if="showHapusJadwalModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]" @click="tutupHapusJadwal"></div>
+        <div class="relative bg-white dark:bg-ink-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+          <div class="pt-6 pb-2 flex justify-center">
+            <div class="w-14 h-14 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-red-500">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="px-6 pb-2 text-center">
+            <h3 class="text-[16px] font-semibold text-ink-900 dark:text-white">Hapus Jadwal?</h3>
+            <p class="text-[13.5px] text-ink-500 dark:text-ink-300 mt-1.5">
+              Jadwal
+              <strong>{{ tanggal(jadwalYangAkanDihapus?.jadwal_terdekat?.tanggal_jadwal) }}</strong>
+              untuk kolam <strong>"{{ jadwalYangAkanDihapus?.nama_kolam }}"</strong> akan dihapus permanen.
+            </p>
+          </div>
+          <div class="px-6 pb-6 pt-4 flex gap-3">
+            <button
+              type="button"
+              @click="tutupHapusJadwal"
+              class="flex-1 px-4 py-2.5 rounded-xl border border-ink-200 dark:border-ink-600 text-[13.5px] font-medium text-ink-700 dark:text-ink-200 hover:bg-ink-50 dark:hover:bg-ink-700 transition"
+              :disabled="isSaving"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              @click="konfirmasiHapusJadwal"
+              class="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13.5px] font-medium transition disabled:opacity-60"
+              :disabled="isSaving"
+            >
+              {{ isSaving ? 'Menghapus...' : 'Ya, Hapus' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
