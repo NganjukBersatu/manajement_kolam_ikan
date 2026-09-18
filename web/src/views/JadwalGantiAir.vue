@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
 const daftar = ref([])
 const daftarKolamAktif = ref([])
@@ -10,6 +10,19 @@ const form = ref({ tanggal: new Date().toISOString().slice(0, 10), persentase_ai
 
 const showTambahJadwal = ref(false)
 const formJadwalBaru = ref({ kolam_id: '', tanggal_jadwal: new Date().toISOString().slice(0, 10) })
+
+// State untuk combobox pencarian kolam
+const cariKolam = ref('')
+const showDropdownKolam = ref(false)
+
+const kolamTerfilter = computed(() => {
+  if (!cariKolam.value) return daftarKolamAktif.value
+  const q = cariKolam.value.toLowerCase()
+  return daftarKolamAktif.value.filter(k =>
+    k.nama_kolam.toLowerCase().includes(q) ||
+    k.nama_ikan.toLowerCase().includes(q)
+  )
+})
 
 async function muat() {
   const res = await fetch('/api/jadwal?jenis=ganti_air')
@@ -47,7 +60,15 @@ async function simpan() {
 
 function bukaTambahJadwal() {
   formJadwalBaru.value = { kolam_id: '', tanggal_jadwal: new Date().toISOString().slice(0, 10) }
+  cariKolam.value = ''
+  showDropdownKolam.value = false
   showTambahJadwal.value = true
+}
+
+function pilihKolam(k) {
+  formJadwalBaru.value.kolam_id = k.id
+  cariKolam.value = `${k.nama_kolam} — ${k.nama_ikan} (${k.jumlah_saat_ini} ekor)`
+  showDropdownKolam.value = false
 }
 
 async function simpanJadwalBaru() {
@@ -162,14 +183,40 @@ onMounted(() => {
     <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5">
       <h2 class="text-[16px] font-semibold dark:text-white mb-4">Tambah Jadwal Ganti Air</h2>
       <form class="space-y-3" @submit.prevent="simpanJadwalBaru">
-        <div>
+        <div class="relative">
           <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Kolam</label>
-          <select v-model="formJadwalBaru.kolam_id" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]">
-            <option value="" disabled>Pilih kolam</option>
-            <option v-for="k in daftarKolamAktif" :key="k.id" :value="k.id">
+
+          <input
+            v-model="cariKolam"
+            type="text"
+            placeholder="Ketik nama kolam..."
+            autocomplete="off"
+            required
+            class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
+            @focus="showDropdownKolam = true"
+            @input="formJadwalBaru.kolam_id = ''; showDropdownKolam = true"
+            @blur="showDropdownKolam = false"
+          />
+          <!-- input tersembunyi supaya required tetap tervalidasi berdasarkan kolam_id yang benar-benar terpilih -->
+          <input type="hidden" :value="formJadwalBaru.kolam_id" required />
+
+          <ul
+            v-if="showDropdownKolam"
+            class="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-ink-100 dark:border-ink-500 bg-white dark:bg-ink-900 shadow-card"
+          >
+            <li
+              v-for="k in kolamTerfilter"
+              :key="k.id"
+              class="px-3 py-2 text-[13px] dark:text-white hover:bg-brand-50 dark:hover:bg-ink-700 cursor-pointer"
+              @mousedown.prevent="pilihKolam(k)"
+            >
               {{ k.nama_kolam }} — {{ k.nama_ikan }} ({{ k.jumlah_saat_ini }} ekor)
-            </option>
-          </select>
+            </li>
+            <li v-if="kolamTerfilter.length === 0" class="px-3 py-2 text-[13px] text-ink-500 dark:text-ink-300">
+              Kolam tidak ditemukan.
+            </li>
+          </ul>
+
           <p v-if="daftarKolamAktif.length === 0" class="text-[12px] text-ink-500 dark:text-ink-300 mt-1">
             Tidak ada kolam dengan tebar aktif saat ini.
           </p>
