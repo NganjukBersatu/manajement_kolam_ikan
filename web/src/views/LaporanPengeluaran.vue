@@ -105,38 +105,19 @@ function isGaji(item) {
 async function muat() {
   loading.value = true
   try {
-    // Ambil pengeluaran biasa
     const resPengeluaran = await fetch(
       `/api/pengeluaran?bulan=${selectedMonth.value}&tahun=${selectedYear.value}`
     )
     const jsonPengeluaran = await resPengeluaran.json()
-    const dataPengeluaran = (jsonPengeluaran.data || []).map(item => ({
+    daftar.value = (jsonPengeluaran.data || []).map(item => ({
       ...item,
-      kategori: item.kategori || 'Pengeluaran Lain',
+      kategori: item.kategori || 'lainnya',
       jumlah: Number(item.jumlah || 0)
-    }))
-
-    // Ambil pengeluaran pakan
-    const resPakan = await fetch(
-      `/api/pakan?bulan=${selectedMonth.value}&tahun=${selectedYear.value}`
-    )
-    const jsonPakan = await resPakan.json()
-    const dataPakan = (jsonPakan.data || []).map(item => ({
-      id: `pakan-${item.id}`,
-      tanggal: item.tanggal,
-      kategori: 'Pakan Harian',
-      deskripsi: item.deskripsi || `Pakan ${item.jenis_pakan || ''}`.trim(),
-      jumlah: Number(item.total || item.jumlah || item.biaya || 0)
-    }))
-
-    // Gabungkan & urutkan berdasarkan tanggal (terbaru di atas)
-    daftar.value = [...dataPengeluaran, ...dataPakan].sort(
-      (a, b) => new Date(b.tanggal) - new Date(a.tanggal)
-    )
+    })).sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
 
     total.value = daftar.value.reduce((sum, item) => sum + Number(item.jumlah || 0), 0)
   } catch (err) {
-    console.error(err)
+    console.error('Gagal memuat laporan pengeluaran:', err)
     daftar.value = []
     total.value = 0
   } finally {
@@ -254,13 +235,12 @@ onMounted(muat)
         class="w-full lg:w-48 rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
       >
         <option value="">Semua kategori</option>
-        <option value="Pakan Harian">Pakan Harian</option>
+        <option value="pakan">Pakan</option>
         <option value="obat">Obat</option>
         <option value="listrik">Listrik</option>
         <option value="gaji">Gaji</option>
         <option value="perlengkapan">Perlengkapan</option>
         <option value="lainnya">Lainnya</option>
-        <option value="Pengeluaran Lain">Pengeluaran Lain</option>
       </select>
 
       <select

@@ -110,12 +110,11 @@ router.get('/', async (req, res) => {
 
     // Hitung total
     const totalPenjualan = Number(penjualanResult.rows[0].total_penjualan)
-    const totalPengeluaranLain = Number(pengeluaranResult.rows[0].total)
+    const totalPengeluaran = Number(pengeluaranResult.rows[0].total)
     const totalBiayaPakan = Number(pakanResult.rows[0].total)
-    const totalPengeluaran = totalPengeluaranLain + totalBiayaPakan
 
     const prevTotalPenjualan = Number(prevPenjualan.rows[0].total_penjualan)
-    const prevTotalPengeluaran = Number(prevPengeluaran.rows[0].total) + Number(prevPakan.rows[0].total)
+    const prevTotalPengeluaran = Number(prevPengeluaran.rows[0].total)
 
     res.json({
       data: {

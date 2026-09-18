@@ -127,6 +127,7 @@ export const kolam = pgTable("kolam", {
 	namaKolam: varchar("nama_kolam", { length: 50 }).notNull(),
 	luasM2: numeric("luas_m2"),
 	status: varchar({ length: 20 }).default('kosong').notNull(),
+	jenisIkanId: integer("jenis_ikan_id"),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 	intervalGantiAirHari: integer("interval_ganti_air_hari").default(7).notNull(),

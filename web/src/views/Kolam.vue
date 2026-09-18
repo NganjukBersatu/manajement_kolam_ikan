@@ -41,9 +41,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickLuar)
 })
-const form = ref({ jenis_ikan_id: '', tanggal_tebar: '', jumlah_bibit: '' })
-const formKolam = ref({ nama_kolam: '', luas_m2: '', jenis_id: '' })
-const formEditKolam = ref({ nama_kolam: '', luas_m2: '', jenis_id: '' })
+const form = ref({ tanggal_tebar: '', jumlah_bibit: '' })
+const formKolam = ref({ nama_kolam: '', luas_m2: '', nama_jenis: '' })
+const formEditKolam = ref({ nama_kolam: '', luas_m2: '', nama_jenis: '' })
 async function muatKolam() {
   const res = await fetch('/api/kolam')
   const json = await res.json()
@@ -57,11 +57,11 @@ async function muatJenisIkan() {
 function bukaTebar(kolam) {
   tutupMenu()
   kolamDipilih.value = kolam
-  form.value = { jenis_ikan_id: '', tanggal_tebar: '', jumlah_bibit: '' }
+  form.value = { tanggal_tebar: new Date().toISOString().slice(0, 10), jumlah_bibit: '' }
   showTebarForm.value = true
 }
 function bukaTambahKolam() {
-  formKolam.value = { nama_kolam: '', luas_m2: '', jenis_id: '' }
+  formKolam.value = { nama_kolam: '', luas_m2: '', nama_jenis: '' }
   showTambahKolam.value = true
 }
 function bukaEditKolam(kolam) {
@@ -70,7 +70,7 @@ function bukaEditKolam(kolam) {
   formEditKolam.value = {
     nama_kolam: kolam.nama_kolam,
     luas_m2: kolam.luas_m2 || '',
-    jenis_id: kolam.jenis_id || ''
+    nama_jenis: kolam.nama_ikan || kolam.nama_jenis || ''
   }
   showEditKolam.value = true
 }
@@ -95,16 +95,23 @@ async function konfirmasiHapusKolam() {
   await muatKolam()
 }
 async function simpanTebar() {
+  const jenisIkanId = kolamDipilih.value?.jenis_ikan_id || kolamDipilih.value?.jenis_id
+  if (!jenisIkanId) {
+    alert('Jenis ikan pada kolam ini belum ditentukan. Silakan edit kolam untuk mengisi jenis ikan terlebih dahulu.')
+    return
+  }
   const res = await fetch('/api/tebar', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       kolam_id: kolamDipilih.value.id,
-      ...form.value
+      jenis_ikan_id: jenisIkanId,
+      tanggal_tebar: form.value.tanggal_tebar,
+      jumlah_bibit: Number(form.value.jumlah_bibit)
     })
   })
   if (!res.ok) {
-    const err = await res.json()
+    const err = await res.json().catch(() => ({}))
     alert(err.message || 'Gagal menyimpan tebar')
     return
   }
@@ -115,7 +122,7 @@ async function simpanKolam() {
   const payload = {
     nama_kolam: formKolam.value.nama_kolam,
     luas_m2: formKolam.value.luas_m2 ? Number(formKolam.value.luas_m2) : null,
-    jenis_id: formKolam.value.jenis_id || null
+    nama_jenis: formKolam.value.nama_jenis ? formKolam.value.nama_jenis.trim() : null
   }
   const res = await fetch('/api/kolam', {
     method: 'POST',
@@ -123,12 +130,12 @@ async function simpanKolam() {
     body: JSON.stringify(payload)
   })
   if (!res.ok) {
-    const err = await res.json()
-    alert(err.message || 'Gagal menambah kolam')
+    const err = await res.json().catch(() => ({}))
+    alert(err.message || err.error || 'Gagal menambah kolam')
     return
   }
   showTambahKolam.value = false
-  await muatKolam()
+  await Promise.all([muatKolam(), muatJenisIkan()])
   // Tampilkan modal sukses
   pesanSukses.value = 'Kolam berhasil ditambahkan.'
   showSuksesModal.value = true
@@ -137,7 +144,7 @@ async function simpanEditKolam() {
   const payload = {
     nama_kolam: formEditKolam.value.nama_kolam,
     luas_m2: formEditKolam.value.luas_m2 ? Number(formEditKolam.value.luas_m2) : null,
-    jenis_id: formEditKolam.value.jenis_id || null
+    nama_jenis: formEditKolam.value.nama_jenis ? formEditKolam.value.nama_jenis.trim() : null
   }
   const res = await fetch(`/api/kolam/${kolamDiedit.value.id}`, {
     method: 'PUT',
@@ -145,12 +152,12 @@ async function simpanEditKolam() {
     body: JSON.stringify(payload)
   })
   if (!res.ok) {
-    const err = await res.json()
-    alert(err.message || 'Gagal mengubah kolam')
+    const err = await res.json().catch(() => ({}))
+    alert(err.message || err.error || 'Gagal mengubah kolam')
     return
   }
   showEditKolam.value = false
-  await muatKolam()
+  await Promise.all([muatKolam(), muatJenisIkan()])
   // Tampilkan modal sukses
   pesanSukses.value = 'Kolam berhasil diperbarui.'
   showSuksesModal.value = true
@@ -190,6 +197,7 @@ const kolamTerfilter = computed(() => {
     const cocokJenis =
       !filterJenis.value ||
       String(k.jenis_id) === String(filterJenis.value) ||
+      String(k.jenis_ikan_id) === String(filterJenis.value) ||
       namaJenis === filterJenis.value.toLowerCase()
     const cocokStatus = !filterStatus.value || k.status === filterStatus.value
     return cocokKata && cocokJenis && cocokStatus
@@ -386,22 +394,24 @@ onMounted(() => {
     <div v-if="showTebarForm" class="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div class="absolute inset-0 bg-black/40" @click="showTebarForm = false" />
       <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5">
-        <h2 class="text-[16px] font-semibold dark:text-white mb-4">Tebar Bibit — {{ kolamDipilih?.nama_kolam }}</h2>
+        <h2 class="text-[16px] font-semibold dark:text-white mb-3">Tebar Bibit — {{ kolamDipilih?.nama_kolam }}</h2>
+        
+        <!-- Info Jenis Ikan yang sudah ditentukan di kolam -->
+        <div class="mb-4 p-3 rounded-lg bg-ink-50 dark:bg-ink-800 border border-ink-100 dark:border-ink-600 flex items-center justify-between text-[13px]">
+          <span class="text-ink-500 dark:text-ink-300">Jenis Ikan:</span>
+          <span class="font-semibold text-brand-600 dark:text-brand-400">
+            {{ kolamDipilih?.nama_ikan || kolamDipilih?.nama_jenis || 'Belum ditentukan' }}
+          </span>
+        </div>
+
         <form class="space-y-3" @submit.prevent="simpanTebar">
-          <div>
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jenis</label>
-            <select v-model="form.jenis_ikan_id" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white">
-              <option value="" disabled>Pilih jenis</option>
-              <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.id">{{ ji.nama }} (sortir {{ ji.hari_sortir }} hari, panen {{ ji.hari_panen }} hari)</option>
-            </select>
-          </div>
           <div>
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Tanggal Tebar</label>
             <input v-model="form.tanggal_tebar" type="date" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
           </div>
           <div>
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jumlah Bibit</label>
-            <input v-model="form.jumlah_bibit" type="number" min="1" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
+            <input v-model="form.jumlah_bibit" type="number" min="1" required placeholder="Contoh: 1000" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]" />
           </div>
           <div class="flex gap-3 pt-2">
             <button type="button" class="flex-1 rounded-lg border border-ink-100 dark:border-ink-500 dark:text-ink-300 py-2.5 text-[13.5px] font-semibold" @click="showTebarForm = false">Batal</button>
@@ -421,11 +431,17 @@ onMounted(() => {
             <input v-model="formKolam.nama_kolam" type="text" required placeholder="Contoh: Kolam A1" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white" />
           </div>
           <div>
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jenis <span class="text-ink-400 font-normal">(opsional)</span></label>
-            <select v-model="formKolam.jenis_id" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white">
-              <option value="">Belum ditentukan</option>
-              <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.id">{{ ji.nama }}</option>
-            </select>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jenis Ikan <span class="text-ink-400 font-normal">(opsional)</span></label>
+            <input
+              v-model="formKolam.nama_jenis"
+              type="text"
+              list="list-jenis-ikan-tambah"
+              placeholder="Ketik jenis ikan (contoh: Lele, Nila, Gurame, Bawal...)"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white placeholder:text-ink-300 dark:placeholder:text-ink-500"
+            />
+            <datalist id="list-jenis-ikan-tambah">
+              <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.nama" />
+            </datalist>
           </div>
           <div>
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Luas (m²) <span class="text-ink-400 font-normal">(opsional)</span></label>
@@ -449,11 +465,17 @@ onMounted(() => {
             <input v-model="formEditKolam.nama_kolam" type="text" required class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white" />
           </div>
           <div>
-            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jenis <span class="text-ink-400 font-normal">(opsional)</span></label>
-            <select v-model="formEditKolam.jenis_id" class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white">
-              <option value="">Belum ditentukan</option>
-              <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.id">{{ ji.nama }}</option>
-            </select>
+            <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Jenis Ikan <span class="text-ink-400 font-normal">(opsional)</span></label>
+            <input
+              v-model="formEditKolam.nama_jenis"
+              type="text"
+              list="list-jenis-ikan-edit"
+              placeholder="Ketik jenis ikan (contoh: Lele, Nila, Gurame, Bawal...)"
+              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 px-3 py-2.5 text-[13.5px] bg-white dark:bg-ink-900 dark:text-white placeholder:text-ink-300 dark:placeholder:text-ink-500"
+            />
+            <datalist id="list-jenis-ikan-edit">
+              <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.nama" />
+            </datalist>
           </div>
           <div>
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Luas (m²) <span class="text-ink-400 font-normal">(opsional)</span></label>
