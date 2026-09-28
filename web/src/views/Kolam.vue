@@ -1,69 +1,106 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import BaseSelect from '../components/BaseSelect.vue'
+
 const daftarKolam = ref([])
 const pencarian = ref('')
 const filterJenis = ref('')
 const filterStatus = ref('')
 const daftarJenisIkan = ref([])
+
 const halamanSekarang = ref(1)
 const perHalaman = ref(10)
+
 const showTebarForm = ref(false)
 const showTambahKolam = ref(false)
 const showEditKolam = ref(false)
 const kolamDipilih = ref(null)
 const kolamDiedit = ref(null)
+
+// Opsi dropdown
+const statusOptions = [
+  { value: '', label: 'Semua status' },
+  { value: 'aktif', label: 'Aktif' },
+  { value: 'kosong', label: 'Kosong' }
+]
+
+const jenisOptions = computed(() => [
+  { value: '', label: 'Semua jenis' },
+  ...daftarJenisIkan.value.map((ji) => ({ value: ji.id, label: ji.nama }))
+])
+
+const perHalamanOptions = [
+  { value: 10, label: '10' },
+  { value: 20, label: '20' },
+  { value: 50, label: '50' }
+]
+
 // Menu aksi
 const menuTerbuka = ref(null)
+
 // Modal hapus
 const showHapusKolamModal = ref(false)
 const kolamYangAkanDihapus = ref(null)
+
 // Modal sukses (muncul setelah tambah/edit kolam berhasil disimpan)
 const showSuksesModal = ref(false)
 const pesanSukses = ref('')
+
 function tutupSukses() {
   showSuksesModal.value = false
   pesanSukses.value = ''
 }
+
 function toggleMenu(id) {
   menuTerbuka.value = menuTerbuka.value === id ? null : id
 }
+
 function tutupMenu() {
   menuTerbuka.value = null
 }
+
 function handleClickLuar(e) {
   if (!e.target.closest('.menu-aksi-kolam')) {
     tutupMenu()
   }
 }
+
 onMounted(() => {
   document.addEventListener('click', handleClickLuar)
 })
+
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickLuar)
 })
+
 const form = ref({ tanggal_tebar: '', jumlah_bibit: '' })
 const formKolam = ref({ nama_kolam: '', luas_m2: '', nama_jenis: '' })
 const formEditKolam = ref({ nama_kolam: '', luas_m2: '', nama_jenis: '' })
+
 async function muatKolam() {
   const res = await fetch('/api/kolam')
   const json = await res.json()
   daftarKolam.value = json.data
 }
+
 async function muatJenisIkan() {
   const res = await fetch('/api/jenis-ikan')
   const json = await res.json()
   daftarJenisIkan.value = json.data
 }
+
 function bukaTebar(kolam) {
   tutupMenu()
   kolamDipilih.value = kolam
   form.value = { tanggal_tebar: new Date().toISOString().slice(0, 10), jumlah_bibit: '' }
   showTebarForm.value = true
 }
+
 function bukaTambahKolam() {
   formKolam.value = { nama_kolam: '', luas_m2: '', nama_jenis: '' }
   showTambahKolam.value = true
 }
+
 function bukaEditKolam(kolam) {
   tutupMenu()
   kolamDiedit.value = kolam
@@ -74,15 +111,18 @@ function bukaEditKolam(kolam) {
   }
   showEditKolam.value = true
 }
+
 function bukaHapusKolam(kolam) {
   tutupMenu()
   kolamYangAkanDihapus.value = kolam
   showHapusKolamModal.value = true
 }
+
 function tutupHapusKolam() {
   showHapusKolamModal.value = false
   kolamYangAkanDihapus.value = null
 }
+
 async function konfirmasiHapusKolam() {
   if (!kolamYangAkanDihapus.value) return
   const res = await fetch(`/api/kolam/${kolamYangAkanDihapus.value.id}`, { method: 'DELETE' })
@@ -94,6 +134,7 @@ async function konfirmasiHapusKolam() {
   tutupHapusKolam()
   await muatKolam()
 }
+
 async function simpanTebar() {
   const jenisIkanId = kolamDipilih.value?.jenis_ikan_id || kolamDipilih.value?.jenis_id
   if (!jenisIkanId) {
@@ -118,6 +159,7 @@ async function simpanTebar() {
   showTebarForm.value = false
   await muatKolam()
 }
+
 async function simpanKolam() {
   const payload = {
     nama_kolam: formKolam.value.nama_kolam,
@@ -136,10 +178,10 @@ async function simpanKolam() {
   }
   showTambahKolam.value = false
   await Promise.all([muatKolam(), muatJenisIkan()])
-  // Tampilkan modal sukses
   pesanSukses.value = 'Kolam berhasil ditambahkan.'
   showSuksesModal.value = true
 }
+
 async function simpanEditKolam() {
   const payload = {
     nama_kolam: formEditKolam.value.nama_kolam,
@@ -158,34 +200,40 @@ async function simpanEditKolam() {
   }
   showEditKolam.value = false
   await Promise.all([muatKolam(), muatJenisIkan()])
-  // Tampilkan modal sukses
   pesanSukses.value = 'Kolam berhasil diperbarui.'
   showSuksesModal.value = true
 }
+
 function rupiah(n) {
   return n ? Number(n).toLocaleString('id-ID') : '-'
 }
+
 function tambahHari(tanggal, hari) {
   const d = new Date(tanggal)
   d.setDate(d.getDate() + Number(hari))
   return d
 }
+
 function estimasiSortir(k) {
   if (!k.tanggal_tebar || !k.hari_sortir) return null
   return tambahHari(k.tanggal_tebar, k.hari_sortir)
 }
+
 function estimasiPanen(k) {
   if (!k.tanggal_tebar || !k.hari_panen) return null
   return tambahHari(k.tanggal_tebar, k.hari_panen)
 }
+
 function formatTanggalEstimasi(d) {
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
 }
+
 function sudahLewat(d) {
   const hariIni = new Date()
   hariIni.setHours(0, 0, 0, 0)
   return d < hariIni
 }
+
 const kolamTerfilter = computed(() => {
   const kata = pencarian.value.trim().toLowerCase()
   return daftarKolam.value.filter((k) => {
@@ -198,36 +246,43 @@ const kolamTerfilter = computed(() => {
       !filterJenis.value ||
       String(k.jenis_id) === String(filterJenis.value) ||
       String(k.jenis_ikan_id) === String(filterJenis.value) ||
-      namaJenis === filterJenis.value.toLowerCase()
+      namaJenis === String(filterJenis.value).toLowerCase()
     const cocokStatus = !filterStatus.value || k.status === filterStatus.value
     return cocokKata && cocokJenis && cocokStatus
   })
 })
+
 function resetFilter() {
   pencarian.value = ''
   filterJenis.value = ''
   filterStatus.value = ''
 }
+
 watch([pencarian, filterJenis, filterStatus, perHalaman], () => {
   halamanSekarang.value = 1
 })
+
 const totalData = computed(() => kolamTerfilter.value.length)
 const totalHalaman = computed(() => Math.ceil(totalData.value / perHalaman.value) || 1)
+
 const kolamHalaman = computed(() => {
   const start = (halamanSekarang.value - 1) * perHalaman.value
   const end = start + perHalaman.value
   return kolamTerfilter.value.slice(start, end)
 })
+
 const infoPagination = computed(() => {
   if (totalData.value === 0) return 'Tidak ada data'
   const start = (halamanSekarang.value - 1) * perHalaman.value + 1
   const end = Math.min(halamanSekarang.value * perHalaman.value, totalData.value)
   return `Menampilkan ${start}–${end} dari ${totalData.value} kolam`
 })
+
 function keHalaman(halaman) {
   if (halaman < 1 || halaman > totalHalaman.value) return
   halamanSekarang.value = halaman
 }
+
 const nomorHalaman = computed(() => {
   const total = totalHalaman.value
   const current = halamanSekarang.value
@@ -243,6 +298,7 @@ const nomorHalaman = computed(() => {
   }
   return pages
 })
+
 onMounted(() => {
   muatKolam()
   muatJenisIkan()
@@ -260,6 +316,7 @@ onMounted(() => {
         + Tambah Kolam
       </button>
     </div>
+
     <!-- Search & Filter -->
     <div class="flex flex-col sm:flex-row gap-3 mb-4">
       <div class="relative flex-1 min-w-0">
@@ -273,15 +330,15 @@ onMounted(() => {
           class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white pl-9 pr-3 py-2.5 text-[13.5px]"
         />
       </div>
-      <select v-model="filterJenis" class="w-full sm:w-56 rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]">
-        <option value="">Semua jenis</option>
-        <option v-for="ji in daftarJenisIkan" :key="ji.id" :value="ji.id">{{ ji.nama }}</option>
-      </select>
-      <select v-model="filterStatus" class="w-full sm:w-40 rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]">
-        <option value="">Semua status</option>
-        <option value="aktif">Aktif</option>
-        <option value="kosong">Kosong</option>
-      </select>
+
+      <div class="w-full sm:w-56">
+        <BaseSelect v-model="filterJenis" :options="jenisOptions" />
+      </div>
+
+      <div class="w-full sm:w-40">
+        <BaseSelect v-model="filterStatus" :options="statusOptions" />
+      </div>
+
       <button
         v-if="pencarian || filterJenis || filterStatus"
         type="button"
@@ -291,6 +348,7 @@ onMounted(() => {
         Reset
       </button>
     </div>
+
     <!-- Tabel -->
     <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden">
       <table class="w-full text-left text-[13.5px]">
@@ -366,20 +424,20 @@ onMounted(() => {
           </tr>
         </tbody>
       </table>
+
       <!-- PAGINATION -->
       <div v-if="totalData > 0" class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-ink-100 dark:border-ink-500">
         <div class="flex items-center gap-3 text-[13px] text-ink-500 dark:text-ink-300">
           <span>{{ infoPagination }}</span>
           <div class="flex items-center gap-1.5">
             <span>Tampilkan</span>
-            <select v-model="perHalaman" class="rounded border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-2 py-1 text-[13px]">
-              <option :value="10">10</option>
-              <option :value="20">20</option>
-              <option :value="50">50</option>
-            </select>
+            <div class="w-16">
+              <BaseSelect v-model="perHalaman" :options="perHalamanOptions" compact up />
+            </div>
             <span>data</span>
           </div>
         </div>
+
         <div class="flex items-center gap-1">
           <button type="button" class="px-2.5 py-1.5 rounded-lg text-[13px] border border-ink-100 dark:border-ink-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-ink-50 dark:hover:bg-ink-600" :disabled="halamanSekarang === 1" @click="keHalaman(halamanSekarang - 1)">←</button>
           <template v-for="(page, idx) in nomorHalaman" :key="idx">
@@ -390,12 +448,13 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
     <!-- Modal Tebar Bibit -->
     <div v-if="showTebarForm" class="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div class="absolute inset-0 bg-black/40" @click="showTebarForm = false" />
       <div class="relative bg-white dark:bg-ink-700 rounded-card shadow-card w-full max-w-md p-5">
         <h2 class="text-[16px] font-semibold dark:text-white mb-3">Tebar Bibit — {{ kolamDipilih?.nama_kolam }}</h2>
-        
+
         <!-- Info Jenis Ikan yang sudah ditentukan di kolam -->
         <div class="mb-4 p-3 rounded-lg bg-ink-50 dark:bg-ink-800 border border-ink-100 dark:border-ink-600 flex items-center justify-between text-[13px]">
           <span class="text-ink-500 dark:text-ink-300">Jenis Ikan:</span>
@@ -420,6 +479,7 @@ onMounted(() => {
         </form>
       </div>
     </div>
+
     <!-- Modal Tambah Kolam -->
     <div v-if="showTambahKolam" class="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div class="absolute inset-0 bg-black/40" @click="showTambahKolam = false" />
@@ -454,6 +514,7 @@ onMounted(() => {
         </form>
       </div>
     </div>
+
     <!-- Modal Edit Kolam -->
     <div v-if="showEditKolam" class="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div class="absolute inset-0 bg-black/40" @click="showEditKolam = false" />
@@ -488,6 +549,7 @@ onMounted(() => {
         </form>
       </div>
     </div>
+
     <!-- Modal Konfirmasi Hapus Kolam -->
     <Teleport to="body">
       <div v-if="showHapusKolamModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4">

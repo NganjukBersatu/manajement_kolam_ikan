@@ -1,5 +1,15 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import BaseSelect from '../components/BaseSelect.vue'
+
+// Ubah tanggal apa pun (Date / ISO string / 'YYYY-MM-DD') menjadi 'YYYY-MM-DD' (waktu lokal)
+function keTanggalInput(d) {
+  if (!d) return ''
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d
+  const x = new Date(d)
+  if (isNaN(x)) return ''
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+}
 
 const daftarKolam = ref([])
 const riwayatObat = ref([])
@@ -12,7 +22,7 @@ const showForm = ref(false)
 const kolamDipilih = ref(null)
 const jadwalDipilih = ref(null)
 const form = ref({
-  tanggal: new Date().toISOString().slice(0, 10),
+  tanggal: keTanggalInput(new Date()),
   nama_obat: '',
   dosis: '',
   catatan: '',
@@ -29,21 +39,34 @@ const modeJadwal = ref('tambah') // 'tambah' | 'edit'
 const jadwalForm = ref({
   id: null,
   kolam_id: '',
-  tanggal_jadwal: new Date().toISOString().slice(0, 10),
+  tanggal_jadwal: keTanggalInput(new Date()),
   catatan: ''
 })
 
 // Modal konfirmasi hapus jadwal (menggantikan window.confirm)
 const showHapusJadwalModal = ref(false)
-const jadwalYangAkanDihapus = ref(null) // menyimpan objek kolam (k) yang jadwalnya mau dihapus
+const jadwalYangAkanDihapus = ref(null)
 
 const filterStatus = ref('semua') // semua | terlambat | jatuh_tempo | mendatang | belum_ada
 
 const toast = ref({ show: false, message: '', type: 'success' })
 
-const hariIni = new Date().toISOString().slice(0, 10)
+const hariIni = keTanggalInput(new Date())
 
 const kolamAktif = computed(() => daftarKolam.value.filter(k => k.status === 'aktif'))
+
+// Opsi dropdown
+const opsiFilter = [
+  { value: 'semua', label: 'Semua' },
+  { value: 'terlambat', label: 'Terlambat' },
+  { value: 'jatuh_tempo', label: 'Jatuh tempo hari ini' },
+  { value: 'mendatang', label: 'Mendatang' },
+  { value: 'belum_ada', label: 'Belum ada jadwal' }
+]
+
+const kolamOptions = computed(() =>
+  kolamAktif.value.map(k => ({ value: k.id, label: k.nama_kolam }))
+)
 
 const daftarGabungan = computed(() => {
   return kolamAktif.value.map(k => {
@@ -59,8 +82,9 @@ const daftarGabungan = computed(() => {
 
     let statusJadwal = null
     if (jadwalTerdekat) {
-      if (jadwalTerdekat.tanggal_jadwal < hariIni) statusJadwal = 'terlambat'
-      else if (jadwalTerdekat.tanggal_jadwal === hariIni) statusJadwal = 'jatuh_tempo'
+      const tglJadwal = keTanggalInput(jadwalTerdekat.tanggal_jadwal)
+      if (tglJadwal < hariIni) statusJadwal = 'terlambat'
+      else if (tglJadwal === hariIni) statusJadwal = 'jatuh_tempo'
       else statusJadwal = 'mendatang'
     }
 
@@ -84,9 +108,10 @@ const daftarTampil = computed(() => {
 })
 
 function tambahHari(tanggalStr, jumlahHari) {
-  const d = new Date(tanggalStr + 'T00:00:00')
+  const d = new Date(keTanggalInput(tanggalStr) + 'T00:00:00')
+  if (isNaN(d)) return ''
   d.setDate(d.getDate() + Number(jumlahHari))
-  return d.toISOString().slice(0, 10)
+  return keTanggalInput(d)
 }
 
 function tampilkanToast(message, type = 'success') {
@@ -127,7 +152,7 @@ function bukaForm(k) {
   kolamDipilih.value = k
   jadwalDipilih.value = k.jadwal_terdekat
   form.value = {
-    tanggal: k.jadwal_terdekat ? k.jadwal_terdekat.tanggal_jadwal : new Date().toISOString().slice(0, 10),
+    tanggal: k.jadwal_terdekat ? keTanggalInput(k.jadwal_terdekat.tanggal_jadwal) : keTanggalInput(new Date()),
     nama_obat: '',
     dosis: '',
     catatan: '',
@@ -210,7 +235,7 @@ function bukaTambahJadwal() {
   jadwalForm.value = {
     id: null,
     kolam_id: kolamAktif.value[0]?.id || '',
-    tanggal_jadwal: new Date().toISOString().slice(0, 10),
+    tanggal_jadwal: keTanggalInput(new Date()),
     catatan: ''
   }
   showJadwalForm.value = true
@@ -222,13 +247,18 @@ function bukaEditJadwal(k) {
   jadwalForm.value = {
     id: k.jadwal_terdekat.id,
     kolam_id: k.id,
-    tanggal_jadwal: k.jadwal_terdekat.tanggal_jadwal,
+    tanggal_jadwal: keTanggalInput(k.jadwal_terdekat.tanggal_jadwal),
     catatan: k.jadwal_terdekat.catatan || ''
   }
   showJadwalForm.value = true
 }
 
 async function simpanJadwal() {
+  if (!jadwalForm.value.kolam_id) {
+    tampilkanToast('Pilih kolam terlebih dahulu', 'error')
+    return
+  }
+
   isSaving.value = true
   try {
     const kolam = daftarKolam.value.find(k => k.id == jadwalForm.value.kolam_id)
@@ -322,39 +352,8 @@ function labelStatusJadwal(status) {
   return 'Belum ada jadwal'
 }
 
-const showFilter = ref(false)
-
-const opsiFilter = [
-  { value: 'semua', label: 'Semua' },
-  { value: 'terlambat', label: 'Terlambat' },
-  { value: 'jatuh_tempo', label: 'Jatuh tempo hari ini' },
-  { value: 'mendatang', label: 'Mendatang' },
-  { value: 'belum_ada', label: 'Belum ada jadwal' }
-]
-
-const labelFilter = computed(() => {
-  return opsiFilter.find(o => o.value === filterStatus.value)?.label || 'Semua'
-})
-
-function pilihFilter(value) {
-  filterStatus.value = value
-  showFilter.value = false
-}
-
-// Tutup dropdown kalau klik di luar
-function handleClickOutside(e) {
-  if (!e.target.closest('.relative')) {
-    showFilter.value = false
-  }
-}
-
 onMounted(() => {
   muatSemua()
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -373,38 +372,8 @@ onUnmounted(() => {
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-2">
         <label class="text-[13px] text-ink-500 dark:text-ink-300">Filter:</label>
-
-        <!-- Custom Filter Dropdown -->
-        <div class="relative">
-          <button
-            type="button"
-            class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ink-100 dark:border-ink-500 bg-white dark:bg-ink-800 text-[13px] font-medium dark:text-ink-100 hover:bg-ink-50 dark:hover:bg-ink-700 transition"
-            @click="showFilter = !showFilter"
-          >
-            <span>{{ labelFilter }}</span>
-            <svg class="w-4 h-4 text-ink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-
-          <!-- Dropdown Menu -->
-          <div
-            v-if="showFilter"
-            class="absolute left-0 mt-1 w-52 rounded-lg border border-ink-100 dark:border-ink-500 bg-white dark:bg-ink-800 shadow-lg z-20 overflow-hidden"
-          >
-            <button
-              v-for="opt in opsiFilter"
-              :key="opt.value"
-              type="button"
-              class="w-full text-left px-3 py-2.5 text-[13px] transition"
-              :class="filterStatus === opt.value
-                ? 'bg-brand-500 text-white font-semibold'
-                : 'dark:text-ink-100 hover:bg-ink-100 dark:hover:bg-ink-700'"
-              @click="pilihFilter(opt.value)"
-            >
-              {{ opt.label }}
-            </button>
-          </div>
+        <div class="w-52">
+          <BaseSelect v-model="filterStatus" :options="opsiFilter" />
         </div>
       </div>
 
@@ -590,16 +559,12 @@ onUnmounted(() => {
         <form class="space-y-3" @submit.prevent="simpanJadwal">
           <div>
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Kolam</label>
-            <select
+            <BaseSelect
               v-model="jadwalForm.kolam_id"
-              required
-              class="w-full rounded-lg border border-ink-100 dark:border-ink-500 dark:bg-ink-900 dark:text-white px-3 py-2.5 text-[13.5px]"
+              :options="kolamOptions"
+              placeholder="Pilih kolam"
               :disabled="modeJadwal === 'edit'"
-            >
-              <option v-for="k in kolamAktif" :key="k.id" :value="k.id">
-                {{ k.nama_kolam }}
-              </option>
-            </select>
+            />
           </div>
           <div>
             <label class="block text-[13px] font-medium dark:text-ink-300 mb-1">Tanggal Jadwal</label>
