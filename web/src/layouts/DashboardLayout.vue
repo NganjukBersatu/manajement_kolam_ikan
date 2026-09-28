@@ -5,6 +5,7 @@ import NavIcon from '../components/NavIcon.vue'
 import Header from '../components/Header.vue'
 import { logout } from '../utils/auth.js'
 import { useBusinessSettings } from '../composables/useBusinessSettings.js'
+import { useAppBranding } from '../composables/useAppBranding.js'
 
 const route = useRoute()
 const collapsed = ref(false)
@@ -13,35 +14,48 @@ const jadwalTerbuka = ref(route.path.startsWith('/jadwal'))
 const laporanTerbuka = ref(route.path.startsWith('/laporan'))
 
 const { settings: usaha } = useBusinessSettings()
+const { branding, label } = useAppBranding()
 
+// Nama usaha di bawah nama aplikasi (diatur di Pengaturan > Usaha)
 const namaUsahaTampil = computed(() => {
   const nama = usaha.value?.namaUsaha?.trim()
   if (!nama || nama === 'Usaha Saya') return null
   return nama
 })
 
+// Logo dari Pengaturan > Usaha. Kalau kosong, pakai ikon bawaan.
+const logoUsaha = computed(() => usaha.value?.logo || '')
+const logoGagal = ref(false)
+watch(logoUsaha, () => (logoGagal.value = false))
+
 const showLogoutModal = ref(false)
 
+// `key` harus sama dengan key di useAppBranding.js supaya namanya bisa diubah dari Pengaturan
 const menu = [
-  { to: '/', label: 'Dashboard', icon: 'home' },
-  { to: '/transaksi', label: 'Transaksi', icon: 'wallet' },
-  { to: '/kolam', label: 'Daftar Kolam', icon: 'fish' },
-  { to: '/jenis-ikan', label: 'Jenis Ikan', icon: 'list' },
+  { to: '/', key: 'dashboard', icon: 'home' },
+  { to: '/transaksi', key: 'transaksi', icon: 'wallet' },
+  { to: '/kolam', key: 'kolam', icon: 'fish' },
+  { to: '/jenis-ikan', key: 'jenis-ikan', icon: 'list' }
 ]
 
 const jadwalSub = [
-  { to: '/jadwal/pemberian-makan', label: 'Pemberian Makan', icon: 'utensils' },
-  { to: '/jadwal/pemberian-obat', label: 'Pemberian Obat', icon: 'pill' },
-  { to: '/jadwal/sortir', label: 'Sortir', icon: 'scissors' },
-  { to: '/jadwal/panen', label: 'Panen', icon: 'fish' },
-  { to: '/jadwal/ganti-air', label: 'Ganti Air', icon: 'droplet' }
+  { to: '/jadwal/pemberian-makan', key: 'pemberian-makan', icon: 'utensils' },
+  { to: '/jadwal/pemberian-obat', key: 'pemberian-obat', icon: 'pill' },
+  { to: '/jadwal/sortir', key: 'sortir', icon: 'scissors' },
+  { to: '/jadwal/panen', key: 'panen', icon: 'fish' },
+  { to: '/jadwal/ganti-air', key: 'ganti-air', icon: 'droplet' }
+]
+
+const menuLain = [
+  { to: '/pengeluaran', key: 'pengeluaran', icon: 'file' },
+  { to: '/stok-pakan', key: 'stok-pakan', icon: 'package' }
 ]
 
 const laporanSub = [
-  { to: '/laporan', label: 'Ringkasan', icon: 'chart' },
-  { to: '/laporan/penjualan', label: 'Penjualan', icon: 'wallet' },
-  { to: '/laporan/pengeluaran', label: 'Pengeluaran', icon: 'file' },
-  { to: '/laporan/panen', label: 'Panen', icon: 'fish' }
+  { to: '/laporan', key: 'laporan-ringkasan', icon: 'chart' },
+  { to: '/laporan/penjualan', key: 'laporan-penjualan', icon: 'wallet' },
+  { to: '/laporan/pengeluaran', key: 'laporan-pengeluaran', icon: 'file' },
+  { to: '/laporan/panen', key: 'laporan-panen', icon: 'fish' }
 ]
 
 // Tutup drawer mobile saat pindah halaman
@@ -122,15 +136,25 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
         mobileOpen ? '!flex fixed inset-y-0 left-0 w-64 shadow-2xl' : ''
       ]"
     >
-      <!-- Logo + Nama Usaha -->
+      <!-- Logo + Nama aplikasi + Nama usaha -->
       <div class="min-h-16 flex items-center gap-2.5 px-4 border-b border-white/10 overflow-hidden py-3">
-        <div class="w-8 h-8 rounded-lg bg-gold-500 flex items-center justify-center text-brand-900 shrink-0">
-          <NavIcon name="kolam" :size="18" />
+        <div class="w-9 h-9 rounded-lg bg-gold-500 flex items-center justify-center text-brand-900 shrink-0 overflow-hidden">
+          <img
+            v-if="logoUsaha && !logoGagal"
+            :src="logoUsaha"
+            :alt="`Logo ${namaUsahaTampil || branding.namaAplikasi}`"
+            class="w-full h-full object-cover"
+            @error="logoGagal = true"
+          />
+          <NavIcon v-else name="kolam" :size="18" />
         </div>
 
         <div v-show="!collapsed || mobileOpen" class="min-w-0 flex-1">
-          <p class="font-semibold text-[13.5px] leading-tight whitespace-nowrap truncate">
-            Manajement Kolam
+          <p
+            class="font-semibold text-[13.5px] leading-tight whitespace-nowrap truncate"
+            :title="branding.namaAplikasi"
+          >
+            {{ branding.namaAplikasi }}
           </p>
           <p
             v-if="namaUsahaTampil"
@@ -174,10 +198,10 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
           :class="collapsed && !mobileOpen ? 'justify-center' : ''"
           exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
-          :title="collapsed && !mobileOpen ? m.label : ''"
+          :title="collapsed && !mobileOpen ? label(m.key) : ''"
         >
           <NavIcon :name="m.icon" :size="16" class="shrink-0" />
-          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">{{ m.label }}</span>
+          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">{{ label(m.key) }}</span>
         </router-link>
 
         <!-- Jadwal -->
@@ -187,11 +211,11 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
             :class="collapsed && !mobileOpen ? 'justify-center' : 'justify-between'"
             @click="bukaJadwal"
-            :title="collapsed && !mobileOpen ? 'Jadwal' : ''"
+            :title="collapsed && !mobileOpen ? label('jadwal') : ''"
           >
             <span class="flex items-center gap-3">
               <NavIcon name="calendar" :size="16" class="shrink-0" />
-              <span v-show="!collapsed || mobileOpen">Jadwal</span>
+              <span v-show="!collapsed || mobileOpen">{{ label('jadwal') }}</span>
             </span>
             <span v-show="!collapsed || mobileOpen" :class="{ 'rotate-180': jadwalTerbuka }" class="transition-transform">▾</span>
           </button>
@@ -205,31 +229,22 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
               exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
             >
               <NavIcon :name="s.icon" :size="14" />
-              {{ s.label }}
+              {{ label(s.key) }}
             </router-link>
           </div>
         </div>
 
         <router-link
-          to="/pengeluaran"
+          v-for="m in menuLain"
+          :key="m.to"
+          :to="m.to"
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
           :class="collapsed && !mobileOpen ? 'justify-center' : ''"
           exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
-          :title="collapsed && !mobileOpen ? 'Pengeluaran' : ''"
+          :title="collapsed && !mobileOpen ? label(m.key) : ''"
         >
-          <NavIcon name="file" :size="16" class="shrink-0" />
-          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">Pengeluaran</span>
-        </router-link>
-
-        <router-link
-          to="/stok-pakan"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
-          :class="collapsed && !mobileOpen ? 'justify-center' : ''"
-          exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
-          :title="collapsed && !mobileOpen ? 'Stok Pakan' : ''"
-        >
-          <NavIcon name="package" :size="16" class="shrink-0" />
-          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">Stok Pakan</span>
+          <NavIcon :name="m.icon" :size="16" class="shrink-0" />
+          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">{{ label(m.key) }}</span>
         </router-link>
 
         <!-- Laporan -->
@@ -239,11 +254,11 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
             :class="collapsed && !mobileOpen ? 'justify-center' : 'justify-between'"
             @click="bukaLaporan"
-            :title="collapsed && !mobileOpen ? 'Laporan' : ''"
+            :title="collapsed && !mobileOpen ? label('laporan') : ''"
           >
             <span class="flex items-center gap-3">
               <NavIcon name="chart" :size="16" class="shrink-0" />
-              <span v-show="!collapsed || mobileOpen">Laporan</span>
+              <span v-show="!collapsed || mobileOpen">{{ label('laporan') }}</span>
             </span>
             <span v-show="!collapsed || mobileOpen" :class="{ 'rotate-180': laporanTerbuka }" class="transition-transform">▾</span>
           </button>
@@ -257,7 +272,7 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
               exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
             >
               <NavIcon :name="s.icon" :size="14" />
-              {{ s.label }}
+              {{ label(s.key) }}
             </router-link>
           </div>
         </div>
@@ -267,10 +282,10 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
           class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition"
           :class="collapsed && !mobileOpen ? 'justify-center' : ''"
           exact-active-class="bg-white text-brand-700 font-semibold hover:bg-white"
-          :title="collapsed && !mobileOpen ? 'Pengaturan' : ''"
+          :title="collapsed && !mobileOpen ? label('pengaturan') : ''"
         >
           <NavIcon name="gear" :size="16" class="shrink-0" />
-          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">Pengaturan</span>
+          <span v-show="!collapsed || mobileOpen" class="whitespace-nowrap">{{ label('pengaturan') }}</span>
         </router-link>
       </nav>
 
