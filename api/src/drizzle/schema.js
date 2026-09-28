@@ -75,6 +75,7 @@ export const sortir = pgTable("sortir", {
 	tanggal: date().notNull(),
 	jumlahMati: integer("jumlah_mati").default(0).notNull(),
 	catatan: text(),
+	sortir_ke: integer("sortir_ke"),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
 	foreignKey({
