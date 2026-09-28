@@ -32,6 +32,11 @@ const jadwalGabungan = ref([])
 const pakanSesi = ref([])
 const perluPerhatian = ref([])
 
+// [BARU] gaya kartu bersama, tab grafik, dan pesan galat
+const card = 'bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5'
+const grafikAktif = ref('penjualan')
+const galat = ref('')
+
 const tampilkanSemuaPerhatian = ref(false)
 const BATAS_TAMPIL_PERHATIAN = 5
 
@@ -233,6 +238,11 @@ const chartKeuntungan = computed(() => {
   }
 })
 
+// [BARU] data grafik sesuai tab yang dipilih
+const grafikData = computed(() =>
+  grafikAktif.value === 'penjualan' ? chartPenjualan.value : chartKeuntungan.value
+)
+
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -266,7 +276,8 @@ const chartOptions = {
   }
 }
 
-async function muat() {
+// [DIUBAH] nama fungsi lama `muat` menjadi `muatData`, isinya tidak berubah
+async function muatData() {
   loading.value = true
 
   const resDashboard = await fetch('/api/dashboard')
@@ -390,16 +401,37 @@ async function muat() {
   loading.value = false
 }
 
+// [BARU] pembungkus supaya kalau ada request gagal, halaman tidak blank
+async function muat() {
+  loading.value = true
+  galat.value = ''
+  try {
+    await muatData()
+  } catch (err) {
+    console.error('Gagal memuat dashboard:', err)
+    galat.value = 'Data dashboard gagal dimuat.'
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(muat)
 </script>
 
 <template>
   <div v-if="loading" class="text-[13.5px] text-ink-500 py-10 text-center">Memuat...</div>
 
+  <div v-else-if="!data || !data.statistik" class="text-center py-10">
+    <p class="text-[13.5px] text-ink-500 dark:text-ink-300">{{ galat || 'Data dashboard belum tersedia.' }}</p>
+    <button type="button" class="mt-3 rounded-lg bg-brand-500 text-white px-4 py-2 text-[13.5px] font-semibold hover:bg-brand-600" @click="muat">
+      Coba lagi
+    </button>
+  </div>
+
   <div v-else class="space-y-4 sm:space-y-5">
     <!-- ===================== HARI INI ===================== -->
-    <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+    <section :class="card">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
           <h2 class="text-[15px] font-semibold dark:text-white">Hari ini</h2>
           <p class="text-[12.5px] text-ink-500 dark:text-ink-300">
@@ -408,67 +440,73 @@ onMounted(muat)
         </div>
         <span
           v-if="totalPerluPerhatian > 0"
-          class="self-start text-[12px] font-semibold px-3 py-1 rounded-full"
+          class="text-[12px] font-semibold px-3 py-1 rounded-full"
           :class="totalTerlambat > 0 ? 'bg-danger-100 text-danger-600' : 'bg-warn-100 text-warn-600'"
         >
           {{ totalPerluPerhatian }} perlu perhatian
         </span>
       </div>
 
-      <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
-        <div
-          v-for="sesi in pakanSesi"
-          :key="sesi.nama"
-          class="rounded-lg border p-2.5 sm:p-3"
-          :class="sesi.terlambat > 0
-            ? statusStyle.terlambat.chip
-            : sesi.belum > 0
-              ? statusStyle.belum.chip
-              : statusStyle.sudah.chip"
-        >
-          <p class="text-[11px] sm:text-[12px] opacity-80">{{ sesi.nama }}</p>
-          <p class="text-[13px] sm:text-[14px] font-semibold mt-0.5">
-            <template v-if="sesi.terlambat > 0">{{ sesi.terlambat }} terlambat</template>
-            <template v-else-if="sesi.belum > 0">{{ sesi.belum }} belum</template>
-            <template v-else>Selesai</template>
+      <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] gap-4">
+        <!-- Ringkasan sesi pakan -->
+        <div class="grid grid-cols-3 gap-2 sm:gap-3 self-start">
+          <div
+            v-for="sesi in pakanSesi"
+            :key="sesi.nama"
+            class="rounded-lg border p-2.5 sm:p-3"
+            :class="sesi.terlambat > 0
+              ? statusStyle.terlambat.chip
+              : sesi.belum > 0
+                ? statusStyle.belum.chip
+                : statusStyle.sudah.chip"
+          >
+            <p class="text-[11px] sm:text-[12px] opacity-80">Pakan {{ sesi.nama.toLowerCase() }}</p>
+            <p class="text-[13px] font-semibold mt-0.5">
+              <template v-if="sesi.terlambat > 0">{{ sesi.terlambat }} terlambat</template>
+              <template v-else-if="sesi.belum > 0">{{ sesi.belum }} belum</template>
+              <template v-else>Selesai</template>
+            </p>
+          </div>
+        </div>
+
+        <!-- Daftar perlu perhatian -->
+        <div class="min-w-0">
+          <p v-if="totalPerluPerhatian === 0" class="text-[13.5px] text-ink-500 dark:text-ink-300 py-1">
+            Semua kolam sudah ditangani hari ini. Tidak ada yang tertunda.
           </p>
+
+          <template v-else>
+            <ul class="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+              <li
+                v-for="item in perluPerhatianTampil"
+                :key="item.id + item.alasan"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-ink-50 dark:bg-ink-900/40 min-w-0"
+              >
+                <span class="w-2 h-2 rounded-full shrink-0" :class="statusStyle[item.status].dot"></span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-[13.5px] font-medium dark:text-white truncate">{{ item.nama }}</p>
+                  <p class="text-[12.5px] text-ink-500 dark:text-ink-300 truncate">{{ item.alasan }}</p>
+                </div>
+              </li>
+            </ul>
+
+            <button
+              v-if="totalPerluPerhatian > BATAS_TAMPIL_PERHATIAN"
+              type="button"
+              @click="toggleTampilanPerhatian"
+              class="mt-2 text-[13px] font-medium text-brand-600 dark:text-brand-400 hover:underline py-1"
+            >
+              {{ tampilkanSemuaPerhatian ? 'Tampilkan lebih sedikit' : `Lihat semua (${totalPerluPerhatian})` }}
+            </button>
+          </template>
         </div>
       </div>
-
-      <div v-if="totalPerluPerhatian === 0" class="text-[13.5px] text-ink-500 dark:text-ink-300 py-1">
-        Semua kolam sudah ditangani hari ini. Tidak ada yang tertunda.
-      </div>
-
-      <template v-else>
-        <ul class="flex flex-col gap-1.5">
-          <li
-            v-for="item in perluPerhatianTampil"
-            :key="item.id + item.alasan"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-ink-50 dark:bg-ink-900/40"
-          >
-            <span class="w-2 h-2 rounded-full shrink-0" :class="statusStyle[item.status].dot"></span>
-            <div class="min-w-0 flex-1">
-              <p class="text-[13.5px] font-medium dark:text-white truncate">{{ item.nama }}</p>
-              <p class="text-[12.5px] text-ink-500 dark:text-ink-300 truncate">{{ item.alasan }}</p>
-            </div>
-          </li>
-        </ul>
-
-        <button
-          v-if="totalPerluPerhatian > BATAS_TAMPIL_PERHATIAN"
-          type="button"
-          @click="toggleTampilanPerhatian"
-          class="mt-3 w-full text-center text-[13px] font-medium text-brand-600 dark:text-brand-400 hover:underline py-1.5 transition"
-        >
-          {{ tampilkanSemuaPerhatian ? 'Tampilkan lebih sedikit ▲' : `Lihat semua (${totalPerluPerhatian}) ▼` }}
-        </button>
-      </template>
-    </div>
+    </section>
 
     <!-- ===================== KARTU STATISTIK ===================== -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
       <!-- Total ikan hidup -->
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
+      <div :class="card">
         <div class="flex items-start justify-between">
           <div class="w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-500/15 flex items-center justify-center">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" class="text-brand-600 dark:text-brand-400">
@@ -486,7 +524,7 @@ onMounted(muat)
           </span>
         </div>
         <p class="text-[13px] text-ink-500 dark:text-ink-300 mt-3">Total ikan hidup</p>
-        <p class="text-[22px] sm:text-[26px] leading-tight font-bold mt-0.5 dark:text-white">
+        <p class="text-[22px] lg:text-[24px] leading-tight font-bold mt-0.5 dark:text-white">
           {{ data.statistik.totalIkanHidup.toLocaleString('id-ID') }}
           <span class="text-sm font-medium text-ink-500 dark:text-ink-300">ekor</span>
         </p>
@@ -502,7 +540,7 @@ onMounted(muat)
       </div>
 
       <!-- Penjualan -->
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
+      <div :class="card">
         <div class="flex items-start justify-between">
           <div class="w-10 h-10 rounded-lg bg-gold-100 dark:bg-gold-500/15 flex items-center justify-center">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" class="text-gold-600 dark:text-gold-400">
@@ -519,7 +557,7 @@ onMounted(muat)
           </span>
         </div>
         <p class="text-[13px] text-ink-500 dark:text-ink-300 mt-3">Penjualan bulan ini</p>
-        <p class="text-[22px] sm:text-[26px] leading-tight font-bold mt-0.5 text-gold-600 dark:text-gold-400">
+        <p class="text-[22px] lg:text-[24px] leading-tight font-bold mt-0.5 text-gold-600 dark:text-gold-400 break-words">
           {{ rupiah(data.statistik.penjualanBulanIni) }}
         </p>
         <p class="text-[12px] text-ink-500 dark:text-ink-300 mt-4">
@@ -528,7 +566,7 @@ onMounted(muat)
       </div>
 
       <!-- Keuntungan -->
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
+      <div :class="[card, 'sm:col-span-2 lg:col-span-1']">
         <div class="flex items-start justify-between">
           <div
             class="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -552,218 +590,186 @@ onMounted(muat)
         </div>
         <p class="text-[13px] text-ink-500 dark:text-ink-300 mt-3">Keuntungan bulan ini</p>
         <p
-          class="text-[22px] sm:text-[26px] leading-tight font-bold mt-0.5"
+          class="text-[22px] lg:text-[24px] leading-tight font-bold mt-0.5 break-words"
           :class="data.statistik.keuntunganBulanIni >= 0 ? 'text-ok-600 dark:text-ok-500' : 'text-danger-600 dark:text-danger-500'"
         >
           {{ rupiah(data.statistik.keuntunganBulanIni) }}
         </p>
         <p class="text-[12px] text-ink-500 dark:text-ink-300 mt-4">
-          Pemasukan {{ rupiah(data.statistik.penjualanBulanIni) }} · Pengeluaran {{ rupiah(data.statistik.pengeluaranBulanIni) }}
+          Masuk {{ rupiah(data.statistik.penjualanBulanIni) }} · Keluar {{ rupiah(data.statistik.pengeluaranBulanIni) }}
         </p>
       </div>
     </div>
 
-    <!-- ===================== IKAN PER KOLAM (scroll horizontal di mobile) ===================== -->
-    <div
-      v-if="ikanPerKolam.length > 0"
-      class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5"
-    >
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
-        <h2 class="text-[15px] font-semibold dark:text-white">Ikan per kolam</h2>
-        <span class="text-[12px] text-ink-500 dark:text-ink-300">Diurutkan dari survival rate terendah</span>
-      </div>
-
-      <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-        <div class="min-w-[640px]">
-          <div class="grid grid-cols-[1.1fr_0.9fr_0.8fr_1fr_0.9fr_1.3fr] gap-3 text-[12.5px] sm:text-[13px] text-ink-500 dark:text-ink-300 font-medium pb-2 border-b border-ink-100 dark:border-ink-500">
-            <div>Kolam</div>
-            <div>Jenis Ikan</div>
-            <div class="text-right">Bibit Awal</div>
-            <div class="text-right">Hidup Sekarang</div>
-            <div class="text-right">Tanggal Tebar</div>
-            <div>Survival Rate</div>
-          </div>
-
-          <div
-            v-for="k in ikanPerKolamUrut"
-            :key="k.kolamId"
-            class="grid grid-cols-[1.1fr_0.9fr_0.8fr_1fr_0.9fr_1.3fr] gap-3 text-[13px] sm:text-[13.5px] py-2.5 border-b border-ink-100 dark:border-ink-500 last:border-0 items-center"
-          >
-            <div class="font-medium dark:text-white truncate">{{ k.namaKolam }}</div>
-            <div class="dark:text-ink-100 truncate">{{ k.namaIkan }}</div>
-            <div class="dark:text-ink-100 text-right tabular-nums">{{ k.jumlahBibit.toLocaleString('id-ID') }}</div>
-            <div class="dark:text-ink-100 text-right tabular-nums">{{ k.jumlahSaatIni.toLocaleString('id-ID') }}</div>
-            <div class="text-right">
-              <p class="dark:text-ink-100 tabular-nums">{{ tanggalTebar(k) }}</p>
-              <p v-if="umurKolamLabel(k)" class="text-[11px] text-ink-500 dark:text-ink-300">{{ umurKolamLabel(k) }}</p>
-            </div>
+    <!-- ===================== KONTEN UTAMA (2 kolom di layar lebar) ===================== -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-5 xl:items-start">
+      <!-- Kolom kiri: grafik + ikan per kolam -->
+      <div class="xl:col-span-2 space-y-4 sm:space-y-5 min-w-0">
+        <!-- Grafik dengan tab -->
+        <section :class="card">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div>
-              <div class="flex items-center gap-2">
-                <div class="h-1.5 flex-1 rounded-full bg-ink-100 dark:bg-ink-900 overflow-hidden">
-                  <div
-                    class="h-full rounded-full"
-                    :class="barSurvival(k.survivalRate)"
-                    :style="{ width: Math.min(k.survivalRate, 100) + '%' }"
-                  ></div>
-                </div>
-                <span class="font-semibold w-11 text-right tabular-nums" :class="warnaSurvival(k.survivalRate)">
-                  {{ k.survivalRate }}%
-                </span>
-              </div>
+              <h2 class="text-[15px] font-semibold dark:text-white">
+                {{ grafikAktif === 'penjualan' ? 'Penjualan per bulan' : 'Keuntungan per bulan' }}
+              </h2>
+              <p class="text-[12.5px] text-ink-500 dark:text-ink-300">6 bulan terakhir</p>
+            </div>
+            <div class="inline-flex rounded-lg border border-ink-100 dark:border-ink-500 p-0.5" role="tablist">
+              <button
+                v-for="t in [{ k: 'penjualan', l: 'Penjualan' }, { k: 'keuntungan', l: 'Keuntungan' }]"
+                :key="t.k"
+                type="button"
+                role="tab"
+                :aria-selected="grafikAktif === t.k"
+                class="px-3 py-1 rounded-md text-[12.5px] font-medium transition"
+                :class="grafikAktif === t.k
+                  ? 'bg-brand-500 text-white'
+                  : 'text-ink-500 dark:text-ink-300 hover:text-ink-700 dark:hover:text-white'"
+                @click="grafikAktif = t.k"
+              >
+                {{ t.l }}
+              </button>
             </div>
           </div>
-
-          <div class="grid grid-cols-[1.1fr_0.9fr_0.8fr_1fr_0.9fr_1.3fr] gap-3 text-[13px] sm:text-[13.5px] pt-3 mt-1 border-t-2 border-ink-200 dark:border-ink-500 items-center">
-            <div class="font-semibold dark:text-white">Total</div>
-            <div class="text-[12px] text-ink-500 dark:text-ink-300">{{ ikanPerKolam.length }} kolam</div>
-            <div class="font-semibold dark:text-white text-right tabular-nums">
-              {{ totalIkanPerKolam.totalBibit.toLocaleString('id-ID') }}
-            </div>
-            <div class="font-semibold dark:text-white text-right tabular-nums">
-              {{ totalIkanPerKolam.totalSekarang.toLocaleString('id-ID') }}
-            </div>
-            <div></div>
-            <div class="font-semibold w-11 text-right tabular-nums" :class="warnaSurvival(totalIkanPerKolam.rataSurvival)">
-              {{ totalIkanPerKolam.rataSurvival }}%
-            </div>
+          <div class="h-56 sm:h-64">
+            <Line :data="grafikData" :options="chartOptions" />
           </div>
-        </div>
-      </div>
-    </div>
+        </section>
 
-    <!-- ===================== GRAFIK ===================== -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
-        <div class="flex items-center justify-between mb-1 gap-2">
-          <h2 class="text-[15px] font-semibold dark:text-white">Penjualan per Bulan</h2>
-          <span class="text-[11px] sm:text-[12px] text-ink-500 dark:text-ink-300 shrink-0">6 bulan terakhir</span>
-        </div>
-        <p class="text-[13px] text-ink-500 dark:text-ink-300 mb-3">
-          Bulan ini
-          <span class="font-semibold text-gold-600 dark:text-gold-400">{{ rupiah(data.statistik.penjualanBulanIni) }}</span>
-        </p>
-        <div class="h-48 sm:h-56">
-          <Line :data="chartPenjualan" :options="chartOptions" />
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
-        <div class="flex items-center justify-between mb-1 gap-2">
-          <h2 class="text-[15px] font-semibold dark:text-white">Keuntungan per Bulan</h2>
-          <span class="text-[11px] sm:text-[12px] text-ink-500 dark:text-ink-300 shrink-0">6 bulan terakhir</span>
-        </div>
-        <p class="text-[13px] text-ink-500 dark:text-ink-300 mb-3">
-          Bulan ini
-          <span
-            class="font-semibold"
-            :class="data.statistik.keuntunganBulanIni >= 0 ? 'text-ok-600 dark:text-ok-500' : 'text-danger-600 dark:text-danger-500'"
-          >
-            {{ rupiah(data.statistik.keuntunganBulanIni) }}
-          </span>
-        </p>
-        <div class="h-48 sm:h-56">
-          <Line :data="chartKeuntungan" :options="chartOptions" />
-        </div>
-      </div>
-    </div>
-
-    <!-- ===================== RINCIAN PENGELUARAN ===================== -->
-    <div
-      v-if="pengeluaranBreakdown.length > 0"
-      class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5"
-    >
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
-        <h2 class="text-[15px] font-semibold dark:text-white">Rincian pengeluaran bulan ini</h2>
-        <span class="text-[12px] text-ink-500 dark:text-ink-300">Total {{ rupiah(totalPengeluaranBreakdown) }}</span>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-5 sm:gap-6 items-center">
-        <div class="relative h-44 sm:h-52 mx-auto w-full max-w-[200px] sm:max-w-[220px]">
-          <Doughnut :data="chartPengeluaranDonut" :options="donutOptions" />
-          <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <p class="text-[11px] text-ink-500 dark:text-ink-300">Total biaya</p>
-            <p class="text-[14px] sm:text-[15px] font-bold dark:text-white">{{ rupiah(totalPengeluaranBreakdown) }}</p>
+        <!-- Ikan per kolam -->
+        <section v-if="ikanPerKolam.length > 0" :class="card">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3">
+            <h2 class="text-[15px] font-semibold dark:text-white">Ikan per kolam</h2>
+            <span class="text-[12px] text-ink-500 dark:text-ink-300">Diurutkan dari survival rate terendah</span>
           </div>
-        </div>
 
-        <div class="flex flex-col gap-2.5 sm:gap-3">
-          <div v-for="r in pengeluaranBreakdown" :key="r.kategori" class="flex items-center gap-2.5 sm:gap-3">
-            <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="WARNA_KATEGORI[r.kategori] || 'bg-ink-400'"></span>
-            <span class="text-[13px] sm:text-[13.5px] dark:text-white flex-1 min-w-0 truncate">{{ r.label }}</span>
-            <span class="text-[13px] sm:text-[13.5px] font-semibold dark:text-white shrink-0">{{ rupiah(r.total) }}</span>
-            <span class="text-[12px] text-ink-500 dark:text-ink-300 w-10 text-right shrink-0">
-              {{ Math.round((r.total / totalPengeluaranBreakdown) * 100) }}%
-            </span>
-          </div>
-        </div>
+          <table class="w-full text-[13px] sm:text-[13.5px]">
+            <thead>
+              <tr class="text-left text-[12.5px] text-ink-500 dark:text-ink-300 border-b border-ink-100 dark:border-ink-500">
+                <th class="py-2 pr-3 font-medium">Kolam</th>
+                <th class="py-2 pr-3 font-medium hidden sm:table-cell">Jenis ikan</th>
+                <th class="py-2 pr-3 font-medium text-right hidden md:table-cell">Bibit awal</th>
+                <th class="py-2 pr-3 font-medium text-right">Hidup</th>
+                <th class="py-2 pr-3 font-medium text-right hidden md:table-cell">Tebar</th>
+                <th class="py-2 font-medium w-32 sm:w-44">Survival</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="k in ikanPerKolamUrut"
+                :key="k.kolamId"
+                class="border-b border-ink-100 dark:border-ink-500 last:border-0"
+              >
+                <td class="py-2.5 pr-3">
+                  <p class="font-medium dark:text-white">{{ k.namaKolam }}</p>
+                  <p class="text-[12px] text-ink-500 dark:text-ink-300 sm:hidden">{{ k.namaIkan }}</p>
+                </td>
+                <td class="py-2.5 pr-3 dark:text-ink-100 hidden sm:table-cell">{{ k.namaIkan }}</td>
+                <td class="py-2.5 pr-3 text-right tabular-nums dark:text-ink-100 hidden md:table-cell">{{ k.jumlahBibit.toLocaleString('id-ID') }}</td>
+                <td class="py-2.5 pr-3 text-right tabular-nums dark:text-ink-100">{{ k.jumlahSaatIni.toLocaleString('id-ID') }}</td>
+                <td class="py-2.5 pr-3 text-right hidden md:table-cell">
+                  <p class="tabular-nums dark:text-ink-100">{{ tanggalTebar(k) }}</p>
+                  <p v-if="umurKolamLabel(k)" class="text-[11px] text-ink-500 dark:text-ink-300">{{ umurKolamLabel(k) }}</p>
+                </td>
+                <td class="py-2.5">
+                  <div class="flex items-center gap-2">
+                    <div class="h-1.5 flex-1 rounded-full bg-ink-100 dark:bg-ink-900 overflow-hidden">
+                      <div class="h-full rounded-full" :class="barSurvival(k.survivalRate)" :style="{ width: Math.min(k.survivalRate, 100) + '%' }"></div>
+                    </div>
+                    <span class="font-semibold w-10 text-right tabular-nums" :class="warnaSurvival(k.survivalRate)">{{ k.survivalRate }}%</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="border-t-2 border-ink-200 dark:border-ink-500">
+                <td class="pt-3 pr-3 font-semibold dark:text-white">
+                  Total
+                  <span class="block text-[12px] font-normal text-ink-500 dark:text-ink-300">{{ ikanPerKolam.length }} kolam</span>
+                </td>
+                <td class="hidden sm:table-cell"></td>
+                <td class="pt-3 pr-3 text-right font-semibold tabular-nums dark:text-white hidden md:table-cell">{{ totalIkanPerKolam.totalBibit.toLocaleString('id-ID') }}</td>
+                <td class="pt-3 pr-3 text-right font-semibold tabular-nums dark:text-white">{{ totalIkanPerKolam.totalSekarang.toLocaleString('id-ID') }}</td>
+                <td class="hidden md:table-cell"></td>
+                <td class="pt-3 text-right font-semibold tabular-nums" :class="warnaSurvival(totalIkanPerKolam.rataSurvival)">{{ totalIkanPerKolam.rataSurvival }}%</td>
+              </tr>
+            </tfoot>
+          </table>
+        </section>
       </div>
-    </div>
 
-    <!-- ===================== JADWAL MENDATANG ===================== -->
-    <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5">
-      <h2 class="text-[15px] font-semibold dark:text-white mb-4">Jadwal mendatang</h2>
+      <!-- Kolom kanan: jadwal + pengeluaran -->
+      <div class="space-y-4 sm:space-y-5 min-w-0">
+        <!-- Jadwal mendatang -->
+        <section :class="card">
+          <h2 class="text-[15px] font-semibold dark:text-white mb-3">Jadwal mendatang</h2>
 
-      <div v-if="jadwalGabungan.length === 0" class="flex items-start sm:items-center gap-3 sm:gap-4 py-2">
-        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-card bg-gold-100 flex items-center justify-center shrink-0">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" class="text-gold-600">
-            <rect x="4" y="5" width="16" height="15" rx="2" />
-            <path d="M4 10h16M9 3v4M15 3v4" />
-          </svg>
-        </div>
-        <div>
-          <p class="text-[13.5px] font-semibold dark:text-white">Belum ada jadwal mendatang</p>
-          <p class="text-[13px] text-ink-500 dark:text-ink-300">Buat jadwal sortir atau panen supaya tidak ada kolam yang terlewat.</p>
-        </div>
-      </div>
-
-      <div v-else class="flex flex-col divide-y divide-ink-100 dark:divide-ink-500">
-        <div
-          v-for="j in jadwalGabungan"
-          :key="j.kolam_id"
-          class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-x-6 sm:gap-y-3 py-3.5 first:pt-0 last:pb-0"
-        >
-          <div class="min-w-0 sm:min-w-[140px] sm:flex-1">
-            <p class="text-[13.5px] font-medium dark:text-white">{{ j.nama_kolam }}</p>
-            <p class="text-[12.5px] text-ink-500 dark:text-ink-300">
-              {{ j.nama_ikan }}<span v-if="j.jumlah"> · {{ Number(j.jumlah).toLocaleString('id-ID') }} ekor</span>
+          <div v-if="jadwalGabungan.length === 0">
+            <p class="text-[13.5px] font-semibold dark:text-white">Belum ada jadwal mendatang</p>
+            <p class="text-[13px] text-ink-500 dark:text-ink-300 mt-0.5">
+              Buat jadwal sortir atau panen supaya tidak ada kolam yang terlewat.
             </p>
           </div>
 
-          <div class="flex flex-col xs:flex-row gap-2.5 sm:gap-4">
-            <div v-if="j.tanggal_sortir" class="flex items-center gap-2.5 min-w-0">
-              <div class="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-500/15 flex items-center justify-center shrink-0">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" class="text-brand-600 dark:text-brand-400">
-                  <path d="M6 3 20 17M20 3 6 17" />
-                  <circle cx="6" cy="19" r="2.2" />
-                  <circle cx="20" cy="19" r="2.2" />
-                </svg>
+          <ul v-else class="divide-y divide-ink-100 dark:divide-ink-500">
+            <li v-for="j in jadwalGabungan.slice(0, 6)" :key="j.kolam_id" class="py-3 first:pt-0 last:pb-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <p class="text-[13.5px] font-medium dark:text-white truncate">{{ j.nama_kolam }}</p>
+                <p class="text-[12px] text-ink-500 dark:text-ink-300 shrink-0">
+                  {{ j.nama_ikan }}<span v-if="j.jumlah"> · {{ Number(j.jumlah).toLocaleString('id-ID') }}</span>
+                </p>
               </div>
-              <div class="min-w-0">
-                <p class="text-[12px] text-ink-500 dark:text-ink-300">Sortir · {{ tanggal(j.tanggal_sortir) }}</p>
-                <span class="inline-block mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="chipUrgensi(j.tanggal_sortir)">
-                  {{ labelUrgensi(j.tanggal_sortir) }}
-                </span>
+              <div class="mt-1.5 space-y-1">
+                <div
+                  v-for="e in [
+                    { label: 'Sortir', tgl: j.tanggal_sortir, dot: 'bg-brand-500' },
+                    { label: 'Panen', tgl: j.tanggal_panen, dot: 'bg-gold-500' }
+                  ]"
+                  :key="e.label"
+                  class="flex items-center gap-2 text-[12.5px]"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="e.dot"></span>
+                  <template v-if="e.tgl">
+                    <span class="text-ink-500 dark:text-ink-300">{{ e.label }} · {{ tanggal(e.tgl) }}</span>
+                    <span class="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="chipUrgensi(e.tgl)">
+                      {{ labelUrgensi(e.tgl) }}
+                    </span>
+                  </template>
+                  <span v-else class="text-ink-400">{{ e.label }} belum dijadwalkan</span>
+                </div>
               </div>
-            </div>
-            <div v-else class="text-[12.5px] text-ink-400">Sortir belum dijadwalkan</div>
+            </li>
+          </ul>
+          <p v-if="jadwalGabungan.length > 6" class="text-[12px] text-ink-500 dark:text-ink-300 mt-3">
+            +{{ jadwalGabungan.length - 6 }} kolam lainnya
+          </p>
+        </section>
 
-            <div v-if="j.tanggal_panen" class="flex items-center gap-2.5 min-w-0">
-              <div class="w-8 h-8 rounded-lg bg-gold-100 dark:bg-gold-500/15 flex items-center justify-center shrink-0">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" class="text-gold-600 dark:text-gold-400">
-                  <path d="M4 20c4-8 12-8 16-16" />
-                  <path d="M9 20c1-3 4-6 8-8" />
-                </svg>
-              </div>
-              <div class="min-w-0">
-                <p class="text-[12px] text-ink-500 dark:text-ink-300">Panen · {{ tanggal(j.tanggal_panen) }}</p>
-                <span class="inline-block mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full" :class="chipUrgensi(j.tanggal_panen)">
-                  {{ labelUrgensi(j.tanggal_panen) }}
-                </span>
-              </div>
-            </div>
-            <div v-else class="text-[12.5px] text-ink-400">Panen belum dijadwalkan</div>
+        <!-- Rincian pengeluaran -->
+        <section v-if="pengeluaranBreakdown.length > 0" :class="card">
+          <div class="flex items-baseline justify-between gap-2 mb-3">
+            <h2 class="text-[15px] font-semibold dark:text-white">Pengeluaran bulan ini</h2>
           </div>
-        </div>
+
+          <div class="relative h-44 w-full max-w-[200px] mx-auto">
+            <Doughnut :data="chartPengeluaranDonut" :options="donutOptions" />
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <p class="text-[11px] text-ink-500 dark:text-ink-300">Total biaya</p>
+              <p class="text-[14px] font-bold dark:text-white">{{ rupiah(totalPengeluaranBreakdown) }}</p>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2.5 mt-4">
+            <div v-for="r in pengeluaranBreakdown" :key="r.kategori" class="flex items-center gap-2.5">
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="WARNA_KATEGORI[r.kategori] || 'bg-ink-400'"></span>
+              <span class="text-[13px] dark:text-white flex-1 min-w-0 truncate">{{ r.label }}</span>
+              <span class="text-[13px] font-semibold dark:text-white shrink-0">{{ rupiah(r.total) }}</span>
+              <span class="text-[12px] text-ink-500 dark:text-ink-300 w-9 text-right shrink-0">
+                {{ Math.round((r.total / totalPengeluaranBreakdown) * 100) }}%
+              </span>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </div>
