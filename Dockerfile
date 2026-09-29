@@ -8,6 +8,7 @@ COPY web/package*.json web/
 RUN npm --prefix api ci --include=dev \
  && npm --prefix web ci --include=dev
 
+COPY package.json ./
 COPY api api
 COPY web web
 RUN npm --prefix web run build
