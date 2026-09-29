@@ -1,0 +1,10 @@
+{
+  "name": "manajemen-kolam-ikan",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "npm --prefix api ci --include=dev && npm --prefix web ci --include=dev && npm --prefix web run build",
+    "start": "npm --prefix api start"
+  },
+  "engines": { "node": ">=20" }
+}

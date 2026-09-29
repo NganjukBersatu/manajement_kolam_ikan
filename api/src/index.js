@@ -1,6 +1,9 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
 
 import { testConnection } from './config/db.js'
 import { requireAuth } from './middleware/auth.js'
@@ -50,7 +53,15 @@ app.use('/api/pengaturan', pengaturanRoutes)
 app.use('/api/stok-pakan', stokPakanRoutes)
 app.use('/api/ganti-air', gantiAirRoutes)                     // ← TAMBAHKAN INI
 
-app.listen(PORT, async () => {
+// ---- Frontend (hasil build Vite) disajikan oleh service yang sama ----
+const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist')
+if (fs.existsSync(distDir)) {
+  app.use(express.static(distDir))
+  // SPA fallback: semua GET non-API dikembalikan ke index.html (vue-router history mode)
+  app.get(/^(?!\/api\/).*/, (req, res) => res.sendFile(path.join(distDir, 'index.html')))
+}
+
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Kolam Ikan API berjalan di http://localhost:${PORT}`)
   await testConnection()
 })
