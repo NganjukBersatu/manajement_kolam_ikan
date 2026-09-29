@@ -4,11 +4,27 @@ import { ref, computed, onMounted } from 'vue'
 const daftar = ref([])
 const loading = ref(true)
 
+// Ambil 'YYYY-MM-DD' dari nilai tanggal apa pun dari server
+// (mis. '2026-09-29' atau '2026-09-29T00:00:00.000Z').
+function normalisasiTanggal(nilai) {
+  if (!nilai) return ''
+  return String(nilai).slice(0, 10)
+}
+
 async function muat() {
   loading.value = true
-  const res = await fetch('/api/penjualan').then(r => r.json())
-  daftar.value = res.data
-  loading.value = false
+  try {
+    const res = await fetch('/api/penjualan').then(r => r.json())
+    daftar.value = (res.data || []).map((p) => ({
+      ...p,
+      tanggal: normalisasiTanggal(p.tanggal)
+    }))
+  } catch (err) {
+    console.error('Gagal memuat penjualan:', err)
+    daftar.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 // ===== Filter periode =====
@@ -26,8 +42,13 @@ const periodeDipilih = ref('bulan_ini')
 const tanggalMulaiCustom = ref('')
 const tanggalSelesaiCustom = ref('')
 
+// Format 'YYYY-MM-DD' memakai waktu LOKAL (bukan UTC),
+// supaya tidak bergeser sehari di zona waktu WIB.
 function keTanggalISO(d) {
-  return d.toISOString().slice(0, 10)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 // Menghitung rentang tanggal [mulai, selesai] (format 'YYYY-MM-DD') sesuai preset yang dipilih
@@ -54,7 +75,8 @@ const rentangTanggal = computed(() => {
 
     case 'bulan_ini': {
       const awal = new Date(now.getFullYear(), now.getMonth(), 1)
-      return { mulai: keTanggalISO(awal), selesai: hariIni }
+      const akhir = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      return { mulai: keTanggalISO(awal), selesai: keTanggalISO(akhir) }
     }
 
     case 'bulan_lalu': {
@@ -87,8 +109,16 @@ const kolamDipilih = ref('')
 
 onMounted(muat)
 
+// Tampilkan tanggal 'YYYY-MM-DD' sebagai tanggal lokal (tanpa pergeseran zona waktu)
 function tanggal(d) {
-  return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+  const str = normalisasiTanggal(d)
+  const [y, m, day] = str.split('-').map(Number)
+  if (!y || !m || !day) return str
+  return new Date(y, m - 1, day).toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  })
 }
 
 function rupiah(n) {
@@ -96,6 +126,7 @@ function rupiah(n) {
 }
 
 // Data yang sudah difilter berdasarkan rentang tanggal saja (dipakai untuk isi dropdown jenis ikan/kolam)
+// Perbandingan string 'YYYY-MM-DD' aman karena semua tanggal sudah dinormalisasi.
 const dataDalamPeriode = computed(() => {
   const { mulai, selesai } = rentangTanggal.value
   return daftar.value.filter((p) => {
@@ -129,7 +160,10 @@ const dataTerfilter = computed(() => {
       const gabungan = `${p.nama_ikan || ''} ${p.nama_kolam || ''} ${p.catatan || ''}`.toLowerCase()
       return gabungan.includes(kataKunci)
     })
-    .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+    .sort((a, b) => {
+      if (a.tanggal !== b.tanggal) return a.tanggal < b.tanggal ? 1 : -1
+      return Number(b.id) - Number(a.id)
+    })
 })
 
 const totalPenjualan = computed(() =>

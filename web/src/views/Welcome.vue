@@ -1,7 +1,24 @@
 <script setup>
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAppBranding } from '../composables/useAppBranding.js'
+import { useBusinessSettings } from '../composables/useBusinessSettings.js'
+import NavIcon from '../components/NavIcon.vue'
 
 const router = useRouter()
+
+// Nama & logo dari Pengaturan (sama seperti Login)
+const { branding } = useAppBranding()
+const { settings: usaha } = useBusinessSettings()
+const logoUsaha = computed(() => usaha.value?.logo || '')
+const logoGagal = ref(false)
+watch(logoUsaha, () => (logoGagal.value = false))
+
+const poin = [
+  'Pantau stok kolam secara real-time',
+  'Jadwal pakan, obat, dan panen otomatis',
+  'Laporan keuangan budidaya tiap bulan'
+]
 
 function keLogin() {
   router.push('/login')
@@ -13,112 +30,160 @@ function keRegister() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-cream flex flex-col">
-    <!-- Background decor -->
-    <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-brand-500/10 blur-3xl" />
-      <div class="absolute -bottom-32 -left-20 w-80 h-80 rounded-full bg-brand-400/10 blur-3xl" />
-    </div>
-
-    <div class="relative flex-1 flex flex-col items-center justify-center px-5 py-12">
-      <!-- Logo & Branding -->
-      <div class="flex flex-col items-center text-center mb-10">
-        <div class="w-20 h-20 rounded-2xl bg-brand-500 flex items-center justify-center shadow-lg shadow-brand-500/25 mb-5">
-          <span class="text-white font-bold text-3xl tracking-tight">K</span>
+  <div class="min-h-screen grid lg:grid-cols-[1.05fr_1fr] bg-cream dark:bg-ink-900">
+    <!-- ===== Panel kiri ===== -->
+    <aside class="relative hidden lg:flex flex-col justify-between overflow-hidden bg-brand-700 text-white p-12">
+      <div class="flex items-center gap-3 relative z-10">
+        <div class="w-11 h-11 rounded-xl bg-gold-500 flex items-center justify-center text-brand-900 overflow-hidden shrink-0">
+          <img
+            v-if="logoUsaha && !logoGagal"
+            :src="logoUsaha"
+            alt="Logo"
+            class="w-full h-full object-cover"
+            @error="logoGagal = true"
+          />
+          <NavIcon v-else name="kolam" :size="22" />
         </div>
-
-        <h1 class="text-ink-900 text-2xl sm:text-[28px] font-bold tracking-tight">
-          Manajement Kolam
-        </h1>
-        <p class="text-ink-500 text-[14.5px] mt-2 max-w-[280px] leading-relaxed">
-          Kelola budidaya ikan, udang, dan kepiting lebih mudah dari satu tempat.
-        </p>
+        <span class="font-semibold text-[16px] truncate max-w-[18rem]">
+          {{ branding.namaAplikasi }}
+        </span>
       </div>
 
-      <!-- Card pilihan -->
-      <div class="w-full max-w-[400px] bg-white rounded-2xl shadow-card border border-ink-100 p-6 sm:p-7">
-        <h2 class="text-ink-900 text-[16px] font-semibold text-center mb-1">
-          Selamat datang
+      <!-- Riak air -->
+      <svg
+        class="absolute -right-32 -bottom-32 w-[640px] h-[640px] pointer-events-none"
+        viewBox="0 0 600 600"
+        fill="none"
+        aria-hidden="true"
+      >
+        <circle class="riak" style="animation-delay: 0s" cx="300" cy="300" r="280" stroke="#D9A448" stroke-width="1.5" />
+        <circle class="riak" style="animation-delay: 1.5s" cx="300" cy="300" r="280" stroke="#D9A448" stroke-width="1.5" />
+        <circle class="riak" style="animation-delay: 3s" cx="300" cy="300" r="280" stroke="#D9A448" stroke-width="1.5" />
+        <circle cx="300" cy="300" r="210" stroke="#2C7A74" stroke-opacity="0.5" stroke-width="1.5" />
+        <circle cx="300" cy="300" r="140" stroke="#2C7A74" stroke-opacity="0.6" stroke-width="1.5" />
+        <circle cx="300" cy="300" r="70" stroke="#2C7A74" stroke-opacity="0.8" stroke-width="1.5" />
+        <circle cx="300" cy="300" r="10" fill="#D9A448" />
+      </svg>
+
+      <div class="relative z-10 max-w-md">
+        <h2 class="text-[34px] leading-[1.15] font-bold tracking-tight">
+          Mulai kelola kolam dengan lebih mudah.
         </h2>
-        <p class="text-ink-500 text-[13px] text-center mb-6">
-          Pilih cara untuk mulai menggunakan aplikasi
+        <p class="mt-4 text-brand-100 text-[15px] leading-relaxed">
+          Satu aplikasi untuk memantau budidaya ikan, udang, dan kepiting dari mana saja.
+        </p>
+        <ul class="mt-8 space-y-3 text-[14px] text-white/90">
+          <li v-for="t in poin" :key="t" class="flex items-start gap-3">
+            <svg
+              class="mt-0.5 shrink-0 text-gold-400"
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            {{ t }}
+          </li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- ===== Panel kanan ===== -->
+    <main class="flex items-center justify-center px-6 py-12">
+      <div class="w-full max-w-[380px]">
+        <!-- Logo mobile -->
+        <div class="lg:hidden flex items-center gap-3 mb-10">
+          <div class="w-11 h-11 rounded-xl bg-brand-500 flex items-center justify-center text-white overflow-hidden shrink-0">
+            <img
+              v-if="logoUsaha && !logoGagal"
+              :src="logoUsaha"
+              alt="Logo"
+              class="w-full h-full object-cover"
+              @error="logoGagal = true"
+            />
+            <NavIcon v-else name="kolam" :size="22" />
+          </div>
+          <span class="font-semibold text-ink-900 dark:text-white truncate">
+            {{ branding.namaAplikasi }}
+          </span>
+        </div>
+
+        <h1 class="text-ink-900 dark:text-white text-[28px] font-bold tracking-tight">
+          Selamat datang
+        </h1>
+        <p class="text-ink-500 dark:text-ink-300 text-[14px] mt-1.5">
+          Pilih cara untuk mulai menggunakan aplikasi.
         </p>
 
-        <!-- Tombol Buat Akun -->
-        <button
-          type="button"
-          @click="keRegister"
-          class="w-full flex items-center justify-center gap-2.5 rounded-xl bg-brand-500 text-white py-3.5 text-[14.5px] font-semibold hover:bg-brand-600 active:scale-[0.98] transition-all shadow-sm shadow-brand-500/20"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <line x1="19" y1="8" x2="19" y2="14" />
-            <line x1="22" y1="11" x2="16" y2="11" />
-          </svg>
-          Buat Akun Baru
-        </button>
+        <div class="mt-8 space-y-4">
+          <!-- Buat Akun -->
+          <button
+            type="button"
+            @click="keRegister"
+            class="w-full rounded-card bg-brand-500 text-white py-3.5 text-[14.5px] font-semibold hover:bg-brand-600 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60 focus-visible:ring-offset-2 transition-all flex items-center justify-center gap-2.5 shadow-sm shadow-brand-500/20"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <line x1="19" y1="8" x2="19" y2="14" />
+              <line x1="22" y1="11" x2="16" y2="11" />
+            </svg>
+            Buat Akun Baru
+          </button>
 
-        <!-- Divider -->
-        <div class="flex items-center gap-3 my-5">
-          <div class="flex-1 h-px bg-ink-100" />
-          <span class="text-[12px] text-ink-400 font-medium">atau</span>
-          <div class="flex-1 h-px bg-ink-100" />
+          <!-- Divider -->
+          <div class="flex items-center gap-3">
+            <div class="flex-1 h-px bg-ink-100 dark:bg-ink-600" />
+            <span class="text-[12px] text-ink-400 font-medium">atau</span>
+            <div class="flex-1 h-px bg-ink-100 dark:bg-ink-600" />
+          </div>
+
+          <!-- Masuk -->
+          <button
+            type="button"
+            @click="keLogin"
+            class="w-full rounded-card border border-ink-100 dark:border-ink-500 bg-white dark:bg-ink-700 text-ink-800 dark:text-white py-3.5 text-[14.5px] font-semibold hover:border-brand-400 hover:text-brand-600 dark:hover:border-brand-400 dark:hover:text-brand-400 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40 transition-all flex items-center justify-center gap-2.5"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            Sudah punya akun? Masuk
+          </button>
         </div>
 
-        <!-- Tombol Login -->
-        <button
-          type="button"
-          @click="keLogin"
-          class="w-full flex items-center justify-center gap-2.5 rounded-xl border-2 border-ink-100 text-ink-800 py-3.5 text-[14.5px] font-semibold hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50/50 active:scale-[0.98] transition-all"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-            <polyline points="10 17 15 12 10 7" />
-            <line x1="15" y1="12" x2="3" y2="12" />
-          </svg>
-          Sudah punya akun? Masuk
-        </button>
+        <p class="text-ink-400 dark:text-ink-400 text-[12.5px] mt-10 text-center">
+          © {{ new Date().getFullYear() }} {{ branding.namaAplikasi }}
+        </p>
       </div>
-
-      <!-- Fitur singkat -->
-      <div class="mt-10 grid grid-cols-3 gap-4 max-w-[400px] w-full">
-        <div class="flex flex-col items-center text-center">
-          <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 flex items-center justify-center mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-              <path d="m9 12 2 2 4-4" />
-            </svg>
-          </div>
-          <p class="text-[11.5px] text-ink-500 leading-snug">Pantau<br />stok kolam</p>
-        </div>
-        <div class="flex flex-col items-center text-center">
-          <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 flex items-center justify-center mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
-          </div>
-          <p class="text-[11.5px] text-ink-500 leading-snug">Jadwal<br />otomatis</p>
-        </div>
-        <div class="flex flex-col items-center text-center">
-          <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-600 flex items-center justify-center mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="20" x2="12" y2="10" />
-              <line x1="18" y1="20" x2="18" y2="4" />
-              <line x1="6" y1="20" x2="6" y2="16" />
-            </svg>
-          </div>
-          <p class="text-[11.5px] text-ink-500 leading-snug">Laporan<br />keuangan</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <p class="relative text-center text-ink-400 text-[12px] pb-6">
-      © {{ new Date().getFullYear() }} Manajement Kolam
-    </p>
+    </main>
   </div>
 </template>
+
+<style scoped>
+.riak {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: riak 6s ease-out infinite;
+  opacity: 0;
+}
+
+@keyframes riak {
+  0% { transform: scale(0.15); opacity: 0.55; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .riak {
+    animation: none;
+    opacity: 0;
+  }
+}
+</style>

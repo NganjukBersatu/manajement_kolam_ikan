@@ -1,20 +1,41 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
+
+// Tanggal hari ini dalam waktu lokal, format 'YYYY-MM-DD'
+function hariIniLokal() {
+  const x = new Date()
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+}
 
 const daftar = ref([])
+const isSaving = ref(false)
 const showForm = ref(false)
 const jadwalDipilih = ref(null)
 const form = ref({
-  tanggal: new Date().toISOString().slice(0, 10),
+  tanggal: hariIniLokal(),
   jumlah_mati: '',
   catatan: '',
   sortir_ke: 1
 })
 
+const toast = ref({ show: false, message: '', type: 'success' })
+
+function tampilkanToast(message, type = 'success') {
+  toast.value = { show: true, message, type }
+  setTimeout(() => {
+    toast.value.show = false
+  }, 3500)
+}
+
 async function muat() {
-  const res = await fetch('/api/jadwal?jenis=sortir')
-  const json = await res.json()
-  daftar.value = json.data
+  try {
+    const res = await fetch('/api/jadwal?jenis=sortir')
+    const json = await res.json()
+    daftar.value = json.data || []
+  } catch (e) {
+    console.error('Gagal memuat jadwal sortir:', e)
+    tampilkanToast('Gagal memuat jadwal sortir', 'error')
+  }
 }
 
 function bukaForm(j) {
@@ -22,7 +43,7 @@ function bukaForm(j) {
   // Hitung sortir ke berapa (mulai dari 1)
   const ke = (j.jumlah_sortir || 0) + 1
   form.value = {
-    tanggal: new Date().toISOString().slice(0, 10),
+    tanggal: hariIniLokal(),
     jumlah_mati: '',
     catatan: '',
     sortir_ke: ke
@@ -31,21 +52,43 @@ function bukaForm(j) {
 }
 
 async function simpan() {
-  await fetch('/api/sortir', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  isSaving.value = true
+  try {
+    const payload = {
       jadwal_id: jadwalDipilih.value.id,
       tebar_id: jadwalDipilih.value.tebar_id,
       kolam_id: jadwalDipilih.value.kolam_id,
       sortir_ke: form.value.sortir_ke,
       tanggal: form.value.tanggal,
-      jumlah_mati: form.value.jumlah_mati,
-      catatan: form.value.catatan
+      jumlah_mati: Number(form.value.jumlah_mati),
+      catatan: form.value.catatan || null
+    }
+
+    const res = await fetch('/api/sortir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     })
-  })
-  showForm.value = false
-  await muat()
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      console.error('POST sortir gagal:', res.status, err, payload)
+      tampilkanToast(
+        (err.message || err.error || 'Gagal menyimpan sortir') + ` (${res.status})`,
+        'error'
+      )
+      return // modal tetap terbuka supaya data yang sudah diisi tidak hilang
+    }
+
+    showForm.value = false
+    await muat()
+    tampilkanToast(`Sortir ke-${payload.sortir_ke} berhasil dicatat`)
+  } catch (e) {
+    console.error('Error jaringan saat simpan sortir:', e)
+    tampilkanToast('Gagal menyimpan sortir (masalah jaringan)', 'error')
+  } finally {
+    isSaving.value = false
+  }
 }
 
 function tanggal(d) {
@@ -88,6 +131,15 @@ onMounted(muat)
 </script>
 
 <template>
+  <!-- Toast -->
+  <div
+    v-if="toast.show"
+    class="fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white transition-all"
+    :class="toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'"
+  >
+    {{ toast.message }}
+  </div>
+
   <div class="bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card overflow-hidden">
     <table class="w-full text-left text-[13.5px]">
       <thead>
@@ -204,9 +256,10 @@ onMounted(muat)
           </button>
           <button
             type="submit"
-            class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600"
+            class="flex-1 rounded-lg bg-brand-500 text-white py-2.5 text-[13.5px] font-semibold hover:bg-brand-600 disabled:opacity-60"
+            :disabled="isSaving"
           >
-            Simpan Sortir ke-{{ form.sortir_ke }}
+            {{ isSaving ? 'Menyimpan...' : `Simpan Sortir ke-${form.sortir_ke}` }}
           </button>
         </div>
       </form>
