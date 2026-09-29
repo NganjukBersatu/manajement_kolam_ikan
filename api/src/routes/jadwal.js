@@ -4,20 +4,18 @@ import { pool } from '../config/db.js'
 const router = Router()
 
 // Pastikan kolom `catatan` ada di tabel jadwal.
-// Dijalankan otomatis sekali saat server start (aman dijalankan berulang kali),
-// jadi di lokal maupun Railway kolomnya akan dibuat sendiri kalau belum ada.
+// Dijalankan otomatis sekali saat server start (aman dijalankan berulang kali).
 pool
   .query('ALTER TABLE jadwal ADD COLUMN IF NOT EXISTS catatan TEXT')
   .then(() => console.log('✅ Kolom jadwal.catatan siap'))
-  .catch(err => console.error('❌ Gagal memastikan kolom jadwal.catatan:', err.message))
+  .catch((err) => console.error('❌ Gagal memastikan kolom jadwal.catatan:', err.message))
 
-// GET /api/jadwal?jenis=sortir&status=belum → daftar jadwal, terdekat dulu
-// Parameter jenis dan status keduanya opsional dan bisa dipakai sendiri-sendiri atau bersamaan.
+// GET /api/jadwal?jenis=sortir&status=belum
 router.get('/', async (req, res) => {
   const businessId = req.user.businessId
   const { jenis, status } = req.query
+
   try {
-    // $1 selalu business_id, filter lain menyusul setelahnya
     const params = [businessId]
     const kondisi = ['j.business_id = $1']
 
@@ -33,19 +31,24 @@ router.get('/', async (req, res) => {
     const where = `WHERE ${kondisi.join(' AND ')}`
 
     const result = await pool.query(
-
-      `SELECT j.id, j.jenis, to_char(j.tanggal_jadwal, 'YYYY-MM-DD') AS tanggal_jadwal,
-              j.status, j.tebar_id, j.kolam_id,
-
-      `SELECT j.id, j.jenis, j.tanggal_jadwal, j.status, j.catatan, j.tebar_id, j.kolam_id,
-
-              k.nama_kolam, ji.nama AS nama_ikan, t.jumlah_saat_ini,
-              COALESCE((
-                SELECT COUNT(*)::int
-                FROM sortir s
-                WHERE s.tebar_id = j.tebar_id AND s.kolam_id = j.kolam_id
-                  AND s.business_id = j.business_id
-              ), 0) AS jumlah_sortir
+      `SELECT
+         j.id,
+         j.jenis,
+         to_char(j.tanggal_jadwal, 'YYYY-MM-DD') AS tanggal_jadwal,
+         j.status,
+         j.catatan,
+         j.tebar_id,
+         j.kolam_id,
+         k.nama_kolam,
+         ji.nama AS nama_ikan,
+         t.jumlah_saat_ini,
+         COALESCE((
+           SELECT COUNT(*)::int
+           FROM sortir s
+           WHERE s.tebar_id = j.tebar_id
+             AND s.kolam_id = j.kolam_id
+             AND s.business_id = j.business_id
+         ), 0) AS jumlah_sortir
        FROM jadwal j
        JOIN kolam k ON k.id = j.kolam_id
        JOIN tebar t ON t.id = j.tebar_id
@@ -54,6 +57,7 @@ router.get('/', async (req, res) => {
        ORDER BY j.status ASC, j.tanggal_jadwal ASC`,
       params
     )
+
     res.json({ data: result.rows })
   } catch (err) {
     console.error('GET jadwal error:', err)
@@ -61,22 +65,18 @@ router.get('/', async (req, res) => {
   }
 })
 
-// POST /api/jadwal → buat jadwal baru secara manual
-// Dipakai untuk jenis yang tidak otomatis dibuat ulang oleh sistem (misal ganti_air
-// setelah jadwal sebelumnya selesai dicatat).
+// POST /api/jadwal
 router.post('/', async (req, res) => {
-
   const businessId = req.user.businessId
-  const { tebar_id, kolam_id, jenis, tanggal_jadwal } = req.body
-
   const { tebar_id, kolam_id, jenis, tanggal_jadwal, catatan } = req.body
 
   if (!tebar_id || !kolam_id || !jenis || !tanggal_jadwal) {
-    return res.status(400).json({ message: 'tebar_id, kolam_id, jenis, tanggal_jadwal wajib diisi' })
+    return res.status(400).json({
+      message: 'tebar_id, kolam_id, jenis, tanggal_jadwal wajib diisi'
+    })
   }
 
   try {
-    // Pastikan tebar dan kolam yang dikirim memang milik business ini
     const tebarCek = await pool.query(
       `SELECT id FROM tebar WHERE id = $1 AND business_id = $2`,
       [tebar_id, businessId]
@@ -84,6 +84,7 @@ router.post('/', async (req, res) => {
     if (tebarCek.rows.length === 0) {
       return res.status(404).json({ message: 'Tebar tidak ditemukan' })
     }
+
     const kolamCek = await pool.query(
       `SELECT id FROM kolam WHERE id = $1 AND business_id = $2`,
       [kolam_id, businessId]
@@ -93,16 +94,12 @@ router.post('/', async (req, res) => {
     }
 
     const result = await pool.query(
-
-      `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal, business_id)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [tebar_id, kolam_id, jenis, tanggal_jadwal, businessId]
-
-      `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal, catatan)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [tebar_id, kolam_id, jenis, tanggal_jadwal, catatan || null]
-
+      `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal, catatan, business_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [tebar_id, kolam_id, jenis, tanggal_jadwal, catatan || null, businessId]
     )
+
     res.status(201).json({ data: result.rows[0] })
   } catch (err) {
     console.error('POST jadwal error:', err)
@@ -110,9 +107,7 @@ router.post('/', async (req, res) => {
   }
 })
 
-// PUT /api/jadwal/:id → ubah jadwal yang sudah ada
-// Dipakai untuk mengedit tanggal, catatan, atau status jadwal tanpa membuat baris baru.
-// Field yang tidak dikirim (undefined) tidak akan diubah.
+// PUT /api/jadwal/:id
 router.put('/:id', async (req, res) => {
   const businessId = req.user.businessId
   const { id } = req.params
@@ -123,27 +118,27 @@ router.put('/:id', async (req, res) => {
   }
 
   try {
-    // Catatan boleh dikosongkan: kalau field `catatan` dikirim (termasuk null/''),
-    // nilainya ikut diperbarui. Kalau tidak dikirim, catatan lama dipertahankan.
+    // Kalau field `catatan` dikirim (meski kosong), ikut diperbarui.
+    // Kalau tidak dikirim sama sekali, catatan lama dipertahankan.
     const catatanDikirim = Object.prototype.hasOwnProperty.call(req.body, 'catatan')
     const catatanBaru = catatanDikirim ? (catatan || null) : null
 
     const result = await pool.query(
       `UPDATE jadwal
-       SET tanggal_jadwal = COALESCE($1, tanggal_jadwal),
-
-           catatan = COALESCE($2, catatan),
-           status = COALESCE($3, status)
-       WHERE id = $4 AND business_id = $5
+       SET
+         tanggal_jadwal = COALESCE($1, tanggal_jadwal),
+         catatan = CASE WHEN $2::boolean THEN $3 ELSE catatan END,
+         status = COALESCE($4, status)
+       WHERE id = $5 AND business_id = $6
        RETURNING *`,
-      [tanggal_jadwal, catatan, status, id, businessId]
-
-           catatan = CASE WHEN $2::boolean THEN $3 ELSE catatan END,
-           status = COALESCE($4, status)
-       WHERE id = $5
-       RETURNING *`,
-      [tanggal_jadwal || null, catatanDikirim, catatanBaru, status || null, id]
-
+      [
+        tanggal_jadwal || null,
+        catatanDikirim,
+        catatanBaru,
+        status || null,
+        id,
+        businessId
+      ]
     )
 
     if (result.rowCount === 0) {
@@ -157,7 +152,7 @@ router.put('/:id', async (req, res) => {
   }
 })
 
-// DELETE /api/jadwal/:id → hapus jadwal
+// DELETE /api/jadwal/:id
 router.delete('/:id', async (req, res) => {
   const businessId = req.user.businessId
   const { id } = req.params
@@ -178,11 +173,11 @@ router.delete('/:id', async (req, res) => {
 
     res.json({ message: 'Jadwal berhasil dihapus', data: result.rows[0] })
   } catch (err) {
-    // Kode 23503 = foreign key violation di PostgreSQL
-    // Terjadi kalau jadwal ini masih dirujuk oleh data lain (misalnya riwayat obat)
+    // 23503 = foreign key violation
     if (err.code === '23503') {
       return res.status(409).json({
-        message: 'Jadwal ini sudah terhubung dengan riwayat pemberian obat, tidak bisa dihapus langsung'
+        message:
+          'Jadwal ini sudah terhubung dengan riwayat pemberian obat, tidak bisa dihapus langsung'
       })
     }
     console.error('DELETE jadwal error:', err)

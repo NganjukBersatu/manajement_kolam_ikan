@@ -4,8 +4,7 @@ import { pool } from '../config/db.js'
 const router = Router()
 
 // Pastikan tabel `sortir` punya semua kolom yang dipakai kode di bawah.
-// Dijalankan otomatis sekali saat server start dan aman diulang (IF NOT EXISTS),
-// jadi database lokal maupun Railway akan disamakan strukturnya.
+// Dijalankan otomatis sekali saat server start dan aman diulang (IF NOT EXISTS).
 async function pastikanStrukturSortir() {
   const perintah = [
     `CREATE TABLE IF NOT EXISTS sortir (
@@ -17,7 +16,8 @@ async function pastikanStrukturSortir() {
      )`,
     `ALTER TABLE sortir ADD COLUMN IF NOT EXISTS jadwal_id INTEGER`,
     `ALTER TABLE sortir ADD COLUMN IF NOT EXISTS catatan TEXT`,
-    `ALTER TABLE sortir ADD COLUMN IF NOT EXISTS sortir_ke INTEGER`
+    `ALTER TABLE sortir ADD COLUMN IF NOT EXISTS sortir_ke INTEGER`,
+    `ALTER TABLE sortir ADD COLUMN IF NOT EXISTS business_id INTEGER`
   ]
 
   for (const sql of perintah) {
@@ -27,7 +27,7 @@ async function pastikanStrukturSortir() {
 
 pastikanStrukturSortir()
   .then(() => console.log('✅ Struktur tabel sortir siap'))
-  .catch(err => console.error('❌ Gagal menyiapkan tabel sortir:', err.message))
+  .catch((err) => console.error('❌ Gagal menyiapkan tabel sortir:', err.message))
 
 // GET /api/sortir → daftar semua catatan sortir
 router.get('/', async (req, res) => {
@@ -56,7 +56,14 @@ router.post('/', async (req, res) => {
   const businessId = req.user.businessId
   const { jadwal_id, tebar_id, kolam_id, tanggal, jumlah_mati, catatan, sortir_ke } = req.body
 
-  if (!tebar_id || !kolam_id || !tanggal || jumlah_mati === undefined || jumlah_mati === null || jumlah_mati === '') {
+  if (
+    !tebar_id ||
+    !kolam_id ||
+    !tanggal ||
+    jumlah_mati === undefined ||
+    jumlah_mati === null ||
+    jumlah_mati === ''
+  ) {
     return res.status(400).json({
       message: 'tebar_id, kolam_id, tanggal, jumlah_mati wajib diisi'
     })
@@ -135,13 +142,8 @@ router.post('/', async (req, res) => {
     await client.query(
       `UPDATE tebar
        SET jumlah_saat_ini = GREATEST(jumlah_saat_ini - $1, 0)
-
        WHERE id = $2 AND business_id = $3`,
-      [jumlah_mati, tebar_id, businessId]
-
-       WHERE id = $2`,
-      [jumlahMati, tebar_id]
-
+      [jumlahMati, tebar_id, businessId]
     )
 
     // JANGAN set status jadwal jadi 'selesai'
