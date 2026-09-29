@@ -3,6 +3,14 @@ import { pool } from '../config/db.js'
 
 const router = Router()
 
+// Pastikan kolom `catatan` ada di tabel jadwal.
+// Dijalankan otomatis sekali saat server start (aman dijalankan berulang kali),
+// jadi di lokal maupun Railway kolomnya akan dibuat sendiri kalau belum ada.
+pool
+  .query('ALTER TABLE jadwal ADD COLUMN IF NOT EXISTS catatan TEXT')
+  .then(() => console.log('✅ Kolom jadwal.catatan siap'))
+  .catch(err => console.error('❌ Gagal memastikan kolom jadwal.catatan:', err.message))
+
 // GET /api/jadwal?jenis=sortir&status=belum → daftar jadwal, terdekat dulu
 // Parameter jenis dan status keduanya opsional dan bisa dipakai sendiri-sendiri atau bersamaan.
 router.get('/', async (req, res) => {
@@ -23,7 +31,7 @@ router.get('/', async (req, res) => {
     const where = kondisi.length > 0 ? `WHERE ${kondisi.join(' AND ')}` : ''
 
     const result = await pool.query(
-      `SELECT j.id, j.jenis, j.tanggal_jadwal, j.status, j.tebar_id, j.kolam_id,
+      `SELECT j.id, j.jenis, j.tanggal_jadwal, j.status, j.catatan, j.tebar_id, j.kolam_id,
               k.nama_kolam, ji.nama AS nama_ikan, t.jumlah_saat_ini,
               COALESCE((
                 SELECT COUNT(*)::int
@@ -40,6 +48,7 @@ router.get('/', async (req, res) => {
     )
     res.json({ data: result.rows })
   } catch (err) {
+    console.error('GET jadwal error:', err)
     res.status(500).json({ message: 'Gagal mengambil jadwal', error: err.message })
   }
 })
@@ -48,38 +57,49 @@ router.get('/', async (req, res) => {
 // Dipakai untuk jenis yang tidak otomatis dibuat ulang oleh sistem (misal ganti_air
 // setelah jadwal sebelumnya selesai dicatat).
 router.post('/', async (req, res) => {
-  const { tebar_id, kolam_id, jenis, tanggal_jadwal } = req.body
+  const { tebar_id, kolam_id, jenis, tanggal_jadwal, catatan } = req.body
   if (!tebar_id || !kolam_id || !jenis || !tanggal_jadwal) {
     return res.status(400).json({ message: 'tebar_id, kolam_id, jenis, tanggal_jadwal wajib diisi' })
   }
 
   try {
     const result = await pool.query(
-      `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [tebar_id, kolam_id, jenis, tanggal_jadwal]
+      `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal, catatan)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [tebar_id, kolam_id, jenis, tanggal_jadwal, catatan || null]
     )
     res.status(201).json({ data: result.rows[0] })
   } catch (err) {
+    console.error('POST jadwal error:', err)
     res.status(500).json({ message: 'Gagal menambah jadwal', error: err.message })
   }
 })
 
 // PUT /api/jadwal/:id → ubah jadwal yang sudah ada
 // Dipakai untuk mengedit tanggal, catatan, atau status jadwal tanpa membuat baris baru.
+// Field yang tidak dikirim (undefined) tidak akan diubah.
 router.put('/:id', async (req, res) => {
   const { id } = req.params
   const { tanggal_jadwal, catatan, status } = req.body
 
+  if (!/^\d+$/.test(id)) {
+    return res.status(400).json({ message: 'ID jadwal tidak valid' })
+  }
+
   try {
+    // Catatan boleh dikosongkan: kalau field `catatan` dikirim (termasuk null/''),
+    // nilainya ikut diperbarui. Kalau tidak dikirim, catatan lama dipertahankan.
+    const catatanDikirim = Object.prototype.hasOwnProperty.call(req.body, 'catatan')
+    const catatanBaru = catatanDikirim ? (catatan || null) : null
+
     const result = await pool.query(
       `UPDATE jadwal
        SET tanggal_jadwal = COALESCE($1, tanggal_jadwal),
-           catatan = COALESCE($2, catatan),
-           status = COALESCE($3, status)
-       WHERE id = $4
+           catatan = CASE WHEN $2::boolean THEN $3 ELSE catatan END,
+           status = COALESCE($4, status)
+       WHERE id = $5
        RETURNING *`,
-      [tanggal_jadwal, catatan, status, id]
+      [tanggal_jadwal || null, catatanDikirim, catatanBaru, status || null, id]
     )
 
     if (result.rowCount === 0) {
@@ -88,6 +108,7 @@ router.put('/:id', async (req, res) => {
 
     res.json({ data: result.rows[0] })
   } catch (err) {
+    console.error('PUT jadwal error:', err)
     res.status(500).json({ message: 'Gagal mengubah jadwal', error: err.message })
   }
 })
@@ -95,6 +116,10 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/jadwal/:id → hapus jadwal
 router.delete('/:id', async (req, res) => {
   const { id } = req.params
+
+  if (!/^\d+$/.test(id)) {
+    return res.status(400).json({ message: 'ID jadwal tidak valid' })
+  }
 
   try {
     const result = await pool.query(
@@ -115,6 +140,7 @@ router.delete('/:id', async (req, res) => {
         message: 'Jadwal ini sudah terhubung dengan riwayat pemberian obat, tidak bisa dihapus langsung'
       })
     }
+    console.error('DELETE jadwal error:', err)
     res.status(500).json({ message: 'Gagal menghapus jadwal', error: err.message })
   }
 })
