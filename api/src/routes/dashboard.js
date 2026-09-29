@@ -12,90 +12,105 @@ const LABEL_KATEGORI = {
   lainnya: 'Lainnya'
 }
 
+// Semua query di bawah memakai $1 = business_id dari token login,
+// sehingga setiap akun hanya melihat data usahanya sendiri.
 router.get('/', async (req, res) => {
+  const bid = [req.user.businessId]
+  const q = (sql) => pool.query(sql, bid)
+
   try {
-    const kolamResult = await pool.query('SELECT status FROM kolam')
+    const kolamResult = await q('SELECT status FROM kolam WHERE business_id = $1')
     const totalKolam = kolamResult.rows.length
     const kolamAktif = kolamResult.rows.filter(k => k.status === 'aktif').length
     const kolamKosong = kolamResult.rows.filter(k => k.status === 'kosong').length
 
-    const ikanResult = await pool.query(
-      `SELECT COALESCE(SUM(jumlah_saat_ini), 0) AS total FROM tebar WHERE status = 'aktif'`
+    const ikanResult = await q(
+      `SELECT COALESCE(SUM(jumlah_saat_ini), 0) AS total FROM tebar
+       WHERE status = 'aktif' AND business_id = $1`
     )
 
-    const jadwalResult = await pool.query(`
-      SELECT j.id, j.jenis, j.tanggal_jadwal, k.nama_kolam, ji.nama AS nama_ikan
+    const jadwalResult = await q(`
+      SELECT j.id, j.jenis, to_char(j.tanggal_jadwal, 'YYYY-MM-DD') AS tanggal_jadwal,
+             k.nama_kolam, ji.nama AS nama_ikan
       FROM jadwal j
       JOIN kolam k ON k.id = j.kolam_id
       JOIN tebar t ON t.id = j.tebar_id
       JOIN jenis_ikan ji ON ji.id = t.jenis_ikan_id
-      WHERE j.status = 'belum'
+      WHERE j.status = 'belum' AND j.business_id = $1
       ORDER BY j.tanggal_jadwal ASC
       LIMIT 5
     `)
 
-    const penjualanResult = await pool.query(`
+    const penjualanResult = await q(`
       SELECT COALESCE(SUM(total), 0) AS total FROM penjualan
-      WHERE date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
+      WHERE business_id = $1
+        AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
     `)
 
-    const penjualanBulanLaluResult = await pool.query(`
+    const penjualanBulanLaluResult = await q(`
       SELECT COALESCE(SUM(total), 0) AS total FROM penjualan
-      WHERE date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE - interval '1 month')
+      WHERE business_id = $1
+        AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE - interval '1 month')
     `)
 
     // Total pengeluaran bulan ini = pengeluaran manual (selain kategori 'obat', yang tidak
     // dipakai) + biaya pakan + biaya obat. Kategori 'obat' di tabel pengeluaran sengaja
     // dikecualikan supaya tidak dobel hitung dengan tabel obat.
-    const pengeluaranResult = await pool.query(`
+    const pengeluaranResult = await q(`
       SELECT
-        COALESCE((SELECT SUM(jumlah) FROM pengeluaran WHERE kategori != 'obat' AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)), 0)
-        + COALESCE((SELECT SUM(biaya) FROM pakan WHERE date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)), 0)
-        + COALESCE((SELECT SUM(biaya) FROM obat WHERE date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)), 0)
+        COALESCE((SELECT SUM(jumlah) FROM pengeluaran WHERE business_id = $1 AND kategori != 'obat' AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)), 0)
+        + COALESCE((SELECT SUM(biaya) FROM pakan WHERE business_id = $1 AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)), 0)
+        + COALESCE((SELECT SUM(biaya) FROM obat WHERE business_id = $1 AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)), 0)
         AS total
     `)
 
-    const pengeluaranBulanLaluResult = await pool.query(`
+    const pengeluaranBulanLaluResult = await q(`
       SELECT
-        COALESCE((SELECT SUM(jumlah) FROM pengeluaran WHERE kategori != 'obat' AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE - interval '1 month')), 0)
-        + COALESCE((SELECT SUM(biaya) FROM pakan WHERE date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE - interval '1 month')), 0)
-        + COALESCE((SELECT SUM(biaya) FROM obat WHERE date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE - interval '1 month')), 0)
+        COALESCE((SELECT SUM(jumlah) FROM pengeluaran WHERE business_id = $1 AND kategori != 'obat' AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE - interval '1 month')), 0)
+        + COALESCE((SELECT SUM(biaya) FROM pakan WHERE business_id = $1 AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE - interval '1 month')), 0)
+        + COALESCE((SELECT SUM(biaya) FROM obat WHERE business_id = $1 AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE - interval '1 month')), 0)
         AS total
     `)
 
     // Rekonstruksi ikan hidup di awal bulan ini, tanpa perlu tabel snapshot:
     // sekarang + kematian bulan ini (sortir) + panen bulan ini - tebar baru bulan ini
-    const rekonKematianResult = await pool.query(`
+    const rekonKematianResult = await q(`
       SELECT COALESCE(SUM(jumlah_mati), 0) AS total FROM sortir
-      WHERE date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
+      WHERE business_id = $1
+        AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
     `)
-    const rekonPanenResult = await pool.query(`
+    const rekonPanenResult = await q(`
       SELECT COALESCE(SUM(jumlah_ekor), 0) AS total FROM panen
-      WHERE date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
+      WHERE business_id = $1
+        AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
     `)
-    const rekonTebarBaruResult = await pool.query(`
+    const rekonTebarBaruResult = await q(`
       SELECT COALESCE(SUM(jumlah_bibit), 0) AS total FROM tebar
-      WHERE date_trunc('month', tanggal_tebar) = date_trunc('month', CURRENT_DATE)
+      WHERE business_id = $1
+        AND date_trunc('month', tanggal_tebar) = date_trunc('month', CURRENT_DATE)
     `)
 
     // Rincian pengeluaran per kategori (untuk breakdown di dashboard)
-    const breakdownResult = await pool.query(`
+    const breakdownResult = await q(`
       SELECT kategori, SUM(jumlah) AS total
       FROM pengeluaran
-      WHERE kategori != 'obat' AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
+      WHERE business_id = $1 AND kategori != 'obat'
+        AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
       GROUP BY kategori
 
       UNION ALL
 
       SELECT 'pakan' AS kategori, COALESCE(SUM(biaya), 0) AS total
       FROM pakan
-      WHERE date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
+      WHERE business_id = $1
+        AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
 
       UNION ALL
 
       SELECT 'obat' AS kategori, COALESCE(SUM(biaya), 0) AS total
       FROM obat
-      WHERE date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
+      WHERE business_id = $1
+        AND date_trunc('month', tanggal) = date_trunc('month', CURRENT_DATE)
 
       ORDER BY total DESC
     `)
@@ -107,13 +122,14 @@ router.get('/', async (req, res) => {
     const keuntunganBulanLalu = penjualanBulanLalu - pengeluaranBulanLalu
 
     // Breakdown ikan hidup per kolam (bibit awal vs sekarang + survival rate)
-    const ikanPerKolamResult = await pool.query(`
+    const ikanPerKolamResult = await q(`
       SELECT k.id AS kolam_id, k.nama_kolam, ji.nama AS nama_ikan,
-             t.jumlah_bibit, t.jumlah_saat_ini, t.tanggal_tebar
+             t.jumlah_bibit, t.jumlah_saat_ini,
+             to_char(t.tanggal_tebar, 'YYYY-MM-DD') AS tanggal_tebar
       FROM tebar t
       JOIN kolam k ON k.id = t.kolam_id
       JOIN jenis_ikan ji ON ji.id = t.jenis_ikan_id
-      WHERE t.status = 'aktif'
+      WHERE t.status = 'aktif' AND t.business_id = $1
       ORDER BY k.nama_kolam
     `)
 
@@ -204,22 +220,25 @@ router.get('/grafik-bulanan', async (req, res) => {
       penjualan_bulanan AS (
         SELECT date_trunc('month', tanggal) AS periode, SUM(total) AS total
         FROM penjualan
+        WHERE business_id = $1
         GROUP BY 1
       ),
       pengeluaran_bulanan AS (
         SELECT date_trunc('month', tanggal) AS periode, SUM(jumlah) AS total
         FROM pengeluaran
-        WHERE kategori != 'obat'
+        WHERE business_id = $1 AND kategori != 'obat'
         GROUP BY 1
       ),
       pakan_bulanan AS (
         SELECT date_trunc('month', tanggal) AS periode, SUM(biaya) AS total
         FROM pakan
+        WHERE business_id = $1
         GROUP BY 1
       ),
       obat_bulanan AS (
         SELECT date_trunc('month', tanggal) AS periode, SUM(biaya) AS total
         FROM obat
+        WHERE business_id = $1
         GROUP BY 1
       )
       SELECT
@@ -232,7 +251,7 @@ router.get('/grafik-bulanan', async (req, res) => {
       LEFT JOIN pakan_bulanan pk ON pk.periode = b.periode
       LEFT JOIN obat_bulanan ob ON ob.periode = b.periode
       ORDER BY b.periode ASC
-    `)
+    `, [req.user.businessId])
 
     const NAMA_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 
@@ -241,7 +260,7 @@ router.get('/grafik-bulanan', async (req, res) => {
       const pengeluaran = Number(r.pengeluaran)
       const tgl = new Date(r.periode)
       return {
-        bulan: NAMA_BULAN[tgl.getMonth()],
+        bulan: NAMA_BULAN[tgl.getUTCMonth()],
         penjualan,
         keuntungan: penjualan - pengeluaran
       }

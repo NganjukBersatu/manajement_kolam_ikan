@@ -10,11 +10,14 @@ function toNumber(value, fallback = 0) {
 
 // GET /api/stok-pakan
 router.get('/', async (req, res) => {
+  const businessId = req.user.businessId
   try {
     const result = await pool.query(
       `SELECT id, nama, stok, satuan, stok_minimum, harga_per_kg, created_at
        FROM stok_pakan
-       ORDER BY nama ASC`
+       WHERE business_id = $1
+       ORDER BY nama ASC`,
+      [businessId]
     )
     res.json({ data: result.rows })
   } catch (err) {
@@ -24,6 +27,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/stok-pakan
 router.post('/', async (req, res) => {
+  const businessId = req.user.businessId
   const { nama, stok, satuan, stok_minimum, harga_per_kg } = req.body
 
   if (!nama || nama.trim() === '') {
@@ -32,15 +36,16 @@ router.post('/', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `INSERT INTO stok_pakan (nama, stok, satuan, stok_minimum, harga_per_kg)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO stok_pakan (nama, stok, satuan, stok_minimum, harga_per_kg, business_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, nama, stok, satuan, stok_minimum, harga_per_kg, created_at`,
       [
         nama.trim(),
         toNumber(stok, 0),
         satuan || 'kg',
         toNumber(stok_minimum, 10),
-        toNumber(harga_per_kg, 0)
+        toNumber(harga_per_kg, 0),
+        businessId
       ]
     )
     res.status(201).json({ data: result.rows[0] })
@@ -51,6 +56,7 @@ router.post('/', async (req, res) => {
 
 // PUT /api/stok-pakan/:id
 router.put('/:id', async (req, res) => {
+  const businessId = req.user.businessId
   const { nama, stok, satuan, stok_minimum, harga_per_kg } = req.body
 
   const stokVal = stok !== undefined ? toNumber(stok, null) : null
@@ -66,7 +72,7 @@ router.put('/:id', async (req, res) => {
          satuan = COALESCE($3, satuan),
          stok_minimum = COALESCE($4, stok_minimum),
          harga_per_kg = COALESCE($5, harga_per_kg)
-       WHERE id = $6
+       WHERE id = $6 AND business_id = $7
        RETURNING id, nama, stok, satuan, stok_minimum, harga_per_kg, created_at`,
       [
         nama?.trim() || null,
@@ -74,7 +80,8 @@ router.put('/:id', async (req, res) => {
         satuan || null,
         stokMinVal,
         hargaVal,
-        req.params.id
+        req.params.id,
+        businessId
       ]
     )
 
@@ -90,10 +97,11 @@ router.put('/:id', async (req, res) => {
 
 // DELETE /api/stok-pakan/:id
 router.delete('/:id', async (req, res) => {
+  const businessId = req.user.businessId
   try {
     const result = await pool.query(
-      'DELETE FROM stok_pakan WHERE id = $1 RETURNING id',
-      [req.params.id]
+      'DELETE FROM stok_pakan WHERE id = $1 AND business_id = $2 RETURNING id',
+      [req.params.id, businessId]
     )
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Jenis pakan tidak ditemukan' })

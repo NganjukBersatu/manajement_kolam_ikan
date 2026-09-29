@@ -7,15 +7,19 @@ const KATEGORI_VALID = ['pakan', 'obat', 'listrik', 'gaji', 'perlengkapan', 'lai
 // GET /api/pengeluaran
 // Support filter bulan & tahun (opsional)
 router.get('/', async (req, res) => {
+  const businessId = req.user.businessId
   try {
     const { bulan, tahun } = req.query
 
-    let query = 'SELECT * FROM pengeluaran'
-    const params = []
+    // $1 selalu business_id, filter bulan/tahun menyusul kalau ada
+    const params = [businessId]
+    let query = 'SELECT * FROM pengeluaran WHERE business_id = $1'
 
     if (bulan && tahun) {
-      query += ' WHERE EXTRACT(MONTH FROM tanggal) = $1 AND EXTRACT(YEAR FROM tanggal) = $2'
-      params.push(Number(bulan), Number(tahun))
+      params.push(Number(bulan))
+      query += ` AND EXTRACT(MONTH FROM tanggal) = $${params.length}`
+      params.push(Number(tahun))
+      query += ` AND EXTRACT(YEAR FROM tanggal) = $${params.length}`
     }
 
     query += ' ORDER BY tanggal DESC'
@@ -29,6 +33,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/pengeluaran → Tambah
 router.post('/', async (req, res) => {
+  const businessId = req.user.businessId
   const { kategori, jumlah, deskripsi, tanggal } = req.body
 
   if (!kategori || jumlah === undefined || !tanggal) {
@@ -43,10 +48,10 @@ router.post('/', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `INSERT INTO pengeluaran (kategori, jumlah, deskripsi, tanggal)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO pengeluaran (kategori, jumlah, deskripsi, tanggal, business_id)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [kategori, jumlah, deskripsi || null, tanggal]
+      [kategori, jumlah, deskripsi || null, tanggal, businessId]
     )
 
     res.status(201).json({ data: result.rows[0] })
@@ -57,6 +62,7 @@ router.post('/', async (req, res) => {
 
 // PUT /api/pengeluaran/:id → Edit
 router.put('/:id', async (req, res) => {
+  const businessId = req.user.businessId
   const { id } = req.params
   const { kategori, jumlah, deskripsi, tanggal } = req.body
 
@@ -77,9 +83,9 @@ router.put('/:id', async (req, res) => {
            jumlah = $2,
            deskripsi = $3,
            tanggal = $4
-       WHERE id = $5
+       WHERE id = $5 AND business_id = $6
        RETURNING *`,
-      [kategori, jumlah, deskripsi || null, tanggal, id]
+      [kategori, jumlah, deskripsi || null, tanggal, id, businessId]
     )
 
     if (result.rows.length === 0) {
@@ -94,10 +100,11 @@ router.put('/:id', async (req, res) => {
 
 // DELETE /api/pengeluaran/:id → Hapus
 router.delete('/:id', async (req, res) => {
+  const businessId = req.user.businessId
   try {
     const result = await pool.query(
-      'DELETE FROM pengeluaran WHERE id = $1 RETURNING id',
-      [req.params.id]
+      'DELETE FROM pengeluaran WHERE id = $1 AND business_id = $2 RETURNING id',
+      [req.params.id, businessId]
     )
 
     if (result.rows.length === 0) {

@@ -8,20 +8,25 @@ const SESI_VALID = ['pagi', 'siang', 'sore']
 // GET /api/pakan
 // Support: ?tanggal=2026-09-08  atau  ?bulan=9&tahun=2026
 router.get('/', async (req, res) => {
+  const businessId = req.user.businessId
   const { tanggal, bulan, tahun } = req.query
 
   try {
-    const params = []
-    let where = ''
-    let idx = 1
+    // $1 selalu business_id, filter lain menyusul setelahnya
+    const params = [businessId]
+    const kondisi = ['p.business_id = $1']
 
     if (tanggal) {
       params.push(tanggal)
-      where = `WHERE p.tanggal = $${idx++}`
+      kondisi.push(`p.tanggal = $${params.length}`)
     } else if (bulan && tahun) {
-      params.push(Number(bulan), Number(tahun))
-      where = `WHERE EXTRACT(MONTH FROM p.tanggal) = $${idx++} AND EXTRACT(YEAR FROM p.tanggal) = $${idx++}`
+      params.push(Number(bulan))
+      kondisi.push(`EXTRACT(MONTH FROM p.tanggal) = $${params.length}`)
+      params.push(Number(tahun))
+      kondisi.push(`EXTRACT(YEAR FROM p.tanggal) = $${params.length}`)
     }
+
+    const where = `WHERE ${kondisi.join(' AND ')}`
 
     const result = await pool.query(
       `SELECT 
@@ -36,8 +41,8 @@ router.get('/', async (req, res) => {
          k.nama_kolam, 
          sp.nama AS nama_pakan
        FROM pakan p
-       LEFT JOIN kolam k ON k.id = p.kolam_id
-       LEFT JOIN stok_pakan sp ON sp.id = p.stok_pakan_id
+       LEFT JOIN kolam k ON k.id = p.kolam_id AND k.business_id = p.business_id
+       LEFT JOIN stok_pakan sp ON sp.id = p.stok_pakan_id AND sp.business_id = p.business_id
        ${where}
        ORDER BY p.tanggal DESC, p.sesi`,
       params
@@ -59,20 +64,25 @@ const JAM_BATAS = { pagi: 10, siang: 15, sore: 19 }
 
 // GET /api/pakan/ringkasan-hari-ini
 router.get('/ringkasan-hari-ini', async (req, res) => {
+  const businessId = req.user.businessId
   try {
     const jamSekarang = new Date().getHours()
 
-    // Kolam yang sedang aktif (punya tebar berstatus 'aktif')
+    // Kolam yang sedang aktif (punya tebar berstatus 'aktif') milik business ini
     const kolamRes = await pool.query(
       `SELECT k.id AS kolam_id, k.nama_kolam
        FROM tebar t
        JOIN kolam k ON k.id = t.kolam_id
-       WHERE t.status = 'aktif'`
+       WHERE t.status = 'aktif'
+         AND t.business_id = $1
+         AND k.business_id = $1`,
+      [businessId]
     )
 
     // Catatan pakan yang sudah masuk hari ini
     const pakanRes = await pool.query(
-      `SELECT kolam_id, sesi FROM pakan WHERE tanggal = CURRENT_DATE`
+      `SELECT kolam_id, sesi FROM pakan WHERE tanggal = CURRENT_DATE AND business_id = $1`,
+      [businessId]
     )
     const sudahSet = new Set(pakanRes.rows.map(p => `${p.kolam_id}-${p.sesi}`))
 
@@ -107,6 +117,7 @@ router.get('/ringkasan-hari-ini', async (req, res) => {
 
 // GET /api/pakan/kolam/:kolam_id
 router.get('/kolam/:kolam_id', async (req, res) => {
+  const businessId = req.user.businessId
   try {
     const result = await pool.query(
       `SELECT 
@@ -114,12 +125,12 @@ router.get('/kolam/:kolam_id', async (req, res) => {
          p.jumlah_kg, p.biaya, p.catatan, p.stok_pakan_id,
          k.nama_kolam, sp.nama AS nama_pakan
        FROM pakan p
-       LEFT JOIN kolam k ON k.id = p.kolam_id
-       LEFT JOIN stok_pakan sp ON sp.id = p.stok_pakan_id
-       WHERE p.kolam_id = $1
+       LEFT JOIN kolam k ON k.id = p.kolam_id AND k.business_id = p.business_id
+       LEFT JOIN stok_pakan sp ON sp.id = p.stok_pakan_id AND sp.business_id = p.business_id
+       WHERE p.kolam_id = $1 AND p.business_id = $2
        ORDER BY p.tanggal DESC, p.sesi
        LIMIT 100`,
-      [req.params.kolam_id]
+      [req.params.kolam_id, businessId]
     )
     res.json({ data: result.rows })
   } catch (err) {
@@ -130,6 +141,7 @@ router.get('/kolam/:kolam_id', async (req, res) => {
 
 // POST /api/pakan → catat pakan + kurangi stok + hitung biaya otomatis
 router.post('/', async (req, res) => {
+  const businessId = req.user.businessId
   const { kolam_id, tanggal, sesi, jumlah_kg, biaya, catatan, stok_pakan_id } = req.body
 
   if (!kolam_id || !tanggal || !jumlah_kg) {
@@ -143,14 +155,24 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN')
 
+    // Kolam harus milik business yang sedang login
+    const kolamCek = await client.query(
+      'SELECT id FROM kolam WHERE id = $1 AND business_id = $2',
+      [kolam_id, businessId]
+    )
+    if (kolamCek.rows.length === 0) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ message: 'Kolam tidak ditemukan' })
+    }
+
     let finalBiaya = Number(biaya) || 0
     let hargaPerKg = 0
 
     // Validasi & kurangi stok + ambil harga_per_kg
     if (stok_pakan_id) {
       const stokRes = await client.query(
-        'SELECT id, nama, stok, harga_per_kg FROM stok_pakan WHERE id = $1 FOR UPDATE',
-        [stok_pakan_id]
+        'SELECT id, nama, stok, harga_per_kg FROM stok_pakan WHERE id = $1 AND business_id = $2 FOR UPDATE',
+        [stok_pakan_id, businessId]
       )
 
       if (stokRes.rows.length === 0) {
@@ -175,15 +197,15 @@ router.post('/', async (req, res) => {
       }
 
       await client.query(
-        'UPDATE stok_pakan SET stok = stok - $1 WHERE id = $2',
-        [dipakai, stok_pakan_id]
+        'UPDATE stok_pakan SET stok = stok - $1 WHERE id = $2 AND business_id = $3',
+        [dipakai, stok_pakan_id, businessId]
       )
     }
 
     // Insert catatan pakan
     const result = await client.query(
-      `INSERT INTO pakan (kolam_id, tanggal, sesi, jumlah_kg, biaya, catatan, stok_pakan_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO pakan (kolam_id, tanggal, sesi, jumlah_kg, biaya, catatan, stok_pakan_id, business_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, kolam_id, sesi, tanggal::text AS tanggal, jumlah_kg, biaya, catatan, stok_pakan_id`,
       [
         kolam_id,
@@ -192,7 +214,8 @@ router.post('/', async (req, res) => {
         jumlah_kg,
         finalBiaya,
         catatan || null,
-        stok_pakan_id || null
+        stok_pakan_id || null,
+        businessId
       ]
     )
 
@@ -213,13 +236,14 @@ router.post('/', async (req, res) => {
     
 // DELETE /api/pakan/:id → hapus + kembalikan stok
 router.delete('/:id', async (req, res) => {
+  const businessId = req.user.businessId
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
     const existing = await client.query(
-      'SELECT id, jumlah_kg, stok_pakan_id FROM pakan WHERE id = $1 FOR UPDATE',
-      [req.params.id]
+      'SELECT id, jumlah_kg, stok_pakan_id FROM pakan WHERE id = $1 AND business_id = $2 FOR UPDATE',
+      [req.params.id, businessId]
     )
 
     if (existing.rows.length === 0) {
@@ -232,12 +256,12 @@ router.delete('/:id', async (req, res) => {
     // Kembalikan stok
     if (row.stok_pakan_id) {
       await client.query(
-        'UPDATE stok_pakan SET stok = stok + $1 WHERE id = $2',
-        [row.jumlah_kg, row.stok_pakan_id]
+        'UPDATE stok_pakan SET stok = stok + $1 WHERE id = $2 AND business_id = $3',
+        [row.jumlah_kg, row.stok_pakan_id, businessId]
       )
     }
 
-    await client.query('DELETE FROM pakan WHERE id = $1', [req.params.id])
+    await client.query('DELETE FROM pakan WHERE id = $1 AND business_id = $2', [req.params.id, businessId])
     await client.query('COMMIT')
 
     res.json({ message: 'Data pakan dihapus' })

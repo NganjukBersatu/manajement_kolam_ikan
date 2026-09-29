@@ -30,8 +30,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Username atau password salah' })
     }
 
+    // Akun tanpa business tidak boleh login, karena semua data terikat ke business
+    if (!user.businessId) {
+      return res.status(403).json({ message: 'Akun ini belum terhubung dengan usaha. Hubungi admin.' })
+    }
+
     const token = jwt.sign(
-      { id: user.id, username: user.username },
+      { id: user.id, username: user.username, businessId: user.businessId },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     )
@@ -106,7 +111,7 @@ router.post('/register', async (req, res) => {
     })
 
     const token = jwt.sign(
-      { id: newUser.id, username: newUser.username },
+      { id: newUser.id, username: newUser.username, businessId: newUser.businessId },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
     )

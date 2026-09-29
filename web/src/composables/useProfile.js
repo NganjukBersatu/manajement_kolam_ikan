@@ -1,37 +1,58 @@
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
-const STORAGE_KEY = 'profile_data'
-
+// Data profil sekarang disimpan di server (per akun), bukan di localStorage browser.
 const defaultProfile = {
-  name: 'Admin',
+  name: '',
+  username: '',
   role: 'Administrator',
   email: '',
   photo: null // base64 string atau null (pakai inisial)
 }
 
-function loadProfile() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return { ...defaultProfile, ...JSON.parse(raw) }
-  } catch (e) {
-    console.error('Gagal memuat data profil:', e)
-  }
-  return { ...defaultProfile }
+const profile = ref({ ...defaultProfile })
+
+// Hapus sisa data lama di browser ini (dulu dipakai bersama semua akun)
+try {
+  localStorage.removeItem('profile_data')
+} catch (e) {
+  // abaikan
 }
 
-const profile = ref(loadProfile())
-
-watch(
-  profile,
-  (val) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(val))
-    } catch (e) {
-      console.error('Gagal menyimpan data profil:', e)
+// Ambil profil akun yang sedang login dari server
+async function muatProfil() {
+  try {
+    const res = await fetch('/api/pengaturan/akun')
+    if (!res.ok) return
+    const json = await res.json()
+    const d = json.data || {}
+    profile.value = {
+      ...defaultProfile,
+      name: d.nama || d.username || '',
+      username: d.username || '',
+      email: d.email || '',
+      photo: d.foto || null
     }
-  },
-  { deep: true }
-)
+  } catch (e) {
+    console.warn('Gagal memuat profil dari server:', e.message)
+  }
+}
+
+// Kosongkan profil di memori (dipanggil saat keluar / ganti akun)
+function resetProfile() {
+  profile.value = { ...defaultProfile }
+}
+
+async function simpanFoto(foto) {
+  const res = await fetch('/api/pengaturan/akun/foto', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ foto })
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error(json.message || 'Gagal menyimpan foto')
+  }
+}
 
 export function useProfile() {
   function setPhoto(base64) {
@@ -39,11 +60,19 @@ export function useProfile() {
   }
 
   function removePhoto() {
+    const lama = profile.value.photo
     profile.value.photo = null
+    simpanFoto(null).catch((e) => {
+      console.error(e)
+      profile.value.photo = lama
+    })
   }
 
   function updateProfile(data) {
-    profile.value = { ...profile.value, ...data }
+    const baru = { ...data }
+    // Nama kosong → pakai username akun
+    if ('name' in baru && !baru.name) baru.name = profile.value.username
+    profile.value = { ...profile.value, ...baru }
   }
 
   function initials() {
@@ -56,7 +85,7 @@ export function useProfile() {
       .join('') || 'A'
   }
 
-  // Baca file gambar yang dipilih user, konversi ke base64, lalu validasi ukuran/tipe
+  // Baca file gambar yang dipilih user, konversi ke base64, validasi, lalu simpan ke server
   function handleFileSelect(file) {
     return new Promise((resolve, reject) => {
       if (!file) return reject(new Error('Tidak ada file dipilih'))
@@ -68,9 +97,16 @@ export function useProfile() {
         return reject(new Error(`Ukuran gambar maksimal ${maxSizeMB}MB`))
       }
       const reader = new FileReader()
-      reader.onload = () => {
+      reader.onload = async () => {
+        const lama = profile.value.photo
         setPhoto(reader.result)
-        resolve(reader.result)
+        try {
+          await simpanFoto(reader.result)
+          resolve(reader.result)
+        } catch (err) {
+          profile.value.photo = lama
+          reject(err)
+        }
       }
       reader.onerror = () => reject(new Error('Gagal membaca file gambar'))
       reader.readAsDataURL(file)
@@ -83,6 +119,8 @@ export function useProfile() {
     removePhoto,
     updateProfile,
     initials,
-    handleFileSelect
+    handleFileSelect,
+    muatProfil,
+    resetProfile
   }
 }

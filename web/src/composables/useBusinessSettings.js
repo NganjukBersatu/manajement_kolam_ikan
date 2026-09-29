@@ -1,6 +1,4 @@
-import { ref, computed, watch } from 'vue'
-
-const STORAGE_KEY = 'business_settings'
+import { ref, computed } from 'vue'
 
 export const KOMODITAS_PRESET = [
   { value: 'ikan', label: 'Ikan', satuanDefault: 'ekor' },
@@ -33,30 +31,15 @@ const defaultSettings = {
   notifJadwal: true
 }
 
-function loadFromLocal() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return { ...defaultSettings, ...JSON.parse(raw) }
-  } catch (e) {
-    console.error('Gagal memuat pengaturan usaha:', e)
-  }
-  return { ...defaultSettings }
+// Pengaturan usaha sekarang disimpan di server (per akun), bukan di localStorage browser.
+const settings = ref({ ...defaultSettings })
+
+// Hapus sisa data lama di browser ini (dulu dipakai bersama semua akun)
+try {
+  localStorage.removeItem('business_settings')
+} catch (e) {
+  // abaikan
 }
-
-const settings = ref(loadFromLocal())
-
-// Auto-save ke localStorage
-watch(
-  settings,
-  (val) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(val))
-    } catch (e) {
-      console.error('Gagal menyimpan pengaturan usaha:', e)
-    }
-  },
-  { deep: true }
-)
 
 export const ZONA_WAKTU_OPTIONS = [
   { value: 'Asia/Jakarta', label: 'WIB (Jakarta)' },
@@ -68,6 +51,37 @@ export const MATA_UANG_OPTIONS = [
   { value: 'IDR', label: 'Rupiah (Rp)' },
   { value: 'USD', label: 'US Dollar ($)' }
 ]
+
+// ===== API Sync =====
+async function loadFromApi() {
+  try {
+    const res = await fetch('/api/pengaturan/usaha')
+    if (!res.ok) return
+
+    const json = await res.json()
+    settings.value = { ...defaultSettings, ...(json.data || {}) }
+  } catch (e) {
+    console.warn('Gagal load pengaturan dari server:', e.message)
+  }
+}
+
+// Melempar error kalau gagal, supaya halaman Pengaturan bisa menampilkan pesan gagal
+async function saveToApi() {
+  const res = await fetch('/api/pengaturan/usaha', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings.value)
+  })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error(json.message || 'Gagal menyimpan pengaturan usaha')
+  }
+}
+
+// Kosongkan pengaturan di memori (dipanggil saat keluar / ganti akun)
+function resetSettings() {
+  settings.value = { ...defaultSettings }
+}
 
 export function useBusinessSettings() {
   // Label gabungan, contoh: "Ikan, Udang"
@@ -94,11 +108,12 @@ export function useBusinessSettings() {
     settings.value = { ...settings.value, ...data }
   }
 
-  // Dipakai setelah registrasi sukses
+  // Dipakai setelah registrasi sukses.
+  // Mulai dari nilai bawaan (bukan dari data akun sebelumnya), lalu simpan ke server.
   function setFromRegistration({ name, address, phone, commodities = [] }) {
     settings.value = {
-      ...settings.value,
-      namaUsaha: name || settings.value.namaUsaha,
+      ...defaultSettings,
+      namaUsaha: name || defaultSettings.namaUsaha,
       alamat: address || '',
       telepon: phone || '',
       commodities: commodities.map((c) => ({
@@ -113,6 +128,8 @@ export function useBusinessSettings() {
       const first = KOMODITAS_PRESET.find((k) => k.value === commodities[0].key)
       if (first) settings.value.satuan = first.satuanDefault
     }
+
+    saveToApi().catch((e) => console.warn('Gagal menyimpan data registrasi:', e.message))
   }
 
   // Toggle komoditas (untuk UI multi-select)
@@ -142,7 +159,7 @@ export function useBusinessSettings() {
     if (item) item.initialPools = Number(count) || 0
   }
 
-  // Upload logo
+  // Upload logo (langsung disimpan ke server)
   function handleLogoSelect(file) {
     return new Promise((resolve, reject) => {
       if (!file) return reject(new Error('Tidak ada file dipilih'))
@@ -153,9 +170,16 @@ export function useBusinessSettings() {
         return reject(new Error('Ukuran gambar maksimal 2MB'))
       }
       const reader = new FileReader()
-      reader.onload = () => {
+      reader.onload = async () => {
+        const lama = settings.value.logo
         settings.value.logo = reader.result
-        resolve(reader.result)
+        try {
+          await saveToApi()
+          resolve(reader.result)
+        } catch (err) {
+          settings.value.logo = lama
+          reject(err)
+        }
       }
       reader.onerror = () => reject(new Error('Gagal membaca file gambar'))
       reader.readAsDataURL(file)
@@ -163,46 +187,12 @@ export function useBusinessSettings() {
   }
 
   function removeLogo() {
+    const lama = settings.value.logo
     settings.value.logo = null
-  }
-
-  // ===== API Sync (aman terhadap 404) =====
-  async function loadFromApi() {
-    try {
-      const res = await fetch('/api/pengaturan/usaha')
-
-      // Endpoint belum ada di backend → diam saja, pakai data lokal
-      if (res.status === 404) {
-        console.warn('Endpoint /api/pengaturan/usaha belum tersedia, pakai data lokal')
-        return
-      }
-
-      if (!res.ok) return
-
-      const json = await res.json()
-      if (json.data) {
-        settings.value = { ...defaultSettings, ...json.data }
-      }
-    } catch (e) {
-      console.warn('Gagal load pengaturan dari server:', e.message)
-    }
-  }
-
-  async function saveToApi() {
-    try {
-      const res = await fetch('/api/pengaturan/usaha', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings.value)
-      })
-
-      if (res.status === 404) {
-        console.warn('Endpoint /api/pengaturan/usaha belum tersedia, hanya disimpan lokal')
-        return
-      }
-    } catch (e) {
-      console.warn('Gagal simpan pengaturan ke server:', e.message)
-    }
+    saveToApi().catch((e) => {
+      console.error(e)
+      settings.value.logo = lama
+    })
   }
 
   return {
@@ -219,6 +209,7 @@ export function useBusinessSettings() {
     removeLogo,
     loadFromApi,
     saveToApi,
+    resetSettings,
     KOMODITAS_PRESET
   }
 }

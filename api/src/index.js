@@ -22,13 +22,14 @@ import pengeluaranRoutes from './routes/pengeluaran.js'
 import laporanRoutes from './routes/laporan.js'
 import pengaturanRoutes from './routes/pengaturan.js'
 import stokPakanRoutes from './routes/stokPakan.js'
-import gantiAirRoutes from './routes/gantiAir.js'             // ← TAMBAHKAN INI
+import gantiAirRoutes from './routes/gantiAir.js'
 
 const app = express()
 const PORT = process.env.PORT || 4001
 
 app.use(cors())
-app.use(express.json())
+// Batas dinaikkan dari 100kb karena foto profil & logo dikirim sebagai base64
+app.use(express.json({ limit: '6mb' }))
 
 // ---- Route PUBLIK (tidak perlu login) ----
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'kolam-ikan-api' }))
@@ -51,7 +52,7 @@ app.use('/api/pengeluaran', pengeluaranRoutes)
 app.use('/api/laporan', laporanRoutes)
 app.use('/api/pengaturan', pengaturanRoutes)
 app.use('/api/stok-pakan', stokPakanRoutes)
-app.use('/api/ganti-air', gantiAirRoutes)                     // ← TAMBAHKAN INI
+app.use('/api/ganti-air', gantiAirRoutes)
 
 // ---- Frontend (hasil build Vite) disajikan oleh service yang sama ----
 const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist')

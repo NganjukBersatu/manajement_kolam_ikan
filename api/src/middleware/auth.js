@@ -13,6 +13,13 @@ export function requireAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, JWT_SECRET)
+
+    // Token lama (dibuat sebelum data dipisah per usaha) tidak punya businessId.
+    // Paksa login ulang supaya token baru membawa businessId.
+    if (!payload.businessId) {
+      return res.status(401).json({ message: 'Sesi lama tidak berlaku. Silakan login ulang.' })
+    }
+
     req.user = payload
     next()
   } catch (err) {
