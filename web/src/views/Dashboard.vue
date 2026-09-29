@@ -32,7 +32,7 @@ const jadwalGabungan = ref([])
 const pakanSesi = ref([])
 const perluPerhatian = ref([])
 
-// [BARU] gaya kartu bersama, tab grafik, dan pesan galat
+// gaya kartu bersama, tab grafik, dan pesan galat
 const card = 'bg-white dark:bg-ink-700 rounded-card border border-ink-100 dark:border-ink-500 shadow-card p-4 sm:p-5'
 const grafikAktif = ref('penjualan')
 const galat = ref('')
@@ -52,15 +52,43 @@ function toggleTampilanPerhatian() {
 function rupiah(n) {
   return 'Rp' + Number(n || 0).toLocaleString('id-ID')
 }
+
+// ===== Helper tanggal (semua memakai tanggal LOKAL, bukan UTC) =====
+
+// Ambil 'YYYY-MM-DD' dari nilai tanggal apa pun dari server
+// (mis. '2026-09-29' atau '2026-09-29T00:00:00.000Z').
+function normalisasiTanggal(nilai) {
+  if (!nilai) return null
+  return String(nilai).slice(0, 10)
+}
+
+// Ubah 'YYYY-MM-DD' menjadi objek Date pada tengah malam waktu lokal.
+function parseTanggal(nilai) {
+  const str = normalisasiTanggal(nilai)
+  if (!str) return null
+  const [y, m, d] = str.split('-').map(Number)
+  if (!y || !m || !d) return null
+  return new Date(y, m - 1, d)
+}
+
+// Format 'YYYY-MM-DD' memakai waktu lokal (bukan toISOString yang UTC).
+function keTanggalISO(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function tanggal(d) {
-  if (!d) return '-'
-  return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
+  const dt = parseTanggal(d)
+  if (!dt) return '-'
+  return dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
 }
 
 function selisihHari(d) {
-  if (!d) return null
+  const target = parseTanggal(d)
+  if (!target) return null
   const hariIni = new Date(); hariIni.setHours(0, 0, 0, 0)
-  const target = new Date(d); target.setHours(0, 0, 0, 0)
   return Math.round((target - hariIni) / 86400000)
 }
 function labelUrgensi(d) {
@@ -238,7 +266,7 @@ const chartKeuntungan = computed(() => {
   }
 })
 
-// [BARU] data grafik sesuai tab yang dipilih
+// data grafik sesuai tab yang dipilih
 const grafikData = computed(() =>
   grafikAktif.value === 'penjualan' ? chartPenjualan.value : chartKeuntungan.value
 )
@@ -276,7 +304,6 @@ const chartOptions = {
   }
 }
 
-// [DIUBAH] nama fungsi lama `muat` menjadi `muatData`, isinya tidak berubah
 async function muatData() {
   loading.value = true
 
@@ -312,18 +339,19 @@ async function muatData() {
   sortir.forEach(item => {
     if (item.status === 'selesai') return
     const key = item.kolam_id
+    const tglJadwal = normalisasiTanggal(item.tanggal_jadwal)
     if (!map[key]) {
       map[key] = {
         kolam_id: item.kolam_id,
         nama_kolam: item.nama_kolam,
         nama_ikan: item.nama_ikan,
         jumlah: item.jumlah_saat_ini,
-        tanggal_sortir: item.tanggal_jadwal,
+        tanggal_sortir: tglJadwal,
         tanggal_panen: null,
         status_sortir: item.status
       }
     } else {
-      map[key].tanggal_sortir = item.tanggal_jadwal
+      map[key].tanggal_sortir = tglJadwal
       map[key].jumlah = item.jumlah_saat_ini
       map[key].status_sortir = item.status
     }
@@ -332,6 +360,7 @@ async function muatData() {
   panen.forEach(item => {
     if (item.status === 'selesai') return
     const key = item.kolam_id
+    const tglJadwal = normalisasiTanggal(item.tanggal_jadwal)
     if (!map[key]) {
       map[key] = {
         kolam_id: item.kolam_id,
@@ -339,20 +368,21 @@ async function muatData() {
         nama_ikan: item.nama_ikan,
         jumlah: item.jumlah_saat_ini,
         tanggal_sortir: null,
-        tanggal_panen: item.tanggal_jadwal,
+        tanggal_panen: tglJadwal,
         status_panen: item.status
       }
     } else {
-      map[key].tanggal_panen = item.tanggal_jadwal
+      map[key].tanggal_panen = tglJadwal
       map[key].status_panen = item.status
       if (!map[key].jumlah) map[key].jumlah = item.jumlah_saat_ini
     }
   })
 
   jadwalGabungan.value = Object.values(map).sort((a, b) => {
-    const tglA = a.tanggal_sortir || a.tanggal_panen
-    const tglB = b.tanggal_sortir || b.tanggal_panen
-    return new Date(tglA) - new Date(tglB)
+    const tglA = a.tanggal_sortir || a.tanggal_panen || ''
+    const tglB = b.tanggal_sortir || b.tanggal_panen || ''
+    if (tglA === tglB) return 0
+    return tglA < tglB ? -1 : 1
   })
 
   const urutanSesi = [
@@ -383,7 +413,8 @@ async function muatData() {
       })
     })
 
-  const hariIni = new Date().toISOString().slice(0, 10)
+  // Tanggal hari ini memakai waktu LOKAL (bukan toISOString yang UTC)
+  const hariIni = keTanggalISO(new Date())
   jadwalGabungan.value.forEach(j => {
     if (j.tanggal_sortir && j.tanggal_sortir <= hariIni && j.status_sortir !== 'selesai') {
       daftarPerhatian.push({
@@ -401,7 +432,7 @@ async function muatData() {
   loading.value = false
 }
 
-// [BARU] pembungkus supaya kalau ada request gagal, halaman tidak blank
+// pembungkus supaya kalau ada request gagal, halaman tidak blank
 async function muat() {
   loading.value = true
   galat.value = ''
