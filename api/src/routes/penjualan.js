@@ -4,10 +4,14 @@ import { pool } from '../config/db.js'
 const router = Router()
 
 // GET semua penjualan
+// tanggal dikirim sebagai teks 'YYYY-MM-DD' agar tidak bergeser zona waktu
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT p.*, ji.nama AS nama_ikan, k.nama_kolam
+      SELECT p.*,
+             to_char(p.tanggal, 'YYYY-MM-DD') AS tanggal,
+             ji.nama AS nama_ikan,
+             k.nama_kolam
       FROM penjualan p
       LEFT JOIN jenis_ikan ji ON ji.id = p.jenis_ikan_id
       LEFT JOIN kolam k ON k.id = p.kolam_id
@@ -41,7 +45,7 @@ router.post('/', async (req, res) => {
       `INSERT INTO penjualan 
         (tanggal, jenis_ikan_id, kolam_id, jumlah_kg, harga_per_kg, total, catatan)
        VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       RETURNING *`,
+       RETURNING *, to_char(tanggal, 'YYYY-MM-DD') AS tanggal`,
       [
         tanggal,
         jenis_ikan_id,
@@ -87,7 +91,7 @@ router.put('/:id', async (req, res) => {
         total = $6,
         catatan = $7
        WHERE id = $8
-       RETURNING *`,
+       RETURNING *, to_char(tanggal, 'YYYY-MM-DD') AS tanggal`,
       [
         tanggal,
         jenis_ikan_id,
