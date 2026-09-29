@@ -4,6 +4,7 @@ import { pool } from '../config/db.js'
 const router = Router()
 
 router.post('/', async (req, res) => {
+  const businessId = req.user.businessId
   let { kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit } = req.body
   if (!kolam_id || !tanggal_tebar || !jumlah_bibit) {
     return res.status(400).json({ message: 'kolam_id, tanggal_tebar, jumlah_bibit wajib diisi' })
@@ -13,7 +14,11 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN')
 
-    const kolamCek = await client.query(`SELECT status, jenis_ikan_id FROM kolam WHERE id = $1`, [kolam_id])
+    // Kolam harus milik business yang sedang login
+    const kolamCek = await client.query(
+      `SELECT status, jenis_ikan_id FROM kolam WHERE id = $1 AND business_id = $2`,
+      [kolam_id, businessId]
+    )
     if (kolamCek.rows.length === 0) {
       await client.query('ROLLBACK')
       return res.status(404).json({ message: 'Kolam tidak ditemukan' })
@@ -32,9 +37,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Jenis ikan pada kolam ini belum ditentukan. Silakan edit kolam untuk memilih jenis ikan.' })
     }
 
+    // Jenis ikan juga harus milik business yang sama
     const jenisResult = await client.query(
-      'SELECT hari_sortir, hari_panen, hari_obat_pertama, interval_obat_hari FROM jenis_ikan WHERE id = $1',
-      [jenis_ikan_id]
+      `SELECT hari_sortir, hari_panen, hari_obat_pertama, interval_obat_hari
+       FROM jenis_ikan WHERE id = $1 AND business_id = $2`,
+      [jenis_ikan_id, businessId]
     )
     if (jenisResult.rows.length === 0) {
       await client.query('ROLLBACK')
@@ -43,21 +50,25 @@ router.post('/', async (req, res) => {
     const { hari_sortir, hari_panen, hari_obat_pertama, interval_obat_hari } = jenisResult.rows[0]
 
     const tebarResult = await client.query(
-      `INSERT INTO tebar (kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit, jumlah_saat_ini)
-       VALUES ($1, $2, $3, $4, $4) RETURNING *`,
-      [kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit]
+      `INSERT INTO tebar (kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit, jumlah_saat_ini, business_id)
+       VALUES ($1, $2, $3, $4, $4, $5) RETURNING *`,
+      [kolam_id, jenis_ikan_id, tanggal_tebar, jumlah_bibit, businessId]
     )
     const tebarBaru = tebarResult.rows[0]
 
-    await client.query(`UPDATE kolam SET status = 'aktif', jenis_ikan_id = $1, updated_at = NOW() WHERE id = $2`, [jenis_ikan_id, kolam_id])
+    await client.query(
+      `UPDATE kolam SET status = 'aktif', jenis_ikan_id = $1, updated_at = NOW()
+       WHERE id = $2 AND business_id = $3`,
+      [jenis_ikan_id, kolam_id, businessId]
+    )
 
     // Jadwal sortir & panen otomatis dari tanggal_tebar + hari yang ditentukan jenis ikan
     await client.query(
-      `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal)
+      `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal, business_id)
        VALUES
-        ($1, $2, 'sortir', ($3::date + ($4 || ' days')::interval)::date),
-        ($1, $2, 'panen',  ($3::date + ($5 || ' days')::interval)::date)`,
-      [tebarBaru.id, kolam_id, tanggal_tebar, hari_sortir, hari_panen]
+        ($1, $2, 'sortir', ($3::date + ($4 || ' days')::interval)::date, $6),
+        ($1, $2, 'panen',  ($3::date + ($5 || ' days')::interval)::date, $6)`,
+      [tebarBaru.id, kolam_id, tanggal_tebar, hari_sortir, hari_panen, businessId]
     )
 
     // Jadwal obat: mulai dari hari_obat_pertama, berulang tiap interval_obat_hari, sampai maksimal hari_panen.
@@ -79,9 +90,9 @@ router.post('/', async (req, res) => {
 
     for (const hari of hariObatList) {
       await client.query(
-        `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal)
-         VALUES ($1, $2, 'obat', ($3::date + ($4 || ' days')::interval)::date)`,
-        [tebarBaru.id, kolam_id, tanggal_tebar, hari]
+        `INSERT INTO jadwal (tebar_id, kolam_id, jenis, tanggal_jadwal, business_id)
+         VALUES ($1, $2, 'obat', ($3::date + ($4 || ' days')::interval)::date, $5)`,
+        [tebarBaru.id, kolam_id, tanggal_tebar, hari, businessId]
       )
     }
 
@@ -97,14 +108,16 @@ router.post('/', async (req, res) => {
 })
 
 router.get('/:id', async (req, res) => {
+  const businessId = req.user.businessId
   try {
     const result = await pool.query(
-      `SELECT t.*, k.nama_kolam, ji.nama AS nama_ikan
+      `SELECT t.*, to_char(t.tanggal_tebar, 'YYYY-MM-DD') AS tanggal_tebar,
+              k.nama_kolam, ji.nama AS nama_ikan
        FROM tebar t
        JOIN kolam k ON k.id = t.kolam_id
        JOIN jenis_ikan ji ON ji.id = t.jenis_ikan_id
-       WHERE t.id = $1`,
-      [req.params.id]
+       WHERE t.id = $1 AND t.business_id = $2`,
+      [req.params.id, businessId]
     )
     if (result.rows.length === 0) return res.status(404).json({ message: 'Tebar tidak ditemukan' })
     res.json({ data: result.rows[0] })

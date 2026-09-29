@@ -26,6 +26,7 @@ export const businessCommodities = pgTable("business_commodities", {
 
 export const tebar = pgTable("tebar", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	kolamId: integer("kolam_id").notNull(),
 	jenisIkanId: integer("jenis_ikan_id").notNull(),
 	tanggalTebar: date("tanggal_tebar").notNull(),
@@ -48,6 +49,7 @@ export const tebar = pgTable("tebar", {
 
 export const jadwal = pgTable("jadwal", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	tebarId: integer("tebar_id").notNull(),
 	kolamId: integer("kolam_id").notNull(),
 	jenis: varchar({ length: 20 }).notNull(),
@@ -69,6 +71,7 @@ export const jadwal = pgTable("jadwal", {
 
 export const sortir = pgTable("sortir", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	jadwalId: integer("jadwal_id"),
 	tebarId: integer("tebar_id").notNull(),
 	kolamId: integer("kolam_id").notNull(),
@@ -97,6 +100,7 @@ export const sortir = pgTable("sortir", {
 
 export const panen = pgTable("panen", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	jadwalId: integer("jadwal_id"),
 	tebarId: integer("tebar_id").notNull(),
 	kolamId: integer("kolam_id").notNull(),
@@ -125,6 +129,7 @@ export const panen = pgTable("panen", {
 
 export const kolam = pgTable("kolam", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	namaKolam: varchar("nama_kolam", { length: 50 }).notNull(),
 	luasM2: numeric("luas_m2"),
 	status: varchar({ length: 20 }).default('kosong').notNull(),
@@ -136,6 +141,7 @@ export const kolam = pgTable("kolam", {
 
 export const pakan = pgTable("pakan", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	kolamId: integer("kolam_id").notNull(),
 	tanggal: date().notNull(),
 	jumlahKg: numeric("jumlah_kg").notNull(),
@@ -159,6 +165,7 @@ export const pakan = pgTable("pakan", {
 
 export const jenisIkan = pgTable("jenis_ikan", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	nama: varchar({ length: 100 }).notNull(),
 	hariSortir: integer("hari_sortir").notNull(),
 	hariPanen: integer("hari_panen").notNull(),
@@ -170,6 +177,7 @@ export const jenisIkan = pgTable("jenis_ikan", {
 
 export const pengeluaran = pgTable("pengeluaran", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	kategori: varchar({ length: 30 }).notNull(),
 	jumlah: numeric().notNull(),
 	deskripsi: text(),
@@ -179,6 +187,7 @@ export const pengeluaran = pgTable("pengeluaran", {
 
 export const pengaturanAkun = pgTable("pengaturan_akun", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	nama: varchar({ length: 100 }).notNull(),
 	email: varchar({ length: 100 }),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
@@ -186,6 +195,7 @@ export const pengaturanAkun = pgTable("pengaturan_akun", {
 
 export const penjualan = pgTable("penjualan", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	tanggal: date().notNull(),
 	jenisIkanId: integer("jenis_ikan_id").notNull(),
 	kolamId: integer("kolam_id"),
@@ -226,6 +236,7 @@ export const users = pgTable("users", {
 
 export const gantiAir = pgTable("ganti_air", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	jadwalId: integer("jadwal_id"),
 	tebarId: integer("tebar_id").notNull(),
 	kolamId: integer("kolam_id").notNull(),
@@ -253,6 +264,7 @@ export const gantiAir = pgTable("ganti_air", {
 
 export const obat = pgTable("obat", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	kolamId: integer("kolam_id").notNull(),
 	tanggal: date().notNull(),
 	namaObat: varchar("nama_obat", { length: 100 }).notNull(),
@@ -276,6 +288,7 @@ export const obat = pgTable("obat", {
 
 export const stokPakan = pgTable("stok_pakan", {
 	id: serial().primaryKey().notNull(),
+	businessId: integer("business_id").notNull(),
 	nama: varchar({ length: 100 }).notNull(),
 	stok: numeric({ precision: 12, scale:  2 }).default('0').notNull(),
 	satuan: varchar({ length: 20 }).default('kg').notNull(),

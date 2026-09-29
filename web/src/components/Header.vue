@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from '../composables/useTheme.js'
 import { useProfile } from '../composables/useProfile.js'
+import { useBusinessSettings } from '../composables/useBusinessSettings.js'
 import { useNotifications } from '../composables/useNotifications.js'
 import NavIcon from './NavIcon.vue'
 
@@ -13,7 +14,8 @@ defineProps({
 const route = useRoute()
 const router = useRouter()
 const { isDark, toggle } = useTheme()
-const { profile, initials, handleFileSelect } = useProfile()
+const { profile, initials, handleFileSelect, muatProfil } = useProfile()
+const { loadFromApi: muatUsaha } = useBusinessSettings()
 const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, iconFor, syncAll } = useNotifications()
 
 const menuOpen = ref(false)
@@ -44,6 +46,9 @@ function closeMenus(e) {
 
 onMounted(() => {
   document.addEventListener('click', closeMenus)
+  // Muat profil dan pengaturan usaha milik akun yang sedang login
+  muatProfil()
+  muatUsaha()
   syncAll()
   notifInterval = setInterval(syncAll, 30000)
 })

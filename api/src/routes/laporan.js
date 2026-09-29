@@ -5,6 +5,7 @@ const router = Router()
 
 // GET /api/laporan?bulan=9&tahun=2026
 router.get('/', async (req, res) => {
+  const businessId = req.user.businessId
   try {
     const now = new Date()
     const bulan = parseInt(req.query.bulan) || (now.getMonth() + 1)
@@ -21,6 +22,8 @@ router.get('/', async (req, res) => {
     }
     const prevStartDate = `${prevTahun}-${String(prevBulan).padStart(2, '0')}-01`
 
+    // Catatan: $1 = tanggal awal bulan, $2 = business_id (di semua query)
+
     // ========== DATA BULAN YANG DIPILIH ==========
     const penjualanResult = await pool.query(`
       SELECT 
@@ -28,13 +31,15 @@ router.get('/', async (req, res) => {
         COALESCE(SUM(jumlah_kg), 0) AS total_kg
       FROM penjualan
       WHERE date_trunc('month', tanggal) = date_trunc('month', $1::date)
-    `, [startDate])
+        AND business_id = $2
+    `, [startDate, businessId])
 
     const pengeluaranResult = await pool.query(`
       SELECT COALESCE(SUM(jumlah), 0) AS total
       FROM pengeluaran
       WHERE date_trunc('month', tanggal) = date_trunc('month', $1::date)
-    `, [startDate])
+        AND business_id = $2
+    `, [startDate, businessId])
 
     const pakanResult = await pool.query(`
       SELECT 
@@ -42,7 +47,8 @@ router.get('/', async (req, res) => {
         COALESCE(SUM(jumlah_kg), 0) AS total_kg
       FROM pakan
       WHERE date_trunc('month', tanggal) = date_trunc('month', $1::date)
-    `, [startDate])
+        AND business_id = $2
+    `, [startDate, businessId])
 
     const panenResult = await pool.query(`
       SELECT 
@@ -50,26 +56,30 @@ router.get('/', async (req, res) => {
         COALESCE(SUM(berat_kg), 0) AS total_kg
       FROM panen
       WHERE date_trunc('month', tanggal) = date_trunc('month', $1::date)
-    `, [startDate])
+        AND business_id = $2
+    `, [startDate, businessId])
 
     // ========== DATA BULAN SEBELUMNYA ==========
     const prevPenjualan = await pool.query(`
       SELECT COALESCE(SUM(total), 0) AS total_penjualan
       FROM penjualan
       WHERE date_trunc('month', tanggal) = date_trunc('month', $1::date)
-    `, [prevStartDate])
+        AND business_id = $2
+    `, [prevStartDate, businessId])
 
     const prevPengeluaran = await pool.query(`
       SELECT COALESCE(SUM(jumlah), 0) AS total
       FROM pengeluaran
       WHERE date_trunc('month', tanggal) = date_trunc('month', $1::date)
-    `, [prevStartDate])
+        AND business_id = $2
+    `, [prevStartDate, businessId])
 
     const prevPakan = await pool.query(`
       SELECT COALESCE(SUM(biaya), 0) AS total
       FROM pakan
       WHERE date_trunc('month', tanggal) = date_trunc('month', $1::date)
-    `, [prevStartDate])
+        AND business_id = $2
+    `, [prevStartDate, businessId])
 
     const prevPanen = await pool.query(`
       SELECT 
@@ -77,22 +87,25 @@ router.get('/', async (req, res) => {
         COALESCE(SUM(berat_kg), 0) AS total_kg
       FROM panen
       WHERE date_trunc('month', tanggal) = date_trunc('month', $1::date)
-    `, [prevStartDate])
+        AND business_id = $2
+    `, [prevStartDate, businessId])
 
     // ========== DETAIL PENGELUARAN ==========
     const detailPengeluaranIni = await pool.query(`
       SELECT id, kategori, jumlah, deskripsi, tanggal
       FROM pengeluaran
       WHERE date_trunc('month', tanggal) = date_trunc('month', $1::date)
+        AND business_id = $2
       ORDER BY tanggal DESC
-    `, [startDate])
+    `, [startDate, businessId])
 
     const detailPengeluaranLalu = await pool.query(`
       SELECT id, kategori, jumlah, deskripsi, tanggal
       FROM pengeluaran
       WHERE date_trunc('month', tanggal) = date_trunc('month', $1::date)
+        AND business_id = $2
       ORDER BY tanggal DESC
-    `, [prevStartDate])
+    `, [prevStartDate, businessId])
 
     // ========== STOK PER KOLAM (selalu data terkini) ==========
     const perKolamResult = await pool.query(`
@@ -103,10 +116,11 @@ router.get('/', async (req, res) => {
         t.jumlah_saat_ini, 
         t.tanggal_tebar
       FROM kolam k
-      JOIN tebar t ON t.kolam_id = k.id AND t.status = 'aktif'
-      JOIN jenis_ikan ji ON ji.id = t.jenis_ikan_id
+      JOIN tebar t ON t.kolam_id = k.id AND t.status = 'aktif' AND t.business_id = k.business_id
+      JOIN jenis_ikan ji ON ji.id = t.jenis_ikan_id AND ji.business_id = k.business_id
+      WHERE k.business_id = $1
       ORDER BY k.nama_kolam ASC
-    `)
+    `, [businessId])
 
     // Hitung total
     const totalPenjualan = Number(penjualanResult.rows[0].total_penjualan)
