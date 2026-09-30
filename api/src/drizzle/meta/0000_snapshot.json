@@ -4,6 +4,407 @@
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.panen": {
+      "name": "panen",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jadwal_id": {
+          "name": "jadwal_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tebar_id": {
+          "name": "tebar_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kolam_id": {
+          "name": "kolam_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_ekor": {
+          "name": "jumlah_ekor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "berat_kg": {
+          "name": "berat_kg",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_panen_business_id": {
+          "name": "idx_panen_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "panen_jadwal_id_fkey": {
+          "name": "panen_jadwal_id_fkey",
+          "tableFrom": "panen",
+          "tableTo": "jadwal",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "jadwal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "panen_tebar_id_fkey": {
+          "name": "panen_tebar_id_fkey",
+          "tableFrom": "panen",
+          "tableTo": "tebar",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "tebar_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "panen_kolam_id_fkey": {
+          "name": "panen_kolam_id_fkey",
+          "tableFrom": "panen",
+          "tableTo": "kolam",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "kolam_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "panen_business_id_fkey": {
+          "name": "panen_business_id_fkey",
+          "tableFrom": "panen",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.pakan": {
+      "name": "pakan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kolam_id": {
+          "name": "kolam_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_kg": {
+          "name": "jumlah_kg",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "biaya": {
+          "name": "biaya",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "stok_pakan_id": {
+          "name": "stok_pakan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sesi": {
+          "name": "sesi",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_pakan_business_id": {
+          "name": "idx_pakan_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "pakan_kolam_id_fkey": {
+          "name": "pakan_kolam_id_fkey",
+          "tableFrom": "pakan",
+          "tableTo": "kolam",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "kolam_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pakan_stok_pakan_id_fkey": {
+          "name": "pakan_stok_pakan_id_fkey",
+          "tableFrom": "pakan",
+          "tableTo": "stok_pakan",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "stok_pakan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "pakan_business_id_fkey": {
+          "name": "pakan_business_id_fkey",
+          "tableFrom": "pakan",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "uq_pakan_kolam_tanggal_sesi": {
+          "columns": [
+            "tanggal",
+            "sesi",
+            "kolam_id"
+          ],
+          "nullsNotDistinct": false,
+          "name": "uq_pakan_kolam_tanggal_sesi"
+        }
+      },
+      "checkConstraints": {
+        "pakan_sesi_check": {
+          "name": "pakan_sesi_check",
+          "value": "(sesi)::text = ANY ((ARRAY['pagi'::character varying, 'siang'::character varying, 'sore'::character varying])::text[])"
+        }
+      },
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.jenis_ikan": {
+      "name": "jenis_ikan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hari_sortir": {
+          "name": "hari_sortir",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hari_panen": {
+          "name": "hari_panen",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "harga_per_kg": {
+          "name": "harga_per_kg",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "hari_obat_pertama": {
+          "name": "hari_obat_pertama",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 7
+        },
+        "interval_obat_hari": {
+          "name": "interval_obat_hari",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 14
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_jenis_ikan_business_id": {
+          "name": "idx_jenis_ikan_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "jenis_ikan_business_id_fkey": {
+          "name": "jenis_ikan_business_id_fkey",
+          "tableFrom": "jenis_ikan",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
     "public.kolam": {
       "name": "kolam",
       "schema": "",
@@ -46,10 +447,75 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "jenis_ikan_id": {
+          "name": "jenis_ikan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "interval_ganti_air_hari": {
+          "name": "interval_ganti_air_hari",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 7
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "idx_kolam_business_id": {
+          "name": "idx_kolam_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "kolam_jenis_ikan_id_fkey": {
+          "name": "kolam_jenis_ikan_id_fkey",
+          "tableFrom": "kolam",
+          "tableTo": "jenis_ikan",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "jenis_ikan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "kolam_business_id_fkey": {
+          "name": "kolam_business_id_fkey",
+          "tableFrom": "kolam",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {},
@@ -109,9 +575,32 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_tebar_business_id": {
+          "name": "idx_tebar_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "tebar_kolam_id_fkey": {
           "name": "tebar_kolam_id_fkey",
@@ -140,135 +629,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.jenis_ikan": {
-      "name": "jenis_ikan",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
         },
-        "nama": {
-          "name": "nama",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "hari_sortir": {
-          "name": "hari_sortir",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "hari_panen": {
-          "name": "hari_panen",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false
-    },
-    "public.jadwal": {
-      "name": "jadwal",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tebar_id": {
-          "name": "tebar_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kolam_id": {
-          "name": "kolam_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "jenis": {
-          "name": "jenis",
-          "type": "varchar(20)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tanggal_jadwal": {
-          "name": "tanggal_jadwal",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "varchar(20)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'belum'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "jadwal_tebar_id_fkey": {
-          "name": "jadwal_tebar_id_fkey",
-          "tableFrom": "jadwal",
-          "tableTo": "tebar",
+        "tebar_business_id_fkey": {
+          "name": "tebar_business_id_fkey",
+          "tableFrom": "tebar",
+          "tableTo": "businesses",
           "schemaTo": "public",
           "columnsFrom": [
-            "tebar_id"
+            "business_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "jadwal_kolam_id_fkey": {
-          "name": "jadwal_kolam_id_fkey",
-          "tableFrom": "jadwal",
-          "tableTo": "kolam",
-          "schemaTo": "public",
-          "columnsFrom": [
-            "kolam_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -331,9 +704,39 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "sortir_ke": {
+          "name": "sortir_ke",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_sortir_business_id": {
+          "name": "idx_sortir_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "sortir_jadwal_id_fkey": {
           "name": "sortir_jadwal_id_fkey",
@@ -376,6 +779,20 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "sortir_business_id_fkey": {
+          "name": "sortir_business_id_fkey",
+          "tableFrom": "sortir",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -384,8 +801,8 @@
       "policies": {},
       "isRLSEnabled": false
     },
-    "public.panen": {
-      "name": "panen",
+    "public.jadwal": {
+      "name": "jadwal",
       "schema": "",
       "columns": {
         "id": {
@@ -393,12 +810,6 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
-        },
-        "jadwal_id": {
-          "name": "jadwal_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         },
         "tebar_id": {
           "name": "tebar_id",
@@ -412,29 +823,24 @@
           "primaryKey": false,
           "notNull": true
         },
-        "tanggal": {
-          "name": "tanggal",
+        "jenis": {
+          "name": "jenis",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal_jadwal": {
+          "name": "tanggal_jadwal",
           "type": "date",
           "primaryKey": false,
           "notNull": true
         },
-        "jumlah_ekor": {
-          "name": "jumlah_ekor",
-          "type": "integer",
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
           "primaryKey": false,
-          "notNull": true
-        },
-        "berat_kg": {
-          "name": "berat_kg",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "catatan": {
-          "name": "catatan",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "'belum'"
         },
         "created_at": {
           "name": "created_at",
@@ -442,27 +848,42 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_jadwal_business_id": {
+          "name": "idx_jadwal_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "panen_jadwal_id_fkey": {
-          "name": "panen_jadwal_id_fkey",
-          "tableFrom": "panen",
-          "tableTo": "jadwal",
-          "schemaTo": "public",
-          "columnsFrom": [
-            "jadwal_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "panen_tebar_id_fkey": {
-          "name": "panen_tebar_id_fkey",
-          "tableFrom": "panen",
+        "jadwal_tebar_id_fkey": {
+          "name": "jadwal_tebar_id_fkey",
+          "tableFrom": "jadwal",
           "tableTo": "tebar",
           "schemaTo": "public",
           "columnsFrom": [
@@ -474,9 +895,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "panen_kolam_id_fkey": {
-          "name": "panen_kolam_id_fkey",
-          "tableFrom": "panen",
+        "jadwal_kolam_id_fkey": {
+          "name": "jadwal_kolam_id_fkey",
+          "tableFrom": "jadwal",
           "tableTo": "kolam",
           "schemaTo": "public",
           "columnsFrom": [
@@ -487,6 +908,20 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "jadwal_business_id_fkey": {
+          "name": "jadwal_business_id_fkey",
+          "tableFrom": "jadwal",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -495,8 +930,8 @@
       "policies": {},
       "isRLSEnabled": false
     },
-    "public.pakan": {
-      "name": "pakan",
+    "public.obat": {
+      "name": "obat",
       "schema": "",
       "columns": {
         "id": {
@@ -517,17 +952,23 @@
           "primaryKey": false,
           "notNull": true
         },
-        "jumlah_kg": {
-          "name": "jumlah_kg",
-          "type": "numeric",
+        "nama_obat": {
+          "name": "nama_obat",
+          "type": "varchar(100)",
           "primaryKey": false,
           "notNull": true
+        },
+        "dosis": {
+          "name": "dosis",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
         },
         "biaya": {
           "name": "biaya",
           "type": "numeric",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "default": "'0'"
         },
         "catatan": {
@@ -542,13 +983,42 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "jadwal_id": {
+          "name": "jadwal_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_obat_business_id": {
+          "name": "idx_obat_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "pakan_kolam_id_fkey": {
-          "name": "pakan_kolam_id_fkey",
-          "tableFrom": "pakan",
+        "obat_kolam_id_fkey": {
+          "name": "obat_kolam_id_fkey",
+          "tableFrom": "obat",
           "tableTo": "kolam",
           "schemaTo": "public",
           "columnsFrom": [
@@ -558,6 +1028,211 @@
             "id"
           ],
           "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "obat_jadwal_id_fkey": {
+          "name": "obat_jadwal_id_fkey",
+          "tableFrom": "obat",
+          "tableTo": "jadwal",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "jadwal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "obat_business_id_fkey": {
+          "name": "obat_business_id_fkey",
+          "tableFrom": "obat",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.businesses": {
+      "name": "businesses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "users_business_id_fkey": {
+          "name": "users_business_id_fkey",
+          "tableFrom": "users",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_username_unique": {
+          "columns": [
+            "username"
+          ],
+          "nullsNotDistinct": false,
+          "name": "users_username_unique"
+        }
+      },
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.business_commodities": {
+      "name": "business_commodities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "commodity_key": {
+          "name": "commodity_key",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "initial_pools": {
+          "name": "initial_pools",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "business_commodities_business_id_fkey": {
+          "name": "business_commodities_business_id_fkey",
+          "tableFrom": "business_commodities",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -625,9 +1300,32 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_penjualan_business_id": {
+          "name": "idx_penjualan_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "penjualan_jenis_ikan_id_fkey": {
           "name": "penjualan_jenis_ikan_id_fkey",
@@ -655,6 +1353,20 @@
             "id"
           ],
           "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "penjualan_business_id_fkey": {
+          "name": "penjualan_business_id_fkey",
+          "tableFrom": "penjualan",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -704,10 +1416,146 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "idx_pengeluaran_business_id": {
+          "name": "idx_pengeluaran_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "pengeluaran_business_id_fkey": {
+          "name": "pengeluaran_business_id_fkey",
+          "tableFrom": "pengeluaran",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.stok_pakan": {
+      "name": "stok_pakan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stok": {
+          "name": "stok",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "satuan": {
+          "name": "satuan",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'kg'"
+        },
+        "stok_minimum": {
+          "name": "stok_minimum",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'10'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "harga_per_kg": {
+          "name": "harga_per_kg",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0'"
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_stok_pakan_business_id": {
+          "name": "idx_stok_pakan_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "stok_pakan_business_id_fkey": {
+          "name": "stok_pakan_business_id_fkey",
+          "tableFrom": "stok_pakan",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {},
@@ -742,10 +1590,220 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "foto": {
+          "name": "foto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "usaha": {
+          "name": "usaha",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "idx_pengaturan_akun_business_id": {
+          "name": "idx_pengaturan_akun_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "uq_pengaturan_akun_business": {
+          "name": "uq_pengaturan_akun_business",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "pengaturan_akun_business_id_fkey": {
+          "name": "pengaturan_akun_business_id_fkey",
+          "tableFrom": "pengaturan_akun",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "public.ganti_air": {
+      "name": "ganti_air",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jadwal_id": {
+          "name": "jadwal_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tebar_id": {
+          "name": "tebar_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kolam_id": {
+          "name": "kolam_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "persentase_air": {
+          "name": "persentase_air",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_ganti_air_business_id": {
+          "name": "idx_ganti_air_business_id",
+          "columns": [
+            {
+              "expression": "business_id",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "int4_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ganti_air_jadwal_id_fkey": {
+          "name": "ganti_air_jadwal_id_fkey",
+          "tableFrom": "ganti_air",
+          "tableTo": "jadwal",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "jadwal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ganti_air_tebar_id_fkey": {
+          "name": "ganti_air_tebar_id_fkey",
+          "tableFrom": "ganti_air",
+          "tableTo": "tebar",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "tebar_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ganti_air_kolam_id_fkey": {
+          "name": "ganti_air_kolam_id_fkey",
+          "tableFrom": "ganti_air",
+          "tableTo": "kolam",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "kolam_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ganti_air_business_id_fkey": {
+          "name": "ganti_air_business_id_fkey",
+          "tableFrom": "ganti_air",
+          "tableTo": "businesses",
+          "schemaTo": "public",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {},
